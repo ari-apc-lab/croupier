@@ -24,6 +24,16 @@ imports:
     - inputs_def.yaml
 
 node_templates:
+  hpc_wm:
+    type: hpc.nodes.WorkloadManager
+    properties:
+      config: { get_input: hpc_wm_config }
+      credentials: { get_input: hpc_wm_credentials }
+      external_monitor_entrypoint: { get_input: monitor_entrypoint }
+      job_prefix: { get_input: job_prefix }
+      workdir_prefix: "single_singularity"
+      skip_cleanup: true
+
   openstack_wm:
     type: hpc.nodes.WorkloadManager
     properties:
@@ -35,18 +45,47 @@ node_templates:
     relationships:
     - type: wm_contained_in
       target: my_server
-
+    
+  hpc_job:
+    type: hpc.nodes.SingularityJob
+    properties:
+      job_options: 
+        pre:
+        - { get_input: mpi_load_command }
+        - { get_input: singularity_load_command }
+        partition: { get_input: partition_name }
+        image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
+        volumes:
+        - { get_input: scratch_voulume_mount_point }
+        - { get_input: singularity_mount_point }
+        command: 'touch single.test'
+        nodes: 1
+        tasks: 1
+        tasks_per_node: 1
+        max_time: '00:01:00'
+      deployment:
+        bootstrap: 'scripts/singularity_bootstrap_example.sh'
+        #revert: 'scripts/singularity_revert_example.sh'
+        inputs:
+          - { get_input: singularity_image_storage }
+          - { get_input: singularity_image_filename }
+          - { get_input: singularity_image_uri }
+      skip_cleanup: True
+    relationships:
+    - type: job_managed_by_wm
+      target: hpc_wm
+    
   vm_job:
     type: hpc.nodes.Job
     properties:
       job_options:
         type: 'SHELL'
         command: "touch single_vm.test"
-      # publish:
-      # - dataset: { get_input: ckan_outputs_dataset }
-      #   file_path: "$CURRENT_WORKDIR/single_vm.test"
-      #   name: "single_vm"
-      #   description: "output test vm"
+      publish:
+      - dataset: { get_input: ckan_outputs_dataset }
+        file_path: "$CURRENT_WORKDIR/single_vm.test"
+        name: "single_vm"
+        description: "output test vm"
     relationships:
     - type: job_managed_by_wm
       target: openstack_wm
@@ -67,14 +106,12 @@ node_templates:
       private_key_path: { concat: [keys_repo/, { get_property: [SELF,resource_id] }] }
       openstack_config: { get_input: openstack_config }
 
-  my_floating_ip:
-   type: cloudify.openstack.nodes.FloatingIP
-   properties:
-      #use_external_resource: true
-      resource_id: { concat: ["autoip_", { get_input: instance_id}] }
-      openstack_config: { get_input: openstack_config }
-      floatingip:
-        floating_network_name: { get_input: cloud_external_network } 
+  #my_floating_ip:
+  #  type: cloudify.openstack.nodes.FloatingIP
+  #  properties:
+  #    use_external_resource: true
+  #    resource_id: { get_input: openstack_floatingip }
+  #    openstack_config: { get_input: openstack_config }
 
   my_server:
     type: cloudify.openstack.nodes.Server
@@ -90,8 +127,8 @@ node_templates:
       target: keypair
     - type: cloudify.relationships.connected_to
       target: croupier-network
-    - type: cloudify.openstack.server_connected_to_floating_ip
-      target: my_floating_ip
+    #- type: cloudify.openstack.server_connected_to_floating_ip
+    #  target: my_floating_ip
 
 outputs:
   single_job_name:

@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2017-2018 MSO4SC - javier.carnero@atos.net
+# Copyright (c) 2017-2018 Croupier - javier.carnero@atos.net
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -45,6 +45,7 @@ def preconfigure_wm(
 
         for rel in ctx.target.instance.relationships:  # server relationships
             node = rel.target.node
+            instance = rel.target.instance
             if node.type == 'cloudify.openstack.nodes.KeyPair':
                 # take private key from openstack
                 if 'private_key_path' in node.properties:
@@ -53,6 +54,12 @@ def preconfigure_wm(
                         private_key = keyfile.read()
                         credentials['private_key'] = private_key
                         credentials_modified = True
+            elif node.type == 'cloudify.openstack.nodes.FloatingIP':
+                # take public ip from openstack
+                if 'floating_ip_address' in instance.runtime_properties:
+                    credentials['host'] = \
+                        instance.runtime_properties['floating_ip_address']
+                    credentials_modified = True
 
         if credentials_modified:
             ctx.source.instance.runtime_properties['credentials'] = \

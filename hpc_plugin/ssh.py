@@ -1,5 +1,5 @@
 ########
-# Copyright (c) 2017-2018 MSO4SC - javier.carnero@atos.net
+# Copyright (c) 2017-2018 Croupier - javier.carnero@atos.net
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -57,7 +57,7 @@ class SshClient(object):
         self._tunnel = None
         self._host = credentials['host']
         self._port = int(credentials['port']) if 'port' in credentials else 22
-        if 'tunnel' in credentials:
+        if 'tunnel' in credentials and credentials['tunnel']:
             self._tunnel = SshForward(credentials)
             self._host = "localhost"
             self._port = self._tunnel.port()
