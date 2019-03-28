@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash -l
 
 ########
 # Copyright (c) 2019 Atos Spain SA. All rights reserved.
@@ -23,7 +23,22 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 # 
-# run_blueprint_test.sh
+# bootstrap_sbatch_example.sh
 
 
-tox -e single_py27 -- croupier_plugin/tests/workflow_tests.py:TestPlugin.test_$1
+FILE="touch.script"
+
+cat > $FILE <<- EOM
+#!/bin/bash -l
+
+#SBATCH -p $2
+#SBATCH -N 1
+#SBATCH -n 1
+#SBATCH --ntasks-per-node=1
+#SBATCH -t 00:01:00
+
+# DYNAMIC VARIABLES
+
+touch test_$1.test
+
+EOM

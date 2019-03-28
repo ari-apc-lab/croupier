@@ -21,35 +21,5 @@ license information in the project root.
          Atos Research & Innovation, Atos Spain S.A.
          e-mail: javier.carnero@atos.net
 
-setup.py
+__init__.py
 '''
-
-
-from setuptools import setup
-
-# Replace the place holders with values for your project
-
-setup(
-
-    # Do not use underscores in the plugin name.
-    name='croupier',
-
-    version='2.2.0',
-    author='Javier Carnero',
-    author_email='javier.carnero@atos.net',
-    description='Plugin to use HPC resources in Cloudify',
-
-    # This must correspond to the actual packages in the plugin.
-    packages=['croupier_plugin',
-              'croupier_plugin.workload_managers',
-              'croupier_plugin.external_repositories'],
-
-    zip_safe=False,
-    install_requires=[
-        # Necessary dependency for developing plugins, do not remove!
-        "cloudify-plugins-common",
-        "paramiko",
-        "pyyaml"
-    ],
-    license='LICENSE'
-)

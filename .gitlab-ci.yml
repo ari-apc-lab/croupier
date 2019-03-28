@@ -22,7 +22,7 @@ flake8_linter:
   stage: test
   image: python:2.7
   script:
-  - pip install tox flake8  # you can also use tox
+  - pip install tox
   - tox -e flake8
 
 unittests:
@@ -37,11 +37,11 @@ package:
   image: centos:7
   script:
   - yum install -y -q zip
-  - DIR=${PWD##*/} && cd .. && zip -r $DIR/hpc_plugin.zip $DIR -x $DIR/.\* && cd $DIR
+  - DIR=${PWD##*/} && cd .. && zip -r $DIR/croupier_plugin.zip $DIR -x $DIR/.\* && cd $DIR
   - yum install -y -q epel-release
   - yum install -y -q python python-pip
   - pip install -q wagon==0.6.1
-  - wagon create hpc_plugin.zip -a '--no-cache-dir -c constraints.txt'
+  - wagon create croupier_plugin.zip -a '--no-cache-dir -c constraints.txt'
   - PLUGIN_NAME=$(echo *.wgn | awk -F- '{print $1}')
   - PLUGIN_VERSION=$(echo *.wgn | awk -F- '{print $2}')
   artifacts:
@@ -71,7 +71,7 @@ deploy:staging:
   - cfy plugins upload *.wgn -y plugin.yaml -t default_tenant
   environment:
     name: staging 
-    url: http://portal.mso4sc.com
+    url: http://portal.croupier.com
   only:
     - master
 
@@ -93,7 +93,7 @@ deploy:production:
   - cfy plugins upload *.wgn -y plugin.yaml -t default_tenant
   environment:
     name: production 
-    url: http://portal.mso4sc.com
+    url: http://portal.croupier.com
   artifacts:
     name: CI_COMMIT_REF_NAME
     paths:

@@ -23,7 +23,6 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 # 
-# run_blueprint_test.sh
+# bootstrap_example.sh
 
-
-tox -e single_py27 -- croupier_plugin/tests/workflow_tests.py:TestPlugin.test_$1
+touch deploy_$1.test

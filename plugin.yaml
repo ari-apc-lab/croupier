@@ -1,23 +1,45 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+#
+# plugin.yaml
+
 plugins:
-    hpc:
-        # Could be 'central_deployment_agent' or 'host_agent'.
-        # If 'central_deployment_agent', this plugin will be executed on the
-        # deployment dedicated agent, other wise it will be executed on the host agent.
+    croupier:
         executor: central_deployment_agent
 
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
         source: https://github.com/ari-apc-lab/croupier/archive/master.zip
-        package_name: cloudify-hpc-plugin
-        package_version: '2.1.2'
+        package_name: croupier-plugin
+        package_version: "2.2.0"
 
 workflows:
     run_jobs:
-        mapping: hpc.hpc_plugin.workflows.run_jobs
+        mapping: croupier.croupier_plugin.workflows.run_jobs
 
 node_types:
-    hpc.nodes.WorkloadManager:
+    croupier.nodes.WorkloadManager:
         derived_from: cloudify.nodes.Compute
         properties:
             config:
@@ -42,7 +64,7 @@ node_types:
                 type: string
             job_prefix:
                 description: Job name prefix for this HPC
-                default: "cfyhpc"
+                default: "croupier"
                 type: string
             base_dir:
                 description: Root directory of all executions
@@ -70,7 +92,7 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 configure:
-                    implementation: hpc.hpc_plugin.tasks.configure_execution
+                    implementation: croupier.croupier_plugin.tasks.configure_execution
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
@@ -83,7 +105,7 @@ node_types:
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 delete:
-                    implementation: hpc.hpc_plugin.tasks.cleanup_execution
+                    implementation: croupier.croupier_plugin.tasks.cleanup_execution
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
@@ -95,37 +117,61 @@ node_types:
                             default: { get_property: [SELF, simulate] }
             cloudify.interfaces.monitoring:
                 start:
-                    implementation: hpc.hpc_plugin.tasks.start_monitoring_hpc
+                    implementation: croupier.croupier_plugin.tasks.start_monitoring_hpc
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
                         credentials:
                             default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint: 
-                            default: { get_property: [SELF, external_monitor_entrypoint] }
-                        external_monitor_port: 
-                            default: { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port: 
-                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
+                        external_monitor_entrypoint:
+                            default:
+                                {
+                                    get_property:
+                                        [SELF, external_monitor_entrypoint],
+                                }
+                        external_monitor_port:
+                            default:
+                                { get_property: [SELF, external_monitor_port] }
+                        external_monitor_orchestrator_port:
+                            default:
+                                {
+                                    get_property:
+                                        [
+                                            SELF,
+                                            external_monitor_orchestrator_port,
+                                        ],
+                                }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:
-                    implementation: hpc.hpc_plugin.tasks.stop_monitoring_hpc
+                    implementation: croupier.croupier_plugin.tasks.stop_monitoring_hpc
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
                         credentials:
                             default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint: 
-                            default: { get_property: [SELF, external_monitor_entrypoint] }
-                        external_monitor_port: 
-                            default: { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port: 
-                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
+                        external_monitor_entrypoint:
+                            default:
+                                {
+                                    get_property:
+                                        [SELF, external_monitor_entrypoint],
+                                }
+                        external_monitor_port:
+                            default:
+                                { get_property: [SELF, external_monitor_port] }
+                        external_monitor_orchestrator_port:
+                            default:
+                                {
+                                    get_property:
+                                        [
+                                            SELF,
+                                            external_monitor_orchestrator_port,
+                                        ],
+                                }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
-    hpc.nodes.Job:
+    croupier.nodes.Job:
         derived_from: cloudify.nodes.Root
         properties:
             deployment:
@@ -142,8 +188,8 @@ node_types:
                 default: False
         interfaces:
             cloudify.interfaces.lifecycle:
-                start: # needs to be start to have the hpc credentials
-                    implementation: hpc.hpc_plugin.tasks.bootstrap_job
+                start: # needs to be 'start' to have the wm credentials
+                    implementation: croupier.croupier_plugin.tasks.bootstrap_job
                     inputs:
                         deployment:
                             description: Deployment scripts and inputs
@@ -151,39 +197,39 @@ node_types:
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
                 stop:
-                    implementation: hpc.hpc_plugin.tasks.revert_job
+                    implementation: croupier.croupier_plugin.tasks.revert_job
                     inputs:
                         deployment:
                             description: Undeployment script and inputs
                             default: { get_property: [SELF, deployment] }
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
-            hpc.interfaces.lifecycle:
+            croupier.interfaces.lifecycle:
                 queue:
-                    implementation: hpc.hpc_plugin.tasks.send_job
+                    implementation: croupier.croupier_plugin.tasks.send_job
                     inputs:
                         job_options:
                             default: { get_property: [SELF, job_options] }
                 publish:
-                    implementation: hpc.hpc_plugin.tasks.publish
+                    implementation: croupier.croupier_plugin.tasks.publish
                     inputs:
                         publish_list:
                             default: { get_property: [SELF, publish] }
                 cleanup:
-                    implementation: hpc.hpc_plugin.tasks.cleanup_job
+                    implementation: croupier.croupier_plugin.tasks.cleanup_job
                     inputs:
                         job_options:
                             default: { get_property: [SELF, job_options] }
                         skip:
                             default: { get_property: [SELF, skip_cleanup] }
                 cancel:
-                    implementation: hpc.hpc_plugin.tasks.stop_job
+                    implementation: croupier.croupier_plugin.tasks.stop_job
                     inputs:
                         job_options:
                             default: { get_property: [SELF, job_options] }
-    
-    hpc.nodes.SingularityJob:
-        derived_from: hpc.nodes.Job
+
+    croupier.nodes.SingularityJob:
+        derived_from: croupier.nodes.Job
 
 relationships:
     wm_contained_in:
@@ -191,9 +237,9 @@ relationships:
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
-                    implementation: hpc.hpc_plugin.tasks.preconfigure_wm
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_wm
                     inputs:
-                        config: 
+                        config:
                             default: { get_property: [SOURCE, config] }
                         credentials:
                             default: { get_property: [SOURCE, credentials] }
@@ -204,23 +250,42 @@ relationships:
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
-                    implementation: hpc.hpc_plugin.tasks.preconfigure_job
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_job
                     inputs:
-                        config: 
+                        config:
                             default: { get_property: [TARGET, config] }
                         credentials:
                             default: { get_property: [TARGET, credentials] }
-                        external_monitor_entrypoint: 
-                            default: { get_property: [TARGET, external_monitor_entrypoint] }
-                        external_monitor_port: 
-                            default: { get_property: [TARGET, external_monitor_port] }
-                        external_monitor_type: 
-                            default: { get_property: [TARGET, external_monitor_type] }
-                        external_monitor_orchestrator_port: 
-                            default: { get_property: [TARGET, external_monitor_orchestrator_port] }
-                        job_prefix: 
+                        external_monitor_entrypoint:
+                            default:
+                                {
+                                    get_property:
+                                        [TARGET, external_monitor_entrypoint],
+                                }
+                        external_monitor_port:
+                            default:
+                                {
+                                    get_property:
+                                        [TARGET, external_monitor_port],
+                                }
+                        external_monitor_type:
+                            default:
+                                {
+                                    get_property:
+                                        [TARGET, external_monitor_type],
+                                }
+                        external_monitor_orchestrator_port:
+                            default:
+                                {
+                                    get_property:
+                                        [
+                                            TARGET,
+                                            external_monitor_orchestrator_port,
+                                        ],
+                                }
+                        job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
-                        monitor_period: 
+                        monitor_period:
                             default: { get_property: [TARGET, monitor_period] }
                         simulate:
                             default: { get_property: [TARGET, simulate] }
