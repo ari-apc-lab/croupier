@@ -1,4 +1,4 @@
-.. 
+..
   |Copyright (c) 2019 Atos Spain SA. All rights reserved.
   |
   |This file is part of Croupier.
@@ -31,6 +31,7 @@ Welcome to Croupier's documentation!
   :caption: Contents:
 
   tosca
+  manager
   plugin
 
 

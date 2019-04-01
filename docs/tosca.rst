@@ -1,4 +1,4 @@
-.. 
+..
   |Copyright (c) 2019 Atos Spain SA. All rights reserved.
   |
   |This file is part of Croupier.
@@ -54,7 +54,7 @@ The header include the TOSCA version used and other imports. In Croupier the Clo
       # Croupier pluging
       - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/plugin.yaml
       # Openstack plugin (Optional)
-      - http://www.getcloudify.org/spec/openstack-plugin/2.9.0/plugin.yaml
+      - http://www.getcloudify.org/spec/openstack-plugin/2.14.7/plugin.yaml
       # The blueprint can be composed by multiple files, in this case we split the inputs section (Optional)
       - inputs-def.yaml
 
@@ -110,7 +110,7 @@ To begin with, every *node* is identified by its name (``hpc_wm`` in the example
             monitor_period: 15
             workdir_prefix: "single_sbatch"
 
-The example above represents a workload manager, with type `croupier.nodes.WorkloadManager`. All computing infrastructures must have a workload manager defined (_Slurm_ or _Torque_ for HPC supported, _BASH_ for Cloud VMs). Then the WM is configured using the inputs (using fuction `get_input`). Detailed information about how to configure the HPCs is in the `Plugin specification <./plugin.html>`__ section. 
+The example above represents a workload manager, with type `croupier.nodes.WorkloadManager`. All computing infrastructures must have a workload manager defined (_Slurm_ or _Torque_ for HPC supported, _BASH_ for Cloud VMs). Then the WM is configured using the inputs (using fuction `get_input`). Detailed information about how to configure the HPCs is in the `Plugin specification <./plugin.html>`__ section.
 
 The following code uses ``hpc_wm`` to describe four jobs that should run in the hpc that represents the node. Two of them are of type ``croupier.nodes.SingularityJob`` which means that the job will run using a `Singularity <https://singularity.lbl.gov/>`__ container, while the other two of type `croupier.nodes.Job` describe jobs that are going to run directly in the HPC. Navigate to `Cloudify HPC plugin types <./plugin.html#types>`__ to know more about each parameter.
 
@@ -164,7 +164,7 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
            target: hpc_wm
          - type: job_depends_on
            target: first_job
-   
+
    third_parallel_job:
       type: croupier.nodes.SingularityJob
       properties:

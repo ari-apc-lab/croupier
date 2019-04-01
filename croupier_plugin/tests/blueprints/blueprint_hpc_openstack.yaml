@@ -29,7 +29,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - http://www.getcloudify.org/spec/openstack-plugin/2.9.0/plugin.yaml
+    - http://www.getcloudify.org/spec/openstack-plugin/2.14.7/plugin.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - plugin.yaml
     - inputs_def.yaml
@@ -42,7 +42,7 @@ node_templates:
       credentials: { get_input: hpc_wm_credentials }
       external_monitor_entrypoint: { get_input: monitor_entrypoint }
       job_prefix: { get_input: job_prefix }
-      workdir_prefix: "single_singularity"
+      workdir_prefix: "hpc_openstack"
       skip_cleanup: true
 
   openstack_wm:
@@ -52,36 +52,24 @@ node_templates:
       credentials: { get_input: cloud_wm_credentials }
       external_monitor_entrypoint: { get_input: monitor_entrypoint }
       job_prefix: { get_input: job_prefix }
-      workdir_prefix: "single_openstack"
+      workdir_prefix: "hpc_openstack"
     relationships:
     - type: wm_contained_in
       target: my_server
 
   hpc_job:
-    type: croupier.nodes.SingularityJob
+    type: croupier.nodes.Job
     properties:
       job_options:
-        pre:
-        - { get_input: mpi_load_command }
-        - { get_input: singularity_load_command }
-        partition: { get_input: partition_name }
-        image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
-        volumes:
-        - { get_input: scratch_voulume_mount_point }
-        - { get_input: singularity_mount_point }
-        command: 'touch single.test'
-        nodes: 1
-        tasks: 1
-        tasks_per_node: 1
-        max_time: '00:01:00'
+        type: 'SBATCH'
+        command: "touch.script single.test"
       deployment:
-        bootstrap: 'scripts/singularity_bootstrap_example.sh'
-        #revert: 'scripts/singularity_revert_example.sh'
+        bootstrap: 'scripts/bootstrap_sbatch_example.sh'
+        revert: 'scripts/revert_sbatch_example.sh'
         inputs:
-          - { get_input: singularity_image_storage }
-          - { get_input: singularity_image_filename }
-          - { get_input: singularity_image_uri }
-      skip_cleanup: True
+        - 'single'
+        - { get_input: partition_name }
+        skip_cleanup: True
     relationships:
     - type: job_managed_by_wm
       target: hpc_wm

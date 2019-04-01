@@ -29,7 +29,6 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - http://www.getcloudify.org/spec/openstack-plugin/2.9.0/plugin.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - plugin.yaml
     - inputs_def.yaml
