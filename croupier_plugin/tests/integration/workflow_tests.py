@@ -41,12 +41,14 @@ class TestPlugin(unittest.TestCase):
         inputs_file = 'blueprint-inputs.yaml'
         if os.path.isfile(os.path.join('croupier_plugin',
                                        'tests',
+                                       'integration',
                                        'inputs',
                                        'local-blueprint-inputs.yaml')):
             inputs_file = 'local-blueprint-inputs.yaml'
         inputs = {}
         with open(os.path.join('croupier_plugin',
                                'tests',
+                               'integration',
                                'inputs',
                                inputs_file),
                   'r') as stream:

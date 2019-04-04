@@ -34,189 +34,136 @@ from croupier_plugin.workload_managers.workload_manager import (
 class Slurm(WorkloadManager):
     """ Slurm Workload Manger Driver """
 
-    def _build_container_script(self, name, job_settings, logger):
-        # check input information correctness
-        if not isinstance(job_settings, dict) or \
-                not isinstance(name, basestring):
-            logger.error("Singularity Script malformed")
-            return None
-
-        if 'image' not in job_settings or 'command' not in job_settings or\
-                'max_time' not in job_settings:
-            logger.error("Singularity Script malformed")
-            return None
-
-        script = '#!/bin/bash -l\n\n'
-
-        script += self._parse_slurm_job_settings(name,
-                                                 job_settings,
-                                                 '#SBATCH', '\n')
-
-        script += '\n# DYNAMIC VARIABLES\n\n'
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'pre' in job_settings:
-            for entry in job_settings['pre']:
-                script += entry + '\n'
-
-        script += '\nmpirun singularity exec '
-
-        if 'home' in job_settings and job_settings['home'] != '':
-            script += '-H ' + job_settings['home'] + ' '
-
-        if 'volumes' in job_settings:
-            for volume in job_settings['volumes']:
-                script += '-B ' + volume + ' '
-
-        # add executable and arguments
-        script += job_settings['image'] + ' ' + job_settings['command'] + '\n'
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'post' in job_settings:
-            for entry in job_settings['post']:
-                script += entry + '\n'
-
-        return script
-
-    def _build_job_submission_call(self, name, job_settings, logger):
-        # check input information correctness
-        if not isinstance(job_settings, dict) or \
-                not isinstance(name, basestring):
-            return {'error': "Incorrect inputs"}
-
-        if 'type' not in job_settings or 'command' not in job_settings:
-            return {'error': "'type' and 'command' " +
-                    "must be defined in job settings"}
-
-        # Build single line command
-        slurm_call = ''
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'pre' in job_settings:
-            for entry in job_settings['pre']:
-                slurm_call += entry + '; '
-
-        if job_settings['type'] == 'SBATCH':
-            # sbatch command plus job name
-            slurm_call += "sbatch --parsable -J '" + name + "'"
-        elif job_settings['type'] == 'SRUN':
-            slurm_call += "srun -J '" + name + "'"
-        else:
-            return {'error': "Job type '" + job_settings['type'] +
-                    "'not supported"}
-
-        if 'max_time' not in job_settings and job_settings['type'] == 'SRUN':
-            return {'error': "'SRUN' jobs must define the 'max_time' property"}
-
-        slurm_call += self._parse_slurm_job_settings(name,
-                                                     job_settings,
-                                                     None, None)
-
-        response = {}
-        if 'scale' in job_settings and \
-                int(job_settings['scale']) > 1:
-            if job_settings['type'] == 'SRUN':
-                return {'error': "'SRUN' does not allow scale property"}
-            # set the max of parallel jobs
-            scale_max = job_settings['scale']
-            # set the job array
-            slurm_call += ' --array=0-{}'.format(scale_max - 1)
-            if 'scale_max_in_parallel' in job_settings and \
-                    int(job_settings['scale_max_in_parallel']) > 0:
-                slurm_call += '%' + str(job_settings['scale_max_in_parallel'])
-                scale_max = job_settings['scale_max_in_parallel']
-            # map the orchestrator variables after last sbatch
-            scale_env_mapping_call = \
-                "sed -i '/# DYNAMIC VARIABLES/a\\" +\
-                "SCALE_INDEX=$SLURM_ARRAY_TASK_ID\\n" +\
-                "SCALE_COUNT=$SLURM_ARRAY_TASK_COUNT\\n" +\
-                "SCALE_MAX=" + str(scale_max) + "' " +\
-                job_settings['command'].split()[0]  # get only the file
-            response['scale_env_mapping_call'] = scale_env_mapping_call
-
-        # add executable and arguments
-        slurm_call += ' ' + job_settings['command'] + '; '
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'post' in job_settings:
-            for entry in job_settings['post']:
-                slurm_call += entry + '; '
-
-        if job_settings['type'] == 'SRUN':
-            # Run in the background detached from terminal
-            slurm_call = 'nohup sh -c "' + slurm_call + '" &'
-
-        response['call'] = slurm_call
-        return response
-
-    def _build_job_cancellation_call(self, name, job_settings, logger):
-        return "scancel --name " + name
-
-    def _parse_slurm_job_settings(self, job_id, job_settings, prefix, suffix):
-        _prefix = prefix if prefix else ''
-        _suffix = suffix if suffix else ''
+    def _parse_job_settings(
+            self,
+            job_id,
+            job_settings,
+            script=False):
         _settings = ''
+        if script:
+            _prefix = '#SBATCH'
+            _suffix = '\n'
+        else:
+            _prefix = ''
+            _suffix = ''
+
+        if not script:
+            if job_settings['type'] == 'SBATCH':
+                # sbatch command plus job name
+                _settings += "sbatch --parsable -J '" + job_id + "'"
+            elif job_settings['type'] == 'SRUN':
+                _settings += "srun -J '" + job_id + "'"
+            else:
+                return {'error': "Job type '" + job_settings['type'] +
+                                 "'not supported"}
 
         # Check if exists and has content
-        def check_job_settings_key(job_settings, key):
+        def _check_job_settings_key(key):
             return key in job_settings and str(job_settings[key]).strip()
 
+        if not _check_job_settings_key('max_time') and \
+                job_settings['type'] == 'SRUN':
+            return {'error': "'SRUN' jobs must define the 'max_time' property"}
+
         # Slurm settings
-        if check_job_settings_key(job_settings, 'stderr_file'):
+        if _check_job_settings_key('nodes'):
+            _settings += _prefix + ' -N ' + \
+                str(job_settings['nodes']) + _suffix
+
+        if _check_job_settings_key('tasks'):
+            _settings += _prefix + ' -n ' + \
+                str(job_settings['tasks']) + _suffix
+
+        if _check_job_settings_key('tasks_per_node'):
+            _settings += _prefix + ' --ntasks-per-node=' + \
+                str(job_settings['tasks_per_node']) + _suffix
+
+        if _check_job_settings_key('max_time'):
+            _settings += _prefix + ' -t ' + \
+                str(job_settings['max_time']) + _suffix
+
+        if _check_job_settings_key('partition') or \
+                _check_job_settings_key('queue'):
+            if _check_job_settings_key('partition'):
+                partition = job_settings['partition']
+            else:
+                partition = job_settings['queue']
+            _settings += _prefix + ' -p ' + \
+                str(partition) + _suffix
+
+        if _check_job_settings_key('memory'):
+            _settings += _prefix + ' --mem=' + \
+                str(job_settings['memory']) + _suffix
+
+        if _check_job_settings_key('reservation'):
+            _settings += _prefix + ' --reservation=' + \
+                str(job_settings['reservation']) + _suffix
+
+        if _check_job_settings_key('qos'):
+            _settings += _prefix + ' --qos=' + \
+                str(job_settings['qos']) + _suffix
+
+        if _check_job_settings_key('mail_user'):
+            _settings += _prefix + ' --mail-user=' + \
+                str(job_settings['mail_user']) + _suffix
+
+        if _check_job_settings_key('mail_type'):
+            _settings += _prefix + ' --mail-type=' + \
+                str(job_settings['mail_type']) + _suffix
+
+        if _check_job_settings_key('account'):
+            _settings += _prefix + ' -A ' + \
+                str(job_settings['account']) + _suffix
+
+        if _check_job_settings_key('stderr_file'):
             _settings += _prefix + ' -e ' + \
                 str(job_settings['stderr_file']) + _suffix
         else:
             _settings += _prefix + ' -e ' + \
                 str(job_id + '.err') + _suffix
 
-        if check_job_settings_key(job_settings, 'stdout_file'):
+        if _check_job_settings_key('stdout_file'):
             _settings += _prefix + ' -o ' + \
                 str(job_settings['stdout_file']) + _suffix
         else:
             _settings += _prefix + ' -o ' + \
                 str(job_id + '.out') + _suffix
 
-        if check_job_settings_key(job_settings, 'max_time'):
-            _settings += _prefix + ' -t ' + \
-                str(job_settings['max_time']) + _suffix
+        if 'scale' in job_settings and \
+                int(job_settings['scale']) > 1:
 
-        if check_job_settings_key(job_settings, 'partition'):
-            _settings += _prefix + ' -p ' + \
-                str(job_settings['partition']) + _suffix
+            if job_settings['type'] == 'SRUN':
+                return {'error': "'SRUN' does not allow scale property"}
 
-        if check_job_settings_key(job_settings, 'nodes'):
-            _settings += _prefix + ' -N ' + \
-                str(job_settings['nodes']) + _suffix
+            # set the job array
+            _settings += ' --array=0-{}'.format(job_settings['scale'] - 1)
+            if 'scale_max_in_parallel' in job_settings and \
+                    int(job_settings['scale_max_in_parallel']) > 0:
+                _settings += '%' + str(job_settings['scale_max_in_parallel'])
 
-        if check_job_settings_key(job_settings, 'tasks'):
-            _settings += _prefix + ' -n ' + \
-                str(job_settings['tasks']) + _suffix
+        # add executable and arguments
+        if not script:
+            if job_settings['type'] == 'SBATCH':
+                _settings += ' ' + job_settings['script']
+                if 'arguments' in job_settings:
+                    for arg in job_settings['arguments']:
+                        _settings += ' '+arg
+                _settings += '; '
+            else:
+                _settings += ' ' + job_settings['command'] + '; '
 
-        if check_job_settings_key(job_settings, 'tasks_per_node'):
-            _settings += _prefix + ' --ntasks-per-node=' + \
-                str(job_settings['tasks_per_node']) + _suffix
+        return {'data': _settings}
 
-        if check_job_settings_key(job_settings, 'memory'):
-            _settings += _prefix + ' --mem=' + \
-                str(job_settings['memory']) + _suffix
+    def _build_job_cancellation_call(self, name, job_settings, logger):
+        return "scancel --name " + name
 
-        if check_job_settings_key(job_settings, 'reservation'):
-            _settings += _prefix + ' --reservation=' + \
-                str(job_settings['reservation']) + _suffix
-
-        if check_job_settings_key(job_settings, 'qos'):
-            _settings += _prefix + ' --qos=' + \
-                str(job_settings['qos']) + _suffix
-
-        if check_job_settings_key(job_settings, 'mail_user'):
-            _settings += _prefix + ' --mail-user=' + \
-                str(job_settings['mail_user']) + _suffix
-
-        if check_job_settings_key(job_settings, 'mail_type'):
-            _settings += _prefix + ' --mail-type=' + \
-                str(job_settings['mail_type']) + _suffix
-
-        return _settings
+    def _get_envar(self, envar, default):
+        if envar == 'SCALE_INDEX':
+            return '$SLURM_ARRAY_TASK_ID'
+        elif envar == 'SCALE_COUNT':
+            return '$SLURM_ARRAY_TASK_COUNT'
+        else:
+            return default
 
 # Monitor
     def get_states(self, workdir, credentials, job_names, logger):

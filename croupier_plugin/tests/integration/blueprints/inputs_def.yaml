@@ -58,9 +58,9 @@ inputs:
 
   ################# Cloud Infrastructre #################
   cloud_wm_config:
-    description: workload manager of the cloud (Only supported BASH)
+    description: workload manager of the cloud (Only supported SHELL)
     default:
-      workload_manager: BASH
+      workload_manager: SHELL
   cloud_wm_credentials:
     description: Cloud credentials
     default: {}
@@ -78,9 +78,9 @@ inputs:
   ################# Second Cloud Infrastructre #################
   # Won't be rendered, their value is a match with other inputs
   secondary_cloud_wm_config:
-    description: workload manager of the cloud (Only supported BASH)
+    description: workload manager of the cloud (Only supported SHELL)
     default:
-      workload_manager: BASH
+      workload_manager: SHELL
   secondary_cloud_wm_credentials:
     default: {}
   eosc_config:

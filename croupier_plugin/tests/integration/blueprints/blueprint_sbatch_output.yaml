@@ -52,7 +52,9 @@ node_templates:
         properties:
             job_options:
                 type: 'SBATCH'
-                command: "touch.script single.test"
+                script: "touch.script"
+                arguments:
+                - "single.test"
             deployment:
                 bootstrap: 'scripts/bootstrap_sbatch_example.sh'
                 revert: 'scripts/revert_sbatch_example.sh'

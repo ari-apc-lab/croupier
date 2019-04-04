@@ -33,189 +33,142 @@ from croupier_plugin.utilities import shlex_quote
 class Torque(WorkloadManager):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
 
-    def _build_container_script(self, name, job_settings, logger):
-        """ Check input information correctness """
-        if not isinstance(job_settings, dict) or \
-                not isinstance(name, basestring):
-            logger.error("Singularity Script malformed")
-            return None
-
-        if 'image' not in job_settings or 'command' not in job_settings or\
-                'max_time' not in job_settings:
-            logger.error("Singularity Script malformed")
-            return None
-
-        script = '#!/bin/bash -l\n\n'
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'pre' in job_settings:
-            for entry in job_settings['pre']:
-                script += entry + '\n'
-
-#       ################### Torque settings ###################
-        if 'nodes' in job_settings:
-            resources_request = "nodes={}".format(job_settings['nodes'])
-
-            if 'tasks_per_node' in job_settings:
-                resources_request += ':ppn={}'.format(
-                    job_settings['tasks_per_node'])
-
-            script += '#PBS -l walltime={}\n'.format(resources_request)
+    def _parse_job_settings(
+            self,
+            job_id,
+            job_settings,
+            script=False):
+        _settings = {'data': ''}
+        if script:
+            _prefix = '#PBS'
+            _suffix = '\n'
         else:
-            if 'tasks_per_node' in job_settings:
-                logger.error(
-                    r"Specify 'tasks_per_node' while 'nodes' is not specified")
+            _prefix = ''
+            _suffix = ''
 
-        # if 'tasks' in job_settings:
-        #     script += '#qsub -n ' + str(job_settings['tasks']) + '\n'
+        # TODO writ for script (prefix, suffix ??)
 
-        script += '#PBS -l walltime={}\n\n'.format(job_settings['max_time'])
-#       #######################################################
+        if not script:
+            if job_settings['type'] == 'SBATCH':
+                # qsub command plus job name
+                _settings['data'] += "qsub -V -N {}".format(
+                    shlex_quote(job_id))
+            elif job_settings['type'] == 'SRUN':
+                _settings['data'] += "qsub -V -I -N {}".format(
+                    shlex_quote(job_id))
+            else:
+                return {'error': "Job type '" + job_settings['type'] +
+                                 "'not supported"}
 
-        script += '\n# DYNAMIC VARIABLES\n\n'
+        # Check if exists and has content
+        def _check_job_settings_key(key):
+            return key in job_settings and str(job_settings[key]).strip()
 
-        # NOTE an uploaded script could also be interesting to execute
-        if 'pre' in job_settings:
-            for entry in job_settings['pre']:
-                script += entry + '\n'
+        def _add_setting(option, value, op_separator=' '):
+            _settings['data'] += '{} {}{}{}{}'.format(
+                _prefix, option, op_separator, value, _suffix)
 
-        script += '\nmpirun singularity exec '
+        if not _check_job_settings_key('nodes') and \
+                _check_job_settings_key('tasks_per_node'):
+            return {'error': "Specified 'tasks_per_node' while"
+                             "'nodes' is not specified"}
 
-        if 'home' in job_settings and job_settings['home'] != '':
-            script += '-H ' + job_settings['home'] + ' '
-
-        if 'volumes' in job_settings:
-            for volume in job_settings['volumes']:
-                script += '-B ' + volume + ' '
-
-        # add executable and arguments
-        script += job_settings['image'] + ' ' + job_settings['command'] + '\n'
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'post' in job_settings:
-            for entry in job_settings['post']:
-                script += entry + '\n'
-
-        return script
-
-    def _build_job_submission_call(self, name, job_settings, logger):
-        # check input information correctness
-        if not isinstance(job_settings, dict) or \
-                not isinstance(name, basestring):
-            return {'error': "Incorrect inputs"}
-
-        if 'type' not in job_settings or 'command' not in job_settings:
-            return {'error': "'type' and 'command' " +
-                    "must be defined in job settings"}
-
-        if 'type' in job_settings and job_settings['type'] != 'SBATCH':
-            return {'error': "Job type '" + job_settings['type'] +
-                    "'not supported. Torque support only batched jobs."}
-
-        # Build single line command
-        torque_call = ''
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'pre' in job_settings:
-            for entry in job_settings['pre']:
-                torque_call += entry + '; '
-
-#       ################### Torque settings ###################
-        # qsub command plus job name
-        torque_call += "qsub -V -N {}".format(shlex_quote(name))
-
-        resources_request = ""
-        if 'nodes' in job_settings:
-            resources_request = "nodes={}".format(job_settings['nodes'])
+        if _check_job_settings_key('nodes'):
+            node_request = "nodes={}".format(job_settings['nodes'])
 
             # number of cores requested per node
-            if 'tasks_per_node' in job_settings:
-                resources_request += ':ppn={}'.format(
+            # TODO If tasks and no tasks_per_node, then
+            # tasks_per_node = tasks/nodes
+            if _check_job_settings_key('tasks_per_node'):
+                node_request += ':ppn={}'.format(
                     job_settings['tasks_per_node'])
+
+            _add_setting('-l', node_request)
+
+        if _check_job_settings_key('max_time'):
+            _add_setting('-l', 'walltime={}'.format(job_settings['max_time']))
+
+        if _check_job_settings_key('queue') or \
+                _check_job_settings_key('partition'):
+            if _check_job_settings_key('queue'):
+                queue = job_settings['queue']
+            else:
+                queue = job_settings['partition']
+            _add_setting('-q', shlex_quote(queue))
+
+        if _check_job_settings_key('memory'):
+            _add_setting('-l', 'mem={}'.format(job_settings('memory')))
+
+        if _check_job_settings_key('mail_user'):
+            _add_setting('-M', job_settings['mail_user'])
+
+        # FIXME make slurm and torque compatible
+        # a (aborted)
+        # b (when it begins)
+        # e (when it ends)
+        # f (when it terminates with a non-zero exit code)
+        if _check_job_settings_key('mail_type'):
+            _add_setting('-m', job_settings['mail_type'])
+
+        if _check_job_settings_key('account'):
+            _add_setting('-A', job_settings['account'])
+
+        if _check_job_settings_key('stderr_file'):
+            _add_setting('-e', job_settings['stdoutstderr_file_file'])
         else:
-            if 'tasks_per_node' in job_settings:
-                logger.error(
-                    r"Specify 'tasks_per_node' while 'nodes' is not specified")
+            _add_setting('-e', job_id + '.err')
 
-        if 'max_time' in job_settings:
-            if len(resources_request) > 0:
-                resources_request += ','
-            resources_request += 'walltime={}'.format(job_settings['max_time'])
-
-        if len(resources_request) > 0:
-            torque_call += ' -l {}'.format(resources_request)
-
-        # more precisely is it a destination [queue][@server]
-        if 'queue' in job_settings:
-            torque_call += " -q {}".format(shlex_quote(job_settings['queue']))
-
-        if 'rerunnable' in job_settings:  # same to requeue in SLURM
-            torque_call += " -r {}".format(
-                'y' if job_settings['rerunnable'] else 'n')
-
-        if 'work_dir' in job_settings:
-            torque_call += " -w {}".format(
-                shlex_quote(job_settings['work_dir']))
+        if _check_job_settings_key('stdout_file'):
+            _add_setting('-o', job_settings['stdout_file'])
+        else:
+            _add_setting('-o', job_id + '.out')
 
         additional_attributes = {}
         if 'group_name' in job_settings:
             additional_attributes["group_list"] = shlex_quote(
                 job_settings['group_name'])
 
-        if len(additional_attributes) > 0:
-            torque_call += " -W {}".format(
-                ','.join("{0}={1}".format(k, v)
-                         for k, v in additional_attributes.iteritems()))
-
-        # if 'tasks' in job_settings:
-        #     torque_call += ' -n ' + str(job_settings['tasks'])
-#       #######################################################
-
-        response = {}
         if 'scale' in job_settings and \
                 int(job_settings['scale']) > 1:
-            # set the max of parallel jobs
-            scale_max = job_settings['scale']
+
             # set the job array
-            torque_call += ' -J 0-{}'.format(scale_max - 1)
+            _settings['data'] += ' -J 0-{}'.format(job_settings['scale'] - 1)
             if 'scale_max_in_parallel' in job_settings and \
                     int(job_settings['scale_max_in_parallel']) > 0:
-                torque_call += '%{}'.format(
+                _settings['data'] += '%{}'.format(
                     job_settings['scale_max_in_parallel'])
-                scale_max = job_settings['scale_max_in_parallel']
-            # map the orchestrator variables after last sbatch
-            scale_env_mapping_call = \
-                "sed -i '/# DYNAMIC VARIABLES/a\\" \
-                "SCALE_INDEX=$PBS_ARRAYID\\n" \
-                "SCALE_COUNT={scale_count}\\n" \
-                "SCALE_MAX={scale_max}' {command}".format(
-                    scale_count=job_settings['scale'],
-                    scale_max=scale_max,
-                    command=job_settings['command'].split()[0])  # file only
-            response['scale_env_mapping_call'] = scale_env_mapping_call
 
         # add executable and arguments
-        torque_call += ' {}'.format(job_settings['command'])
+        if not script:
+            if job_settings['type'] == 'SBATCH':
+                _settings['data'] += ' ' + job_settings['script']
+            else:
+                _settings['data'] += ' ' + job_settings['command']
+            if _check_job_settings_key('arguments'):
+                args = ''
+                for arg in job_settings['arguments']:
+                    args += arg+' '
+                _settings['data'] += ' -F "{}"'.format(args)
+            _settings['data'] += '; '
 
-        # NOTE an uploaded script could also be interesting to execute
-        if 'post' in job_settings:
-            torque_call += '; '
-            for entry in job_settings['post']:
-                torque_call += entry + '; '
-
-        response['call'] = torque_call
-        return response
+        return _settings
 
     def _build_job_cancellation_call(self, name, job_settings, logger):
         return r"qselect -N {} | xargs qdel".format(shlex_quote(name))
 
+    def _get_envar(self, envar, default):
+        if envar == 'SCALE_INDEX':
+            return '$PBS_ARRAYID'
+        else:
+            return default
 # Monitor
+
     def get_states(self, workdir, credentials, job_names, logger):
         return self._get_states_detailed(
             workdir,
             credentials,
             job_names,
-            logger) if len(job_names) > 0 else {}
+            logger) if job_names else {}
 
     @staticmethod
     def _get_states_detailed(workdir, credentials, job_names, logger):

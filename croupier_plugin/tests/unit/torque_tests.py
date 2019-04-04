@@ -42,59 +42,72 @@ class TestTorque(unittest.TestCase):
 
     def test_bad_type_name(self):
         """ Bad name type. """
-        response = self.wm._build_job_submission_call(42,
-                                                      {'command': 'cmd',
-                                                       'type': 'SBATCH'},
-                                                      self.logger)
+        response = self.wm._build_job_submission_call(
+            42,
+            {'script': 'cmd',
+             'type': 'SBATCH'})
         self.assertIn('error', response)
 
     def test_bad_type_settings(self):
         """ Bad type settings. """
         response = self.wm._build_job_submission_call('test',
-                                                      'bad type',
-                                                      self.logger)
+                                                      'bad type')
         self.assertIn('error', response)
 
     def test_bad_settings_command_type(self):
         """ Bad type settings. """
         response = self.wm._build_job_submission_call('test',
-                                                      'bad type',
-                                                      self.logger)
+                                                      'bad type')
         self.assertIn('error', response)
 
     def test_empty_settings(self):
         """ Empty job settings. """
         response = self.wm._build_job_submission_call('test',
-                                                      {},
-                                                      self.logger)
+                                                      {})
         self.assertIn('error', response)
 
     def test_invalid_type_settings(self):
         """ Incomplete job settings with invalid type. """
         response = self.wm._build_job_submission_call('test',
                                                       {'command': 'cmd',
-                                                       'type': 'BAD'},
-                                                      self.logger)
+                                                       'type': 'BAD'})
         self.assertIn('error', response)
 
     def test_only_command_settings(self):
         """ Incomplete job settings: specify only command. """
-        response = self.wm._build_job_submission_call('test',
-                                                      {'command': 'cmd'},
-                                                      self.logger)
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'command': 'cmd'})
         self.assertIn('error', response)
 
     def test_basic_batch_call(self):
         """ Basic batch call. """
-        response = self.wm._build_job_submission_call('test',
-                                                      {'command': 'cmd',
-                                                       'type': 'SBATCH'},
-                                                      self.logger)
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'script': 'cmd',
+             'type': 'SBATCH'})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
         call = response['call']
-        self.assertEqual(call, "qsub -V -N test cmd")
+        self.assertEqual(
+            call,
+            "qsub -V -N test -e test.err -o test.out cmd; ")
+
+    def test_basic_batch_call_with_args(self):
+        """ Basic batch call with args """
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'script': 'cmd',
+             'arguments': ['script'],
+             'type': 'SBATCH'})
+        self.assertNotIn('error', response)
+        self.assertIn('call', response)
+
+        call = response['call']
+        self.assertEqual(
+            call,
+            'qsub -V -N test -e test.err -o test.out cmd -F "script "; ')
 
     def test_complete_batch_call(self):
         """ Complete batch call. """
@@ -104,7 +117,7 @@ class TestTorque(unittest.TestCase):
                 'module load mod1',
                 './some_script.sh'],
                 type='SBATCH',
-                command='cmd',
+                script='cmd',
                 partition='thinnodes',
                 nodes=4,
                 tasks=96,
@@ -112,18 +125,22 @@ class TestTorque(unittest.TestCase):
                 max_time='00:05:00',
                 post=[
                 './cleanup1.sh',
-                './cleanup2.sh']),
-            self.logger)
+                './cleanup2.sh']))
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
         call = response['call']
-        self.assertEqual(call, "module load mod1; ./some_script.sh; "
-                               "qsub -V"
-                               " -N test"
-                               " -l nodes=4:ppn=24,walltime=00:05:00"
-                               " cmd; "
-                               "./cleanup1.sh; ./cleanup2.sh; ")
+        self.assertEqual(
+            call,
+            "module load mod1; ./some_script.sh; "
+            "qsub -V"
+            " -N test"
+            " -l nodes=4:ppn=24"
+            " -l walltime=00:05:00"
+            " -q thinnodes"
+            " -e test.err -o test.out"
+            " cmd; "
+            "./cleanup1.sh; ./cleanup2.sh; ")
 
     def test_batch_call_with_job_array(self):
         """ Complete batch array call. """
@@ -133,7 +150,7 @@ class TestTorque(unittest.TestCase):
                 'module load mod1',
                 './some_script.sh'],
                 type='SBATCH',
-                command='cmd',
+                script='cmd',
                 partition='thinnodes',
                 nodes=4,
                 tasks=96,
@@ -143,19 +160,23 @@ class TestTorque(unittest.TestCase):
                 scale_max_in_parallel=2,
                 post=[
                 './cleanup1.sh',
-                './cleanup2.sh']),
-            self.logger)
+                './cleanup2.sh']))
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
         call = response['call']
-        self.assertEqual(call, "module load mod1; ./some_script.sh; "
-                               "qsub -V"
-                               " -N test"
-                               " -l nodes=4:ppn=24,walltime=00:05:00"
-                               " -J 0-9%2"
-                               " cmd; "
-                               "./cleanup1.sh; ./cleanup2.sh; ")
+        self.assertEqual(
+            call,
+            "module load mod1; ./some_script.sh; "
+            "qsub -V"
+            " -N test"
+            " -l nodes=4:ppn=24"
+            " -l walltime=00:05:00"
+            " -q thinnodes"
+            " -e test.err -o test.out"
+            " -J 0-9%2"
+            " cmd; "
+            "./cleanup1.sh; ./cleanup2.sh; ")
         scale_env_mapping_call = response['scale_env_mapping_call']
         self.assertEqual(scale_env_mapping_call,
                          "sed -i '/# DYNAMIC VARIABLES/a\\"

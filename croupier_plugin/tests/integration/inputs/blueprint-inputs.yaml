@@ -49,7 +49,7 @@ scratch_voulume_mount_point: /scratch
 
 ################# Cloud Infrastructre #################
 cloud_wm_config:
-  workload_manager: BASH
+  workload_manager: SHELL
 cloud_wm_credentials:
   host: ''
   password: ''
@@ -80,7 +80,7 @@ cloud_external_network: external
 ################# Second Cloud Infrastructre #################
 # Won't be rendered, their value is a match with other inputs
 secondary_cloud_wm_config:
-  workload_manager: BASH
+  workload_manager: SHELL
 secondary_cloud_wm_credentials:
   host: ''
   user: &id059 '<USER>'

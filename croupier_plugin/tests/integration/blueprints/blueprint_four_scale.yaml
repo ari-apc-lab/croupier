@@ -52,7 +52,9 @@ node_templates:
         properties:
             job_options:
                 type: 'SBATCH'
-                command: "touch.script fourth_example_1.test"
+                script: "touch.script"
+                arguments:
+                - "fourth_example_1.test"
                 scale: 4
             deployment:
                 bootstrap: 'scripts/bootstrap_sbatch_example.sh'
@@ -134,7 +136,9 @@ node_templates:
         properties:
             job_options:
                 type: 'SBATCH'
-                command: "touch.script fourth_example_4.test"
+                script: "touch.script"
+                arguments:
+                - "fourth_example_4.test"
                 scale: 4
             deployment:
                 bootstrap: 'scripts/bootstrap_sbatch_example.sh'

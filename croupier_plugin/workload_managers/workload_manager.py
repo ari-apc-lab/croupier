@@ -131,14 +131,14 @@ class WorkloadManager(object):
     @staticmethod
     def factory(workload_manager):
         if workload_manager == "SLURM":
-            from slurm import Slurm
+            from croupier_plugin.workload_managers.slurm import Slurm
             return Slurm()
         if workload_manager == "TORQUE":
-            from torque import Torque
+            from croupier_plugin.workload_managers.torque import Torque
             return Torque()
-        if workload_manager == "BASH":
-            from bash import Bash
-            return Bash()
+        if workload_manager == "SHELL":
+            from croupier_plugin.workload_managers.shell import Shell
+            return Shell()
         return None
 
     def submit_job(self,
@@ -172,26 +172,40 @@ class WorkloadManager(object):
         if not SshClient.check_ssh_client(ssh_client, logger):
             return False
 
-        if is_singularity:
-            # generate script content for singularity
-            script_content = self._build_container_script(name,
-                                                          job_settings,
-                                                          logger)
+        # Build script if job is BATCH without one, or Singularity
+        if ('type' in job_settings and
+                job_settings['type'] == "SBATCH" and
+                'script' not in job_settings) or \
+                is_singularity:
+
+            # generate script content
+            if is_singularity:
+                script_content = self._build_container_script(
+                    name,
+                    job_settings,
+                    logger)
+            else:
+                script_content = self._build_script(name, job_settings, logger)
+
             if script_content is None:
                 return False
 
-            if not self._create_shell_script(ssh_client,
-                                             name + ".script",
-                                             script_content,
-                                             logger,
-                                             workdir=workdir):
+            if not self._create_shell_script(
+                    ssh_client,
+                    name + ".script",
+                    script_content,
+                    logger,
+                    workdir=workdir):
                 return False
 
             # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
             settings = {
                 "type": "SBATCH",
-                "command": name + ".script"
+                "script": name + ".script"
             }
+
+            if 'arguments' in job_settings:
+                settings['arguments'] = job_settings['arguments']
 
             if 'scale' in job_settings:
                 settings['scale'] = job_settings['scale']
@@ -202,9 +216,9 @@ class WorkloadManager(object):
             settings = job_settings
 
         # build the call to submit the job
-        response = self._build_job_submission_call(name,
-                                                   settings,
-                                                   logger)
+        response = self._build_job_submission_call(
+            name,
+            settings)
 
         if 'error' in response:
             logger.error(
@@ -228,6 +242,7 @@ class WorkloadManager(object):
 
         # submit the job
         call = response['call']
+
         output, exit_code = ssh_client.execute_shell_command(
             call,
             env=context,
@@ -321,42 +336,28 @@ class WorkloadManager(object):
             return None
 
 #   ################ ABSTRACT METHODS ################
-    def _build_container_script(self,
-                                name,
-                                settings,
-                                logger):
-        """
-        Creates a script to run Singularity
 
-        @type name: string
-        @param name: name of the job
+    def _parse_job_settings(
+            self,
+            job_id,
+            job_settings,
+            script=False):
+        """
+        Generates specific manager data accouding to job_settings
+
+        @type job_id: string
+        @param job_id: name of the job
         @type job_settings: dictionary
-        @param job_settings: dictionary with the container job options
-        @rtype string
-        @return string with the batch script. None if an error arise.
-        """
-        raise NotImplementedError("'_build_container_script' not implemented.")
-
-    def _build_job_submission_call(self,
-                                   name,
-                                   job_settings,
-                                   logger):
-        """
-        Generates submission command line as a string
-
-        @type name: string
-        @param name: name of the job
+        @param job_settings: dictionary with the job options
         @type job_settings: dictionary
         @param job_settings: dictionary with the job options
         @rtype dict
         @return dict with two keys:
-         'call' string to call slurm with its parameters, and
-         'scale_env_mapping_call' to push the scale env variables on
-         the batch scripts
-            None if an error arise.
+         'data' parsed data with its parameters, and
+         'error' if an error arise.
         """
         raise NotImplementedError(
-            "'_build_job_submission_call' not implemented.")
+            "'_parse_job_settings' not implemented.")
 
     def _build_job_cancellation_call(self,
                                      name,
@@ -376,20 +377,203 @@ class WorkloadManager(object):
         raise NotImplementedError(
             "'_build_job_cancellation_call' not implemented.")
 
+    def _get_envar(
+            self,
+            envar,
+            default):
+        """
+        Returns the WM specific envar, or default if there is no one
+
+        @type envar: string
+        @param name: Orchestrator env variable
+        @type default: ANY
+        @param default: default value if WM has no mach
+        @rtype ANY
+        @return envar WM specifc if present, else default
+        """
+        raise NotImplementedError(
+            "'_get_envar' not implemented.")
+
     # Monitor
-    def get_states(self, ssh_client, names, logger):
+    def get_states(self, ssh_client, job_names, logger):
         """
         Get the states of the jobs names
 
         @type credentials: dictionary
         @param credentials: dictionary with the HPC SSH credentials
-        @type names: list
-        @param names: list of the job names to retrieve their states
+        @type job_names: list
+        @param job_names: list of the job names to retrieve their states
         @rtype dict
         @return a dictionary of job names and its states
         """
         raise NotImplementedError("'get_states' not implemented.")
 #   ##################################################
+
+    def _build_script(self, name, job_settings, logger, container=False):
+        """
+        Creates a script to run batch jobs
+
+        @type name: string
+        @param name: name of the job
+        @type job_settings: dictionary
+        @param job_settings: dictionary with the container job options
+        @rtype string
+        @return string with the batch script. None if an error arise.
+        """
+        # check input information correctness
+        if not container:
+            if not isinstance(job_settings, dict) or \
+                    not isinstance(name, basestring):
+                logger.error("Batch job settings malformed")
+                return None
+
+            if 'commands' not in job_settings or \
+                    not job_settings['commands'] or \
+                    'max_time' not in job_settings:
+                logger.error("Batch job settings malformed")
+                return None
+        else:
+            if not isinstance(job_settings, dict) or \
+                    not isinstance(name, basestring):
+                logger.error("Singularity settings malformed")
+                return None
+
+            if 'image' not in job_settings or 'command' not in job_settings or\
+                    'max_time' not in job_settings:
+                logger.error("Singularity settings malformed")
+                return None
+
+        script = '#!/bin/bash -l\n\n'
+
+        response = self._parse_job_settings(
+            name,
+            job_settings,
+            script=True)
+
+        if 'error' in response and response['error']:
+            logger.error(response['error'])
+            return None
+
+        script += response['data']
+
+        script += '\n# DYNAMIC VARIABLES\n\n'
+
+        # Force use WORKDIR
+        script += 'cd $CURRENT_WORKDIR\n\n'
+
+        # NOTE an uploaded script could also be interesting to execute
+        if 'pre' in job_settings:
+            for entry in job_settings['pre']:
+                script += entry + '\n'
+            script += '\n'
+
+        if not container:
+            for cmd in job_settings['commands']:
+                script += cmd + '\n'
+        else:
+            script += 'mpirun singularity exec '
+
+            if 'home' in job_settings and job_settings['home'] != '':
+                script += '-H ' + job_settings['home'] + ' '
+
+            if 'volumes' in job_settings:
+                for volume in job_settings['volumes']:
+                    script += '-B ' + volume + ' '
+
+            # add executable and arguments
+            script += job_settings['image'] + \
+                ' ' + job_settings['command'] + '\n'
+
+        # NOTE an uploaded script could also be interesting to execute
+        if 'post' in job_settings:
+            for entry in job_settings['post']:
+                script += entry + '\n'
+            script += '\n'
+
+        return script
+
+    def _build_job_submission_call(self, name, job_settings):
+        """
+        Generates submission command line as a string
+
+        @type name: string
+        @param name: name of the job
+        @type job_settings: dictionary
+        @param job_settings: dictionary with the job options
+        @rtype dict
+        @return dict with two keys:
+         'call' string to call slurm with its parameters, and
+         'scale_env_mapping_call' to push the scale env variables on
+         the batch scripts
+            None if an error arise.
+        """
+        # check input information correctness
+        if not isinstance(job_settings, dict) or \
+                not isinstance(name, basestring):
+            return {'error': "Incorrect inputs"}
+
+        if 'type' not in job_settings or \
+                ('command' not in job_settings and
+                    'script' not in job_settings):
+            return {'error': "'type' and 'command|script' " +
+                             "must be defined in job settings"}
+
+        # Build single line command
+        _call = ''
+
+        # NOTE an uploaded script could also be interesting to execute
+        if 'pre' in job_settings:
+            for entry in job_settings['pre']:
+                _call += entry + '; '
+
+        response = self._parse_job_settings(
+            name,
+            job_settings)
+
+        if 'error' in response and response['error']:
+            return response
+
+        _call += response['data']
+
+        # NOTE an uploaded script could also be interesting to execute
+        if 'post' in job_settings:
+            for entry in job_settings['post']:
+                _call += entry + '; '
+
+        if job_settings['type'] == 'SRUN' or \
+                self.__class__.__name__ == 'Shell':
+            # Run in the background detached from terminal
+            _call = 'nohup sh -c "' + _call + '" &'
+
+        response = {'call': _call}
+
+        # map orchestrator variables into script
+        if job_settings['type'] == 'SBATCH' and \
+                'scale' in job_settings and int(job_settings['scale']) > 1:
+
+            # set the max of parallel jobs
+            scale_max = job_settings['scale']
+
+            # set the job array
+            if 'scale_max_in_parallel' in job_settings and \
+                    int(job_settings['scale_max_in_parallel']) > 0:
+                scale_max = job_settings['scale_max_in_parallel']
+
+            scale_env_mapping_call = \
+                "sed -i '/# DYNAMIC VARIABLES/a\\" \
+                "SCALE_INDEX={scale_index}\\n" \
+                "SCALE_COUNT={scale_count}\\n" \
+                "SCALE_MAX={scale_max}' " \
+                "{script}".format(
+                    scale_index=self._get_envar('SCALE_INDEX', 0),
+                    scale_count=self._get_envar(
+                        'SCALE_COUNT', job_settings['scale']),
+                    scale_max=self._get_envar('SCALE_MAX', scale_max),
+                    script=job_settings['script'].split()[0])  # file name only
+
+            response['scale_env_mapping_call'] = scale_env_mapping_call
+
+        return response
 
     def _create_shell_script(self,
                              ssh_client,
@@ -420,6 +604,27 @@ class WorkloadManager(object):
             return False
 
         return True
+
+    def _build_container_script(self,
+                                name,
+                                job_settings,
+                                logger):
+        """
+        Creates a script to run Singularity
+
+        @type name: string
+        @param name: name of the job
+        @type job_settings: dictionary
+        @param job_settings: dictionary with the container job options
+        @rtype string
+        @return string with the batch script. None if an error arise.
+        """
+        return self._build_script(
+            name,
+            job_settings,
+            logger,
+            container=True
+        )
 
     def _get_random_name(self, base_name):
         """ Get a random name with a prefix """

@@ -21,7 +21,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# blueprint_openstack.yaml
+# blueprint_hpc_openstack.yaml
 
 
 tosca_definitions_version: cloudify_dsl_1_3
@@ -35,6 +35,16 @@ imports:
     - inputs_def.yaml
 
 node_templates:
+  hpc_wm:
+    type: croupier.nodes.WorkloadManager
+    properties:
+      config: { get_input: hpc_wm_config }
+      credentials: { get_input: hpc_wm_credentials }
+      external_monitor_entrypoint: { get_input: monitor_entrypoint }
+      job_prefix: { get_input: job_prefix }
+      workdir_prefix: "hpc_openstack"
+      skip_cleanup: true
+
   openstack_wm:
     type: croupier.nodes.WorkloadManager
     properties:
@@ -42,22 +52,41 @@ node_templates:
       credentials: { get_input: cloud_wm_credentials }
       external_monitor_entrypoint: { get_input: monitor_entrypoint }
       job_prefix: { get_input: job_prefix }
-      workdir_prefix: "single_openstack"
+      workdir_prefix: "hpc_openstack"
     relationships:
     - type: wm_contained_in
       target: my_server
+
+  hpc_job:
+    type: croupier.nodes.Job
+    properties:
+      job_options:
+        type: 'SBATCH'
+        script: "touch.script"
+        arguments:
+        - "single.test"
+      deployment:
+        bootstrap: 'scripts/bootstrap_sbatch_example.sh'
+        revert: 'scripts/revert_sbatch_example.sh'
+        inputs:
+        - 'single'
+        - { get_input: partition_name }
+        skip_cleanup: True
+    relationships:
+    - type: job_managed_by_wm
+      target: hpc_wm
 
   vm_job:
     type: croupier.nodes.Job
     properties:
       job_options:
-        type: 'SHELL'
+        type: 'SRUN'
         command: "touch single_vm.test"
-      # publish:
-      # - dataset: { get_input: ckan_outputs_dataset }
-      #   file_path: "$CURRENT_WORKDIR/single_vm.test"
-      #   name: "single_vm"
-      #   description: "output test vm"
+      publish:
+      - dataset: { get_input: ckan_outputs_dataset }
+        file_path: "$CURRENT_WORKDIR/single_vm.test"
+        name: "single_vm"
+        description: "output test vm"
     relationships:
     - type: job_managed_by_wm
       target: openstack_wm

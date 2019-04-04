@@ -44,7 +44,7 @@ node_templates:
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
             skip_cleanup: true
-            simulate: True  # COMMENT to test against a real HPC
+            #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single_sbatch"
 
     single_job:
@@ -52,13 +52,15 @@ node_templates:
         properties:
             job_options:
                 type: 'SBATCH'
-                command: "touch.script single.test"
-            deployment:
-                bootstrap: 'scripts/bootstrap_sbatch_example.sh'
-                revert: 'scripts/revert_sbatch_example.sh'
-                inputs:
-                    - 'single'
-                    - { get_input: partition_name }
+                commands:
+                - "touch test_$1.output"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                partition: { get_input: partition_name }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

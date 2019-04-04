@@ -29,45 +29,28 @@ from croupier_plugin.ssh import SshClient
 from croupier_plugin.workload_managers import workload_manager
 
 
-class Bash(workload_manager.WorkloadManager):
+class Shell(workload_manager.WorkloadManager):
 
-    def _build_job_submission_call(self, name, job_settings, logger):
-        # check input information correctness
-        if not isinstance(job_settings, dict) or not isinstance(name,
-                                                                basestring):
-            return {'error': "Incorrect inputs"}
+    def _parse_job_settings(
+            self,
+            job_id,
+            job_settings,
+            script=False):
+        _settings = ''
+        # add executable and arguments
+        if not script:
+            if job_settings['type'] == 'SBATCH':
+                _settings += ' ' + job_settings['script']
+                if 'arguments' in job_settings:
+                    for arg in job_settings['arguments']:
+                        _settings += ' '+arg
+                _settings += '; '
+            else:
+                _settings += ' ' + job_settings['command'] + '; '
 
-        if 'type' not in job_settings or 'command' not in job_settings:
-            return {'error': "'type' and 'command' " +
-                    "must be defined in job settings"}
+            _settings += 'echo ' + job_id + ',$? >> croupier-monitor.data; '
 
-        if job_settings['type'] != 'SHELL':
-            return {'error': "Job type '" + job_settings['type'] +
-                    "'not supported"}
-
-        # Build single line command
-        bash_call = ''
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'pre' in job_settings:
-            for entry in job_settings['pre']:
-                bash_call += entry + '; '
-
-        # add executable and arguments, and save exit code on env
-        bash_call += job_settings['command'] + '; '
-        bash_call += 'echo ' + name + ',$? >> msomonitor.data; '
-
-        # NOTE an uploaded script could also be interesting to execute
-        if 'post' in job_settings:
-            for entry in job_settings['post']:
-                bash_call += entry + '; '
-
-        # Run in the background detached from terminal
-        bash_call = 'nohup sh -c "' + bash_call + '" &'
-
-        response = {}
-        response['call'] = bash_call
-        return response
+        return {'data': _settings}
 
     def _build_job_cancellation_call(self, name, job_settings, logger):
         return "pkill -f " + name
@@ -76,7 +59,7 @@ class Bash(workload_manager.WorkloadManager):
     def get_states(self, workdir, credentials, job_names, logger):
         # TODO set start time of consulting
         # (sacct only check current day)
-        call = "cat msomonitor.data"
+        call = "cat croupier-monitor.data"
 
         client = SshClient(credentials)
 
