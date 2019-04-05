@@ -43,7 +43,7 @@ class TestSlurm(unittest.TestCase):
         """ Bad name type """
         response = self.wm._build_job_submission_call(42,
                                                       {'command': 'cmd',
-                                                       'type': 'SBATCH'})
+                                                       'type': 'BATCH'})
         self.assertIn('error', response)
 
     def test_bad_type_settings(self):
@@ -73,31 +73,36 @@ class TestSlurm(unittest.TestCase):
 
     def test_only_command_settings(self):
         """ Command only as job settings. """
-        response = self.wm._build_job_submission_call('test',
-                                                      {'command': 'cmd'})
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'command': 'cmd'})
         self.assertIn('error', response)
 
     def test_notime_srun_call(self):
         """ srun command without max time set. """
-        response = self.wm._build_job_submission_call('test',
-                                                      {'command': 'cmd',
-                                                       'type': 'SRUN'})
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'command': 'cmd',
+             'type': 'INTERACTIVE'})
         self.assertIn('error', response)
 
     def test_basic_srun_call(self):
         """ Basic srun command. """
-        response = self.wm._build_job_submission_call('test',
-                                                      {'command': 'cmd',
-                                                       'type': 'SRUN',
-                                                       'max_time': '00:05:00'})
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'command': 'cmd',
+             'type': 'INTERACTIVE',
+             'max_time': '00:05:00'})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
         call = response['call']
-        self.assertEqual(call, 'nohup sh -c "srun -J \'test\' ' +
-                               '-t 00:05:00 '
-                               '-e test.err -o test.out ' +
-                               'cmd; " &')
+        self.assertEqual(
+            call,
+            'nohup sh -c "srun -J \'test\' ' +
+            '-t 00:05:00 ' +
+            '-e test.err -o test.out ' +
+            'cmd; " &')
 
     def test_complete_srun_call(self):
         """ Complete srun command. """
@@ -106,7 +111,7 @@ class TestSlurm(unittest.TestCase):
             {'pre': [
                 'module load mod1',
                 './some_script.sh'],
-             'type': 'SRUN',
+             'type': 'INTERACTIVE',
              'command': 'cmd',
              'stderr_file':
              'stderr.out',
@@ -157,7 +162,7 @@ class TestSlurm(unittest.TestCase):
         """ Basic sbatch command. """
         response = self.wm._build_job_submission_call('test',
                                                       {'script': 'cmd',
-                                                       'type': 'SBATCH'})
+                                                       'type': 'BATCH'})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
@@ -172,7 +177,7 @@ class TestSlurm(unittest.TestCase):
             {'pre': [
                 'module load mod1',
                 './some_script.sh'],
-             'type': 'SBATCH',
+             'type': 'BATCH',
              'script': 'cmd',
              'stderr_file':
              'stderr.out',

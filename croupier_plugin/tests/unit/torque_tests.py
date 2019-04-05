@@ -45,7 +45,7 @@ class TestTorque(unittest.TestCase):
         response = self.wm._build_job_submission_call(
             42,
             {'script': 'cmd',
-             'type': 'SBATCH'})
+             'type': 'BATCH'})
         self.assertIn('error', response)
 
     def test_bad_type_settings(self):
@@ -80,12 +80,30 @@ class TestTorque(unittest.TestCase):
             {'command': 'cmd'})
         self.assertIn('error', response)
 
+    def test_basic_interactive_call(self):
+        """ Basic interactive command. """
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'command': 'cmd',
+             'type': 'INTERACTIVE',
+             'max_time': '00:05:00'})
+        self.assertNotIn('error', response)
+        self.assertIn('call', response)
+
+        call = response['call']
+        self.assertEqual(
+            call,
+            'nohup sh -c "qsub -V -I -N ' +
+            'test -l walltime=00:05:00 ' +
+            '-e test.err -o test.out ' +
+            'cmd; " &')
+
     def test_basic_batch_call(self):
         """ Basic batch call. """
         response = self.wm._build_job_submission_call(
             'test',
             {'script': 'cmd',
-             'type': 'SBATCH'})
+             'type': 'BATCH'})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
@@ -100,7 +118,7 @@ class TestTorque(unittest.TestCase):
             'test',
             {'script': 'cmd',
              'arguments': ['script'],
-             'type': 'SBATCH'})
+             'type': 'BATCH'})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
@@ -116,7 +134,7 @@ class TestTorque(unittest.TestCase):
             dict(pre=[
                 'module load mod1',
                 './some_script.sh'],
-                type='SBATCH',
+                type='BATCH',
                 script='cmd',
                 partition='thinnodes',
                 nodes=4,
@@ -149,7 +167,7 @@ class TestTorque(unittest.TestCase):
             dict(pre=[
                 'module load mod1',
                 './some_script.sh'],
-                type='SBATCH',
+                type='BATCH',
                 script='cmd',
                 partition='thinnodes',
                 nodes=4,
@@ -187,7 +205,7 @@ class TestTorque(unittest.TestCase):
     def test_cancellation_call(self):
         """ Jobs cancellation call. """
         response = self.wm._build_job_cancellation_call('test',
-                                                        {'type': 'SBATCH'},
+                                                        {'type': 'BATCH'},
                                                         self.logger)
         self.assertEqual(response, "qselect -N test | xargs qdel")
 

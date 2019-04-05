@@ -72,7 +72,7 @@ class TestPlugin(unittest.TestCase):
                                        'scripts')],
                    inputs='set_inputs')
     def test_srun(self, cfy_local):
-        """ Single SRUN Job Blueprint """
+        """ Single INTERACTIVE Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
@@ -103,7 +103,7 @@ class TestPlugin(unittest.TestCase):
                                        'scripts')],
                    inputs='set_inputs')
     def test_sbatch(self, cfy_local):
-        """ Single SBATCH Job Blueprint """
+        """ Single BATCH Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
@@ -134,7 +134,7 @@ class TestPlugin(unittest.TestCase):
                                        'scripts')],
                    inputs='set_inputs')
     def test_sbatch_output(self, cfy_local):
-        """ Single SBATCH Output Job Blueprint """
+        """ Single BATCH Output Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
@@ -165,7 +165,7 @@ class TestPlugin(unittest.TestCase):
                                        'scripts')],
                    inputs='set_inputs')
     def test_sbatch_scale(self, cfy_local):
-        """ SBATCH Scale Job Blueprint """
+        """ BATCH Scale Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)

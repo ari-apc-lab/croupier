@@ -50,7 +50,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: "SRUN"
+                type: "INTERACTIVE"
                 partition: { get_input: partition_name }
                 command: "touch fourth_example_1.test"
                 nodes: 1
@@ -150,7 +150,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: "SBATCH"
+                type: "BATCH"
                 script: "touch.script"
                 arguments:
                 - "fourth_example_4.test"

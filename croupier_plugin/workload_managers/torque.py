@@ -49,11 +49,11 @@ class Torque(WorkloadManager):
         # TODO writ for script (prefix, suffix ??)
 
         if not script:
-            if job_settings['type'] == 'SBATCH':
+            if job_settings['type'] == 'BATCH':
                 # qsub command plus job name
                 _settings['data'] += "qsub -V -N {}".format(
                     shlex_quote(job_id))
-            elif job_settings['type'] == 'SRUN':
+            elif job_settings['type'] == 'INTERACTIVE':
                 _settings['data'] += "qsub -V -I -N {}".format(
                     shlex_quote(job_id))
             else:
@@ -140,7 +140,7 @@ class Torque(WorkloadManager):
 
         # add executable and arguments
         if not script:
-            if job_settings['type'] == 'SBATCH':
+            if job_settings['type'] == 'BATCH':
                 _settings['data'] += ' ' + job_settings['script']
             else:
                 _settings['data'] += ' ' + job_settings['command']

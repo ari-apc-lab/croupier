@@ -31,11 +31,11 @@ FILE="touch.script"
 cat > $FILE <<- EOM
 #!/bin/bash -l
 
-#SBATCH -p $2
-#SBATCH -N 1
-#SBATCH -n 1
-#SBATCH --ntasks-per-node=1
-#SBATCH -t 00:01:00
+#BATCH -p $2
+#BATCH -N 1
+#BATCH -n 1
+#BATCH --ntasks-per-node=1
+#BATCH -t 00:01:00
 
 # DYNAMIC VARIABLES
 

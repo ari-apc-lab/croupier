@@ -174,7 +174,7 @@ class WorkloadManager(object):
 
         # Build script if job is BATCH without one, or Singularity
         if ('type' in job_settings and
-                job_settings['type'] == "SBATCH" and
+                job_settings['type'] == "BATCH" and
                 'script' not in job_settings) or \
                 is_singularity:
 
@@ -200,7 +200,7 @@ class WorkloadManager(object):
 
             # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
             settings = {
-                "type": "SBATCH",
+                "type": "BATCH",
                 "script": name + ".script"
             }
 
@@ -540,7 +540,7 @@ class WorkloadManager(object):
             for entry in job_settings['post']:
                 _call += entry + '; '
 
-        if job_settings['type'] == 'SRUN' or \
+        if job_settings['type'] == 'INTERACTIVE' or \
                 self.__class__.__name__ == 'Shell':
             # Run in the background detached from terminal
             _call = 'nohup sh -c "' + _call + '" &'
@@ -548,7 +548,7 @@ class WorkloadManager(object):
         response = {'call': _call}
 
         # map orchestrator variables into script
-        if job_settings['type'] == 'SBATCH' and \
+        if job_settings['type'] == 'BATCH' and \
                 'scale' in job_settings and int(job_settings['scale']) > 1:
 
             # set the max of parallel jobs

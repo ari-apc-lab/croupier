@@ -95,7 +95,7 @@ node_templates:
     type: croupier.nodes.Job
     properties:
       job_options:
-        type: 'SRUN'
+        type: 'INTERACTIVE'
         command: 'touch vm.test'
       skip_cleanup: True
       publish:

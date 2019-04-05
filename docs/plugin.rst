@@ -210,8 +210,8 @@ Use this tipe to describe a HPC job.
 
 -  ``job_options``: Job parameters and needed resources.
 
-   -  ``type``: SRUN or SBATCH (job executed using a command or using a
-      script). TORQUE supports only SBATCH mode.
+   -  ``type``: INTERACTIVE or BATCH (job executed using a command or using a
+      script). TORQUE supports only BATCH mode.
 
    -  ``pre``: List of commands to be executed before running the job.
       Optional.
@@ -234,10 +234,10 @@ Use this tipe to describe a HPC job.
    -  ``tasks_per_node``: Number of tasks per node. Default ``1``.
 
    -  ``max_time``: Set a limit on the total run time of the job
-      allocation. Mandatory if SRUN type.
+      allocation. Mandatory if INTERACTIVE type.
 
    -  ``scale``: Execute in parallel the job N times according to this
-      property. Only works with SBATCH jobs. Default ``1`` (no scale).
+      property. Only works with BATCH jobs. Default ``1`` (no scale).
 
    -  ``scale_max_in_parallel``: Maximum number of scaled job instances
       that can be run in parallel. Only works with scale > ``1``.
@@ -337,7 +337,7 @@ This example demonstrates how to describe a new job for non-batched run
            type: croupier.nodes.Job
            properties:
                job_options:
-                   type: 'SRUN'
+                   type: 'INTERACTIVE'
                    pre:
                        - module load gcc/5.3.0
                    partition: 'thin-shared'
@@ -362,7 +362,7 @@ both Slurm and Torque).
            type: croupier.nodes.job
            properties:
                job_options:
-                   type: 'SBATCH'
+                   type: 'BATCH'
                    command: "touch.script"
                deployment:
                    bootstrap: 'scripts/bootstrap_sbatch_example.sh'
@@ -432,7 +432,7 @@ version TORQUE does not support Singularity jobs yet.
    -  ``tasks_per_node``: Number of tasks per node. 1 by default.
 
    -  ``max_time``: Set a limit on the total run time of the job
-      allocation. Mandatory if SRUN type.
+      allocation. Mandatory if INTERACTIVE type.
 
    -  ``scale``: Execute in parallel the job N times according to this
       property. Default ``1`` (no scale).

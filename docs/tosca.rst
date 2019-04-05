@@ -122,7 +122,7 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
       type: croupier.nodes.Job
       properties:
          job_options:
-            type: 'SBATCH'
+            type: 'BATCH'
             command: "touch.script fourth_example_1.test"
             scale: 4
          deployment:
@@ -199,7 +199,7 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
       type: croupier.nodes.Job
       properties:
          job_options:
-            type: 'SBATCH'
+            type: 'BATCH'
             command: "touch.script fourth_example_4.test"
             scale: 4
          deployment:
@@ -265,7 +265,7 @@ Similarly to how `node_templates` are defined, new node types can be defined to 
                description: Iteration index (two digits string)
             job_options:
                default:
-                  type: 'SBATCH'
+                  type: 'BATCH'
                   modules:
                      - 'gcc/5.3.0'
                      - 'impi'
@@ -283,7 +283,7 @@ Similarly to how `node_templates` are defined, new node types can be defined to 
                   description: Input file for dolfin-post postprocessing
             job_options:
                   default:
-                     type: 'SBATCH'
+                     type: 'BATCH'
                      modules:
                         - 'gcc/5.3.0'
                         - 'impi'
@@ -296,7 +296,7 @@ Above there is dummy example of two new types of the FEniCS framework, derived f
 
 The first type, ``croupier.nodes.fenics_iter``, simulates an iteration of the FEniCS framework. A new property has been defined, ``iter_number``, with a description and no default value (so it is mandatory). Besides the ``job_options`` property default value has been overriden with a concrete list of modules, job type, and a command.
 
-The second type, ``croupier.nodes.fenics_post``, described a simulated postprocessing operation of FEniCS, defining again the ``iter_number`` property and another one ``file``. Finally the job options default value has been overriden with a list of modules, a SBATCH type, and a command.
+The second type, ``croupier.nodes.fenics_post``, described a simulated postprocessing operation of FEniCS, defining again the ``iter_number`` property and another one ``file``. Finally the job options default value has been overriden with a list of modules, a BATCH type, and a command.
 
    **Note**
 

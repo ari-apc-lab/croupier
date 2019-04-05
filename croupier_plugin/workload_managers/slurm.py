@@ -41,17 +41,17 @@ class Slurm(WorkloadManager):
             script=False):
         _settings = ''
         if script:
-            _prefix = '#SBATCH'
+            _prefix = '#BATCH'
             _suffix = '\n'
         else:
             _prefix = ''
             _suffix = ''
 
         if not script:
-            if job_settings['type'] == 'SBATCH':
+            if job_settings['type'] == 'BATCH':
                 # sbatch command plus job name
                 _settings += "sbatch --parsable -J '" + job_id + "'"
-            elif job_settings['type'] == 'SRUN':
+            elif job_settings['type'] == 'INTERACTIVE':
                 _settings += "srun -J '" + job_id + "'"
             else:
                 return {'error': "Job type '" + job_settings['type'] +
@@ -62,8 +62,8 @@ class Slurm(WorkloadManager):
             return key in job_settings and str(job_settings[key]).strip()
 
         if not _check_job_settings_key('max_time') and \
-                job_settings['type'] == 'SRUN':
-            return {'error': "'SRUN' jobs must define the 'max_time' property"}
+                job_settings['type'] == 'INTERACTIVE':
+            return {'error': "'INTERACTIVE' jobs must define the 'max_time' property"}
 
         # Slurm settings
         if _check_job_settings_key('nodes'):
@@ -132,8 +132,8 @@ class Slurm(WorkloadManager):
         if 'scale' in job_settings and \
                 int(job_settings['scale']) > 1:
 
-            if job_settings['type'] == 'SRUN':
-                return {'error': "'SRUN' does not allow scale property"}
+            if job_settings['type'] == 'INTERACTIVE':
+                return {'error': "'INTERACTIVE' does not allow scale property"}
 
             # set the job array
             _settings += ' --array=0-{}'.format(job_settings['scale'] - 1)
@@ -143,7 +143,7 @@ class Slurm(WorkloadManager):
 
         # add executable and arguments
         if not script:
-            if job_settings['type'] == 'SBATCH':
+            if job_settings['type'] == 'BATCH':
                 _settings += ' ' + job_settings['script']
                 if 'arguments' in job_settings:
                     for arg in job_settings['arguments']:

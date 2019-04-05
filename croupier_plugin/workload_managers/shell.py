@@ -39,7 +39,7 @@ class Shell(workload_manager.WorkloadManager):
         _settings = ''
         # add executable and arguments
         if not script:
-            if job_settings['type'] == 'SBATCH':
+            if job_settings['type'] == 'BATCH':
                 _settings += ' ' + job_settings['script']
                 if 'arguments' in job_settings:
                     for arg in job_settings['arguments']:

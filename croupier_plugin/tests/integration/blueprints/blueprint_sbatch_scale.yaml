@@ -51,7 +51,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: 'SBATCH'
+                type: 'BATCH'
                 script: "touch.script"
                 arguments:
                 - "single.test"
