@@ -59,50 +59,14 @@ class TestPlugin(unittest.TestCase):
 
         return inputs
 
-    @workflow_test(os.path.join('blueprints', 'blueprint_srun.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints',
-                                                    'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'revert_example.sh'),
-                                       'scripts')],
-                   inputs='set_inputs')
-    def test_srun(self, cfy_local):
-        """ Single INTERACTIVE Job Blueprint """
-        cfy_local.execute('install', task_retries=0)
-        cfy_local.execute('run_jobs', task_retries=0)
-        cfy_local.execute('uninstall', task_retries=0)
-
-        # extract single node instance
-        instance = cfy_local.storage.get_node_instances()[0]
-
-        # due to a cfy bug sometimes login keyword is not ready in the tests
-        if 'login' in instance.runtime_properties:
-            # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
-        else:
-            logging.warning('[WARNING] Login could not be tested')
-
-    @workflow_test(os.path.join('blueprints', 'blueprint_sbatch.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints',
-                                                    'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_' +
-                                                    'sbatch_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'revert_' +
-                                                    'sbatch_example.sh'),
-                                       'scripts')],
-                   inputs='set_inputs')
-    def test_sbatch(self, cfy_local):
+    @workflow_test(
+        os.path.join('blueprints', 'blueprint_single.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[(os.path.join('blueprints',
+                                         'inputs_def.yaml'),
+                            './')],
+        inputs='set_inputs')
+    def test_single(self, cfy_local):
         """ Single BATCH Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
@@ -119,21 +83,40 @@ class TestPlugin(unittest.TestCase):
         else:
             logging.warning('[WARNING] Login could not be tested')
 
-    @workflow_test(os.path.join('blueprints', 'blueprint_sbatch_output.yaml'),
+    @workflow_test(
+        os.path.join('blueprints', 'blueprint_single_script.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[
+            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
+            (os.path.join('blueprints', 'scripts', 'create_script.sh'),
+             'scripts'),
+            (os.path.join('blueprints', 'scripts', 'delete_script.sh'),
+             'scripts')],
+        inputs='set_inputs')
+    def test_single_script(self, cfy_local):
+        """ Single BATCH Job Blueprint with script"""
+        cfy_local.execute('install', task_retries=0)
+        cfy_local.execute('run_jobs', task_retries=0)
+        cfy_local.execute('uninstall', task_retries=0)
+
+        # extract single node instance
+        instance = cfy_local.storage.get_node_instances()[0]
+
+        # due to a cfy bug sometimes login keyword is not ready in the tests
+        if 'login' in instance.runtime_properties:
+            # assert runtime properties is properly set in node instance
+            self.assertEqual(instance.runtime_properties['login'],
+                             True)
+        else:
+            logging.warning('[WARNING] Login could not be tested')
+
+    @workflow_test(os.path.join('blueprints', 'blueprint_publish.yaml'),
                    copy_plugin_yaml=True,
                    resources_to_copy=[(os.path.join('blueprints',
                                                     'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_' +
-                                                    'sbatch_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'revert_' +
-                                                    'sbatch_example.sh'),
-                                       'scripts')],
+                                       './')],
                    inputs='set_inputs')
-    def test_sbatch_output(self, cfy_local):
+    def test_publish(self, cfy_local):
         """ Single BATCH Output Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
@@ -150,21 +133,13 @@ class TestPlugin(unittest.TestCase):
         else:
             logging.warning('[WARNING] Login could not be tested')
 
-    @workflow_test(os.path.join('blueprints', 'blueprint_sbatch_scale.yaml'),
+    @workflow_test(os.path.join('blueprints', 'blueprint_scale.yaml'),
                    copy_plugin_yaml=True,
                    resources_to_copy=[(os.path.join('blueprints',
                                                     'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_' +
-                                                    'sbatch_scale_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'revert_' +
-                                                    'sbatch_example.sh'),
-                                       'scripts')],
+                                       './')],
                    inputs='set_inputs')
-    def test_sbatch_scale(self, cfy_local):
+    def test_scale(self, cfy_local):
         """ BATCH Scale Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
@@ -295,26 +270,18 @@ class TestPlugin(unittest.TestCase):
                                                     'inputs_def.yaml'),
                                        './'),
                                       (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_example.sh'),
+                                                    'create_script.sh'),
                                        'scripts'),
                                       (os.path.join('blueprints', 'scripts',
-                                                    'revert_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'bootstrap_example.sh'),
+                                                    'delete_script.sh'),
                                        'scripts'),
                                       (os.path.join('blueprints', 'scripts',
                                                     'singularity_' +
+                                                    'bootstrap_example.sh'),
+                                       'scripts'),
+                                      (os.path.join('blueprints', 'scripts',
+                                                    'singularity_' +
                                                     'revert_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_' +
-                                                    'sbatch_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'revert_' +
-                                                    'sbatch_example.sh'),
                                        'scripts')],
                    inputs='set_inputs')
     def test_four_scale(self, cfy_local):
@@ -339,15 +306,7 @@ class TestPlugin(unittest.TestCase):
     #                copy_plugin_yaml=True,
     #                resources_to_copy=[(os.path.join('blueprints',
     #                                                 'inputs_def.yaml'),
-    #                                    './'),
-    #                                   (os.path.join('blueprints', 'scripts',
-    #                                                 'singularity_' +
-    #                                                 'bootstrap_example.sh'),
-    #                                    'scripts'),
-    #                                   (os.path.join('blueprints', 'scripts',
-    #                                                 'singularity_' +
-    #                                                 'revert_example.sh'),
-    #                                    'scripts')],
+    #                                    './')],
     #                inputs='set_inputs')
     # def test_openstack(self, cfy_local):
     #     """ Openstack Blueprint """

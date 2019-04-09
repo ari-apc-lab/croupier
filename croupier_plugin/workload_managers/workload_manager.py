@@ -172,11 +172,8 @@ class WorkloadManager(object):
         if not SshClient.check_ssh_client(ssh_client, logger):
             return False
 
-        # Build script if job is BATCH without one, or Singularity
-        if ('type' in job_settings and
-                job_settings['type'] == "BATCH" and
-                'script' not in job_settings) or \
-                is_singularity:
+        # Build script if there is no one, or Singularity
+        if 'script' not in job_settings or is_singularity:
 
             # generate script content
             if is_singularity:
@@ -200,7 +197,6 @@ class WorkloadManager(object):
 
             # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
             settings = {
-                "type": "BATCH",
                 "script": name + ".script"
             }
 
@@ -438,7 +434,8 @@ class WorkloadManager(object):
                 logger.error("Singularity settings malformed")
                 return None
 
-            if 'image' not in job_settings or 'command' not in job_settings or\
+            if 'image' not in job_settings or \
+                    'commands' not in job_settings or \
                     'max_time' not in job_settings:
                 logger.error("Singularity settings malformed")
                 return None
@@ -482,7 +479,7 @@ class WorkloadManager(object):
 
             # add executable and arguments
             script += job_settings['image'] + \
-                ' ' + job_settings['command'] + '\n'
+                ' ' + job_settings['commands'] + '\n'
 
         # NOTE an uploaded script could also be interesting to execute
         if 'post' in job_settings:
@@ -512,10 +509,9 @@ class WorkloadManager(object):
                 not isinstance(name, basestring):
             return {'error': "Incorrect inputs"}
 
-        if 'type' not in job_settings or \
-                ('command' not in job_settings and
-                    'script' not in job_settings):
-            return {'error': "'type' and 'command|script' " +
+        if 'commands' not in job_settings and \
+                'script' not in job_settings:
+            return {'error': "'commands' or 'script' " +
                              "must be defined in job settings"}
 
         # Build single line command
@@ -540,16 +536,14 @@ class WorkloadManager(object):
             for entry in job_settings['post']:
                 _call += entry + '; '
 
-        if job_settings['type'] == 'INTERACTIVE' or \
-                self.__class__.__name__ == 'Shell':
+        if self.__class__.__name__ == 'Shell':
             # Run in the background detached from terminal
             _call = 'nohup sh -c "' + _call + '" &'
 
         response = {'call': _call}
 
         # map orchestrator variables into script
-        if job_settings['type'] == 'BATCH' and \
-                'scale' in job_settings and int(job_settings['scale']) > 1:
+        if 'scale' in job_settings and int(job_settings['scale']) > 1:
 
             # set the max of parallel jobs
             scale_max = job_settings['scale']

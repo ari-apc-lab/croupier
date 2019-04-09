@@ -52,7 +52,7 @@ node_templates:
       credentials: { get_input: cloud_wm_credentials }
       external_monitor_entrypoint: { get_input: monitor_entrypoint }
       job_prefix: { get_input: job_prefix }
-      workdir_prefix: "hpc_openstack"
+      workdir_prefix: "hybrid"
     relationships:
     - type: wm_contained_in
       target: my_server
@@ -61,17 +61,16 @@ node_templates:
     type: croupier.nodes.Job
     properties:
       job_options:
-        type: 'BATCH'
-        script: "touch.script"
+        commands:
+        - "touch test_$1.output"
         arguments:
-        - "single.test"
-      deployment:
-        bootstrap: 'scripts/bootstrap_sbatch_example.sh'
-        revert: 'scripts/revert_sbatch_example.sh'
-        inputs:
-        - 'single'
-        - { get_input: partition_name }
-        skip_cleanup: True
+        - script
+        nodes: 1
+        tasks: 1
+        tasks_per_node: 1
+        max_time: '00:01:00'
+        partition: { get_input: partition_name }
+      skip_cleanup: True
     relationships:
     - type: job_managed_by_wm
       target: hpc_wm
@@ -80,13 +79,13 @@ node_templates:
     type: croupier.nodes.Job
     properties:
       job_options:
-        type: 'INTERACTIVE'
-        command: "touch single_vm.test"
-      publish:
-      - dataset: { get_input: ckan_outputs_dataset }
-        file_path: "$CURRENT_WORKDIR/single_vm.test"
-        name: "single_vm"
-        description: "output test vm"
+        commands: ['touch single_vm.test']
+        max_time: 00:01:00
+      # publish:
+      # - dataset: { get_input: ckan_outputs_dataset }
+      #   file_path: "$CURRENT_WORKDIR/single_vm.test"
+      #   name: "single_vm"
+      #   description: "output test vm"
     relationships:
     - type: job_managed_by_wm
       target: openstack_wm

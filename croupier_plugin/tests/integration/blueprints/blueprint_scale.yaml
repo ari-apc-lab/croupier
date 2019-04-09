@@ -21,7 +21,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# blueprint_sbatch_output.yaml
+# blueprint_scale.yaml
 
 
 tosca_definitions_version: cloudify_dsl_1_3
@@ -45,27 +45,20 @@ node_templates:
             monitor_period: 15
             skip_cleanup: true
             simulate: True  # COMMENT to test against a real HPC
-            workdir_prefix: "single_sbatch"
+            workdir_prefix: "scale"
 
     single_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: 'BATCH'
-                script: "touch.script"
-                arguments:
-                - "single.test"
-            deployment:
-                bootstrap: 'scripts/bootstrap_sbatch_example.sh'
-                revert: 'scripts/revert_sbatch_example.sh'
-                inputs:
-                    - 'single'
-                    - { get_input: partition_name }
-            publish:
-                - dataset: { get_input: ckan_outputs_dataset }
-                  file_path: "$CURRENT_WORKDIR/test_single.test"
-                  name: "test_single"
-                  description: "output test"
+                commands:
+                - "touch test_$SCALE_INDEX.output"
+                scale: 2
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                partition: { get_input: partition_name }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

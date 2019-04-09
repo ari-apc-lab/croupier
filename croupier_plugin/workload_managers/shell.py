@@ -37,16 +37,14 @@ class Shell(workload_manager.WorkloadManager):
             job_settings,
             script=False):
         _settings = ''
+
         # add executable and arguments
         if not script:
-            if job_settings['type'] == 'BATCH':
-                _settings += ' ' + job_settings['script']
-                if 'arguments' in job_settings:
-                    for arg in job_settings['arguments']:
-                        _settings += ' '+arg
-                _settings += '; '
-            else:
-                _settings += ' ' + job_settings['command'] + '; '
+            _settings += ' ' + job_settings['script']
+            if 'arguments' in job_settings:
+                for arg in job_settings['arguments']:
+                    _settings += ' '+arg
+            _settings += '; '
 
             _settings += 'echo ' + job_id + ',$? >> croupier-monitor.data; '
 

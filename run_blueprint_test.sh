@@ -25,5 +25,5 @@
 #
 # run_blueprint_test.sh
 
-
+rm ./keys_repo/*
 tox -e single_py27 -- croupier_plugin/tests/integration/workflow_tests.py:TestPlugin.test_$1

@@ -53,7 +53,6 @@ class JobRequester(object):
                     if seconds_to_wait > 0:
                         continue
 
-                logger.debug("Reading job status..")
                 self._last_time[host] = time.time()
 
                 if settings['type'] == "PROMETHEUS":  # external

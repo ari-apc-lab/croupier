@@ -210,9 +210,6 @@ Use this tipe to describe a HPC job.
 
 -  ``job_options``: Job parameters and needed resources.
 
-   -  ``type``: INTERACTIVE or BATCH (job executed using a command or using a
-      script). TORQUE supports only BATCH mode.
-
    -  ``pre``: List of commands to be executed before running the job.
       Optional.
 
@@ -234,7 +231,7 @@ Use this tipe to describe a HPC job.
    -  ``tasks_per_node``: Number of tasks per node. Default ``1``.
 
    -  ``max_time``: Set a limit on the total run time of the job
-      allocation. Mandatory if INTERACTIVE type.
+      allocation. Mandatory if no script is provided.
 
    -  ``scale``: Execute in parallel the job N times according to this
       property. Only works with BATCH jobs. Default ``1`` (no scale).
@@ -337,11 +334,10 @@ This example demonstrates how to describe a new job for non-batched run
            type: croupier.nodes.Job
            properties:
                job_options:
-                   type: 'INTERACTIVE'
                    pre:
                        - module load gcc/5.3.0
                    partition: 'thin-shared'
-                   command: 'touch example.test'
+                   commands: ['touch job.test']
                    nodes: 1
                    tasks: 1
                    tasks_per_node: 1
@@ -362,8 +358,7 @@ both Slurm and Torque).
            type: croupier.nodes.job
            properties:
                job_options:
-                   type: 'BATCH'
-                   command: "touch.script"
+                   commands: ['touch job.test']
                deployment:
                    bootstrap: 'scripts/bootstrap_sbatch_example.sh'
                    revert: 'scripts/revert_sbatch_example.sh'
@@ -432,7 +427,7 @@ version TORQUE does not support Singularity jobs yet.
    -  ``tasks_per_node``: Number of tasks per node. 1 by default.
 
    -  ``max_time``: Set a limit on the total run time of the job
-      allocation. Mandatory if INTERACTIVE type.
+      allocation. Mandatory if no script is provided.
 
    -  ``scale``: Execute in parallel the job N times according to this
       property. Default ``1`` (no scale).
@@ -522,7 +517,7 @@ This example demonstrates how to describe a new job executed in a
                    home: '$HOME:/home/$USER'
                    volumes:
                        - '/scratch'
-                   command: 'ring > fourth_example_3.test'
+                   commands: ['touch job.test']
                    nodes: 1
                    tasks: 1
                    tasks_per_node: 1

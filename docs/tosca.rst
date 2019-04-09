@@ -122,8 +122,7 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
       type: croupier.nodes.Job
       properties:
          job_options:
-            type: 'BATCH'
-            command: "touch.script fourth_example_1.test"
+            commands: ['touch.script fourth_example_1.test']
             scale: 4
          deployment:
             bootstrap: 'scripts/bootstrap_sbatch_example.sh'
@@ -146,7 +145,7 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
             image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
             volumes:
                - { get_input: scratch_voulume_mount_point }
-            command: 'touch fourth_example_2.test'
+            commands: ['touch job.test']
             nodes: 1
             tasks: 1
             tasks_per_node: 1
@@ -176,7 +175,7 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
             image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
             volumes:
                - { get_input: scratch_voulume_mount_point }
-            command: 'touch fourth_example_3.test'
+            commands: ['touch job.test']
             nodes: 1
             tasks: 1
             tasks_per_node: 1
@@ -199,8 +198,7 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
       type: croupier.nodes.Job
       properties:
          job_options:
-            type: 'BATCH'
-            command: "touch.script fourth_example_4.test"
+            commands: ['touch.script fourth_example_4.test']
             scale: 4
          deployment:
             bootstrap: 'scripts/bootstrap_sbatch_example.sh'
@@ -265,14 +263,13 @@ Similarly to how `node_templates` are defined, new node types can be defined to 
                description: Iteration index (two digits string)
             job_options:
                default:
-                  type: 'BATCH'
                   modules:
                      - 'gcc/5.3.0'
                      - 'impi'
                      - 'petsc'
                      - 'parmetis'
                      - 'zlib'
-                  command: { concat: ['/mnt/lustre/scratch/home/otras/ari/jci/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/fenics_iter.script ', ' ', { get_property: [SELF, iter_number] }] }
+                  commands: [{ concat: ['/mnt/lustre/scratch/home/otras/ari/jci/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/fenics_iter.script ', ' ', { get_property: [SELF, iter_number] }] }]
 
       croupier.nodes.fenics_post:
          derived_from: croupier.nodes.job
@@ -283,14 +280,13 @@ Similarly to how `node_templates` are defined, new node types can be defined to 
                   description: Input file for dolfin-post postprocessing
             job_options:
                   default:
-                     type: 'BATCH'
                      modules:
                         - 'gcc/5.3.0'
                         - 'impi'
                         - 'petsc'
                         - 'parmetis'
                         - 'zlib'
-                     command: { concat: ['/mnt/lustre/scratch/home/otras/ari/jci/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/post.script ', { get_property: [SELF, iter_number] }, ' ', { get_property: [SELF, file] }] }
+                     commands: [{ concat: ['/mnt/lustre/scratch/home/otras/ari/jci/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/post.script ', { get_property: [SELF, iter_number] }, ' ', { get_property: [SELF, file] }] }]
 
 Above there is dummy example of two new types of the FEniCS framework, derived from ``croupier.nodes.Job``.
 

@@ -49,16 +49,9 @@ class Torque(WorkloadManager):
         # TODO writ for script (prefix, suffix ??)
 
         if not script:
-            if job_settings['type'] == 'BATCH':
-                # qsub command plus job name
-                _settings['data'] += "qsub -V -N {}".format(
-                    shlex_quote(job_id))
-            elif job_settings['type'] == 'INTERACTIVE':
-                _settings['data'] += "qsub -V -I -N {}".format(
-                    shlex_quote(job_id))
-            else:
-                return {'error': "Job type '" + job_settings['type'] +
-                                 "'not supported"}
+            # qsub command plus job name
+            _settings['data'] += "qsub -V -N {}".format(
+                shlex_quote(job_id))
 
         # Check if exists and has content
         def _check_job_settings_key(key):
@@ -132,7 +125,7 @@ class Torque(WorkloadManager):
                 int(job_settings['scale']) > 1:
 
             # set the job array
-            _settings['data'] += ' -J 0-{}'.format(job_settings['scale'] - 1)
+            _settings['data'] += ' -t 0-{}'.format(job_settings['scale'] - 1)
             if 'scale_max_in_parallel' in job_settings and \
                     int(job_settings['scale_max_in_parallel']) > 0:
                 _settings['data'] += '%{}'.format(
@@ -140,10 +133,7 @@ class Torque(WorkloadManager):
 
         # add executable and arguments
         if not script:
-            if job_settings['type'] == 'BATCH':
-                _settings['data'] += ' ' + job_settings['script']
-            else:
-                _settings['data'] += ' ' + job_settings['command']
+            _settings['data'] += ' ' + job_settings['script']
             if _check_job_settings_key('arguments'):
                 args = ''
                 for arg in job_settings['arguments']:

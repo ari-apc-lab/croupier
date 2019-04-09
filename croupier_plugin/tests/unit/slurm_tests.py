@@ -39,136 +39,43 @@ class TestSlurm(unittest.TestCase):
         self.wm = WorkloadManager.factory("SLURM")
         self.logger = logging.getLogger('TestSlurm')
 
-    def test_bad_type_name(self):
-        """ Bad name type """
-        response = self.wm._build_job_submission_call(42,
-                                                      {'command': 'cmd',
-                                                       'type': 'BATCH'})
-        self.assertIn('error', response)
-
-    def test_bad_type_settings(self):
-        """ Bad type settings """
-        response = self.wm._build_job_submission_call('test',
-                                                      'bad type')
-        self.assertIn('error', response)
-
-    def test_bad_settings_command_type(self):
-        """ Bad type settings """
-        response = self.wm._build_job_submission_call('test',
-                                                      'bad type')
+    def test_bad_name(self):
+        """ Bad name type. """
+        response = self.wm._build_job_submission_call(
+            42,
+            {'script': 'cmd'})
         self.assertIn('error', response)
 
     def test_empty_settings(self):
         """ Empty job settings """
-        response = self.wm._build_job_submission_call('test',
-                                                      {})
+        response = self.wm._build_job_submission_call('test', {})
         self.assertIn('error', response)
-
-    def test_only_type_settings(self):
-        """ Type only as job settings """
-        response = self.wm._build_job_submission_call('test',
-                                                      {'command': 'cmd',
-                                                       'type': 'BAD'})
-        self.assertIn('error', response)
-
-    def test_only_command_settings(self):
-        """ Command only as job settings. """
-        response = self.wm._build_job_submission_call(
-            'test',
-            {'command': 'cmd'})
-        self.assertIn('error', response)
-
-    def test_notime_srun_call(self):
-        """ srun command without max time set. """
-        response = self.wm._build_job_submission_call(
-            'test',
-            {'command': 'cmd',
-             'type': 'INTERACTIVE'})
-        self.assertIn('error', response)
-
-    def test_basic_srun_call(self):
-        """ Basic srun command. """
-        response = self.wm._build_job_submission_call(
-            'test',
-            {'command': 'cmd',
-             'type': 'INTERACTIVE',
-             'max_time': '00:05:00'})
-        self.assertNotIn('error', response)
-        self.assertIn('call', response)
-
-        call = response['call']
-        self.assertEqual(
-            call,
-            'nohup sh -c "srun -J \'test\' ' +
-            '-t 00:05:00 ' +
-            '-e test.err -o test.out ' +
-            'cmd; " &')
-
-    def test_complete_srun_call(self):
-        """ Complete srun command. """
-        response = self.wm._build_job_submission_call(
-            'test',
-            {'pre': [
-                'module load mod1',
-                './some_script.sh'],
-             'type': 'INTERACTIVE',
-             'command': 'cmd',
-             'stderr_file':
-             'stderr.out',
-             'stdout_file':
-             'stdout.out',
-             'partition':
-             'thinnodes',
-             'nodes': 4,
-             'tasks': 96,
-             'tasks_per_node': 24,
-             'memory': '4GB',
-             'qos': 'qos',
-             'reservation':
-                'croupier',
-             'mail_user':
-             'user@email.com',
-             'mail_type': 'ALL',
-             'max_time': '00:05:00',
-             'post': [
-                './cleanup1.sh',
-                './cleanup2.sh']})
-        self.assertNotIn('error', response)
-        self.assertIn('call', response)
-
-        call = response['call']
-        self.assertEqual(
-            call,
-            'nohup sh -c "'
-            'module load mod1; ./some_script.sh; '
-            'srun -J \'test\''
-            ' -N 4'
-            ' -n 96'
-            ' --ntasks-per-node=24'
-            ' -t 00:05:00'
-            ' -p thinnodes'
-            ' --mem=4GB'
-            ' --reservation=croupier'
-            ' --qos=qos'
-            ' --mail-user=user@email.com'
-            ' --mail-type=ALL'
-            ' -e stderr.out'
-            ' -o stdout.out'
-            ' cmd; '
-            './cleanup1.sh; ./cleanup2.sh; '
-            '" &')
 
     def test_basic_sbatch_call(self):
         """ Basic sbatch command. """
         response = self.wm._build_job_submission_call('test',
-                                                      {'script': 'cmd',
-                                                       'type': 'BATCH'})
+                                                      {'script': 'cmd'})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
         call = response['call']
         self.assertEqual(call, "sbatch --parsable -J 'test' " +
                                "-e test.err -o test.out cmd; ")
+
+    def test_basic_sbatch_call_with_args(self):
+        """ Basic sbatch call with args """
+        response = self.wm._build_job_submission_call(
+            'test',
+            {'script': 'cmd',
+             'arguments': ['script']})
+        self.assertNotIn('error', response)
+        self.assertIn('call', response)
+
+        call = response['call']
+        self.assertEqual(
+            call,
+            "sbatch --parsable -J 'test' " +
+            "-e test.err -o test.out cmd script; ")
 
     def test_complete_sbatch_call(self):
         """ Complete sbatch command. """
@@ -177,7 +84,6 @@ class TestSlurm(unittest.TestCase):
             {'pre': [
                 'module load mod1',
                 './some_script.sh'],
-             'type': 'BATCH',
              'script': 'cmd',
              'stderr_file':
              'stderr.out',

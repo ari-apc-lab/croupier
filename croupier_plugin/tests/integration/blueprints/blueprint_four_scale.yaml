@@ -44,24 +44,20 @@ node_templates:
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
             skip_cleanup: true
-            simulate: True  # COMMENT to test against a real HPC
-            workdir_prefix: "four_scale"
+            simulate: True # COMMENT to test against a real HPC
+            workdir_prefix: "four"
 
     first_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: 'BATCH'
-                script: "touch.script"
-                arguments:
-                - "fourth_example_1.test"
+                partition: { get_input: partition_name }
+                commands: ['touch jobone_$SCALE_INDEX.test']
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
                 scale: 4
-            deployment:
-                bootstrap: 'scripts/bootstrap_sbatch_example.sh'
-                revert: 'scripts/revert_sbatch_example.sh'
-                inputs:
-                    - 'first_job'
-                    - { get_input: partition_name }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm
@@ -72,26 +68,34 @@ node_templates:
         properties:
             job_options:
                 pre:
-                - { get_input: mpi_load_command }
-                - { get_input: singularity_load_command }
+                    - { get_input: mpi_load_command }
+                    - { get_input: singularity_load_command }
                 partition: { get_input: partition_name }
-                image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
+                image:
+                    {
+                        concat:
+                            [
+                                { get_input: singularity_image_storage },
+                                "/",
+                                { get_input: singularity_image_filename },
+                            ],
+                    }
                 volumes:
                     - { get_input: scratch_voulume_mount_point }
                     - { get_input: singularity_mount_point }
-                command: 'touch fourth_example_2.test'
+                commands: ['touch jobtwo_$SCALE_INDEX.test']
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:01:00'
+                max_time: "00:01:00"
                 scale: 2
             deployment:
-                bootstrap: 'scripts/singularity_bootstrap_example.sh'
-                revert: 'scripts/singularity_revert_example.sh'
+                bootstrap: "scripts/singularity_bootstrap_example.sh"
+                revert: "scripts/singularity_revert_example.sh"
                 inputs:
-                - { get_input: singularity_image_storage }
-                - { get_input: singularity_image_filename }
-                - { get_input: singularity_image_uri }
+                    - { get_input: singularity_image_storage }
+                    - { get_input: singularity_image_filename }
+                    - { get_input: singularity_image_uri }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm
@@ -104,26 +108,34 @@ node_templates:
         properties:
             job_options:
                 pre:
-                - { get_input: mpi_load_command }
-                - { get_input: singularity_load_command }
+                    - { get_input: mpi_load_command }
+                    - { get_input: singularity_load_command }
                 partition: { get_input: partition_name }
-                image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
+                image:
+                    {
+                        concat:
+                            [
+                                { get_input: singularity_image_storage },
+                                "/",
+                                { get_input: singularity_image_filename },
+                            ],
+                    }
                 volumes:
                     - { get_input: scratch_voulume_mount_point }
                     - { get_input: singularity_mount_point }
-                command: 'touch fourth_example_3.test'
+                commands: ['touch jobthree_$SCALE_INDEX']
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:01:00'
+                max_time: "00:01:00"
                 scale: 2
             deployment:
-                bootstrap: 'scripts/singularity_bootstrap_example.sh'
-                revert: 'scripts/singularity_revert_example.sh'
+                bootstrap: "scripts/singularity_bootstrap_example.sh"
+                revert: "scripts/singularity_revert_example.sh"
                 inputs:
-                - { get_input: singularity_image_storage }
-                - { get_input: singularity_image_filename }
-                - { get_input: singularity_image_uri }
+                    - { get_input: singularity_image_storage }
+                    - { get_input: singularity_image_filename }
+                    - { get_input: singularity_image_uri }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm
@@ -135,17 +147,15 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: 'BATCH'
                 script: "touch.script"
                 arguments:
-                - "fourth_example_4.test"
+                - "jobfour_$SCALE_INDEX.test"
                 scale: 4
             deployment:
-                bootstrap: 'scripts/bootstrap_sbatch_example.sh'
-                revert: 'scripts/revert_sbatch_example.sh'
+                bootstrap: 'scripts/create_script.sh'
+                revert: 'scripts/delete_script.sh'
                 inputs:
-                    - 'fourth_job'
-                    - { get_input: partition_name }
+                    - 'fourth'
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

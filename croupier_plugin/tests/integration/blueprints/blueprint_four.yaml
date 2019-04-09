@@ -50,19 +50,12 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: "INTERACTIVE"
                 partition: { get_input: partition_name }
-                command: "touch fourth_example_1.test"
+                commands: ['touch fourth_example_1.test']
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-            deployment:
-                bootstrap: "scripts/bootstrap_example.sh"
-                revert: "scripts/revert_example.sh"
-                inputs:
-                    - "first_job"
-                    - { get_input: partition_name }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm
@@ -88,7 +81,7 @@ node_templates:
                 volumes:
                     - { get_input: scratch_voulume_mount_point }
                     - { get_input: singularity_mount_point }
-                command: "touch fourth_example_2.test"
+                commands: ['touch fourth_example_2.test']
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
@@ -127,7 +120,7 @@ node_templates:
                 volumes:
                     - { get_input: scratch_voulume_mount_point }
                     - { get_input: singularity_mount_point }
-                command: "touch fourth_example_3.test"
+                commands: ['touch fourth_example_3.test']
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
@@ -150,16 +143,14 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: "BATCH"
                 script: "touch.script"
                 arguments:
                 - "fourth_example_4.test"
             deployment:
-                bootstrap: "scripts/bootstrap_sbatch_example.sh"
-                revert: "scripts/revert_sbatch_example.sh"
+                bootstrap: 'scripts/create_script.sh'
+                revert: 'scripts/delete_script.sh'
                 inputs:
-                    - "fourth_job"
-                    - { get_input: partition_name }
+                    - 'fourth'
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

@@ -40,70 +40,23 @@ class TestTorque(unittest.TestCase):
         self.wm = WorkloadManager.factory("TORQUE")
         self.logger = logging.getLogger('TestTorque')
 
-    def test_bad_type_name(self):
+    def test_bad_name(self):
         """ Bad name type. """
         response = self.wm._build_job_submission_call(
             42,
-            {'script': 'cmd',
-             'type': 'BATCH'})
-        self.assertIn('error', response)
-
-    def test_bad_type_settings(self):
-        """ Bad type settings. """
-        response = self.wm._build_job_submission_call('test',
-                                                      'bad type')
-        self.assertIn('error', response)
-
-    def test_bad_settings_command_type(self):
-        """ Bad type settings. """
-        response = self.wm._build_job_submission_call('test',
-                                                      'bad type')
+            {'script': 'cmd'})
         self.assertIn('error', response)
 
     def test_empty_settings(self):
         """ Empty job settings. """
-        response = self.wm._build_job_submission_call('test',
-                                                      {})
+        response = self.wm._build_job_submission_call('test', {})
         self.assertIn('error', response)
-
-    def test_invalid_type_settings(self):
-        """ Incomplete job settings with invalid type. """
-        response = self.wm._build_job_submission_call('test',
-                                                      {'command': 'cmd',
-                                                       'type': 'BAD'})
-        self.assertIn('error', response)
-
-    def test_only_command_settings(self):
-        """ Incomplete job settings: specify only command. """
-        response = self.wm._build_job_submission_call(
-            'test',
-            {'command': 'cmd'})
-        self.assertIn('error', response)
-
-    def test_basic_interactive_call(self):
-        """ Basic interactive command. """
-        response = self.wm._build_job_submission_call(
-            'test',
-            {'command': 'cmd',
-             'type': 'INTERACTIVE',
-             'max_time': '00:05:00'})
-        self.assertNotIn('error', response)
-        self.assertIn('call', response)
-
-        call = response['call']
-        self.assertEqual(
-            call,
-            'nohup sh -c "qsub -V -I -N ' +
-            'test -l walltime=00:05:00 ' +
-            '-e test.err -o test.out ' +
-            'cmd; " &')
 
     def test_basic_batch_call(self):
         """ Basic batch call. """
         response = self.wm._build_job_submission_call(
             'test',
-            {'script': 'cmd',
-             'type': 'BATCH'})
+            {'script': 'cmd'})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
@@ -117,8 +70,7 @@ class TestTorque(unittest.TestCase):
         response = self.wm._build_job_submission_call(
             'test',
             {'script': 'cmd',
-             'arguments': ['script'],
-             'type': 'BATCH'})
+             'arguments': ['script']})
         self.assertNotIn('error', response)
         self.assertIn('call', response)
 
@@ -167,7 +119,6 @@ class TestTorque(unittest.TestCase):
             dict(pre=[
                 'module load mod1',
                 './some_script.sh'],
-                type='BATCH',
                 script='cmd',
                 partition='thinnodes',
                 nodes=4,
@@ -192,7 +143,7 @@ class TestTorque(unittest.TestCase):
             " -l walltime=00:05:00"
             " -q thinnodes"
             " -e test.err -o test.out"
-            " -J 0-9%2"
+            " -t 0-9%2"
             " cmd; "
             "./cleanup1.sh; ./cleanup2.sh; ")
         scale_env_mapping_call = response['scale_env_mapping_call']
@@ -205,7 +156,7 @@ class TestTorque(unittest.TestCase):
     def test_cancellation_call(self):
         """ Jobs cancellation call. """
         response = self.wm._build_job_cancellation_call('test',
-                                                        {'type': 'BATCH'},
+                                                        {},
                                                         self.logger)
         self.assertEqual(response, "qselect -N test | xargs qdel")
 

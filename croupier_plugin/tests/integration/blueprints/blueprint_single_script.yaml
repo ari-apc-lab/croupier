@@ -21,7 +21,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# blueprint_sbatch.yaml
+# blueprint_single_script.yaml
 
 
 tosca_definitions_version: cloudify_dsl_1_3
@@ -44,23 +44,26 @@ node_templates:
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
             skip_cleanup: true
-            #simulate: True  # COMMENT to test against a real HPC
-            workdir_prefix: "single_sbatch"
+            simulate: True  # COMMENT to test against a real HPC
+            workdir_prefix: "single_script"
 
     single_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                type: 'BATCH'
-                commands:
-                - "touch test_$1.output"
+                script: "touch.script"
                 arguments:
-                - script
+                - "single.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
                 partition: { get_input: partition_name }
+            deployment:
+                bootstrap: 'scripts/create_script.sh'
+                revert: 'scripts/delete_script.sh'
+                inputs:
+                    - 'single'
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

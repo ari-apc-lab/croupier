@@ -51,8 +51,8 @@ node_templates:
     type: croupier.nodes.Job
     properties:
       job_options:
-        type: 'INTERACTIVE'
-        command: "touch single_vm.test"
+        commands: ['touch single_vm.test']
+        max_time: 00:01:00
       # publish:
       # - dataset: { get_input: ckan_outputs_dataset }
       #   file_path: "$CURRENT_WORKDIR/single_vm.test"

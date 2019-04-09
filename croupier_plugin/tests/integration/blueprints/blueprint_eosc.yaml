@@ -74,7 +74,7 @@ node_templates:
         volumes:
         - { get_input: scratch_voulume_mount_point }
         - { get_input: singularity_mount_point }
-        command: 'touch single.test'
+        commands: ['touch job.test']
         nodes: 1
         tasks: 1
         tasks_per_node: 1
@@ -95,8 +95,7 @@ node_templates:
     type: croupier.nodes.Job
     properties:
       job_options:
-        type: 'INTERACTIVE'
-        command: 'touch vm.test'
+        commands: ['touch job.test']
       skip_cleanup: True
       publish:
       - dataset: { get_input: ckan_outputs_dataset }

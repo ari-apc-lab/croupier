@@ -48,22 +48,15 @@ class Slurm(WorkloadManager):
             _suffix = ''
 
         if not script:
-            if job_settings['type'] == 'BATCH':
-                # sbatch command plus job name
-                _settings += "sbatch --parsable -J '" + job_id + "'"
-            elif job_settings['type'] == 'INTERACTIVE':
-                _settings += "srun -J '" + job_id + "'"
-            else:
-                return {'error': "Job type '" + job_settings['type'] +
-                                 "'not supported"}
+            # sbatch command plus job name
+            _settings += "sbatch --parsable -J '" + job_id + "'"
 
         # Check if exists and has content
         def _check_job_settings_key(key):
             return key in job_settings and str(job_settings[key]).strip()
 
-        if not _check_job_settings_key('max_time') and \
-                job_settings['type'] == 'INTERACTIVE':
-            return {'error': "'INTERACTIVE' jobs must define the 'max_time' property"}
+        if script and not _check_job_settings_key('max_time'):
+            return {'error': "Job must define the 'max_time' property"}
 
         # Slurm settings
         if _check_job_settings_key('nodes'):
@@ -132,9 +125,6 @@ class Slurm(WorkloadManager):
         if 'scale' in job_settings and \
                 int(job_settings['scale']) > 1:
 
-            if job_settings['type'] == 'INTERACTIVE':
-                return {'error': "'INTERACTIVE' does not allow scale property"}
-
             # set the job array
             _settings += ' --array=0-{}'.format(job_settings['scale'] - 1)
             if 'scale_max_in_parallel' in job_settings and \
@@ -143,14 +133,11 @@ class Slurm(WorkloadManager):
 
         # add executable and arguments
         if not script:
-            if job_settings['type'] == 'BATCH':
-                _settings += ' ' + job_settings['script']
-                if 'arguments' in job_settings:
-                    for arg in job_settings['arguments']:
-                        _settings += ' '+arg
-                _settings += '; '
-            else:
-                _settings += ' ' + job_settings['command'] + '; '
+            _settings += ' ' + job_settings['script']
+            if 'arguments' in job_settings:
+                for arg in job_settings['arguments']:
+                    _settings += ' '+arg
+            _settings += '; '
 
         return {'data': _settings}
 

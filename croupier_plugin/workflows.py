@@ -325,6 +325,8 @@ def build_graph(nodes):
 class Monitor(object):
     """Monitor the instances"""
 
+    MAX_ERRORS = 5
+
     def __init__(self, job_instances_map, logger):
         self.job_ids = {}
         self._execution_pool = {}
@@ -332,6 +334,7 @@ class Monitor(object):
         self.job_instances_map = job_instances_map
         self.logger = logger
         self.jobs_requester = JobRequester()
+        self.continued_errors = 0
 
     def update_status(self):
         """Gets all executing instances and update their state"""
@@ -361,11 +364,20 @@ class Monitor(object):
             return
 
         # then look for the status of the instances through its name
-        states = self.jobs_requester.request(monitor_jobs, self.logger)
+        try:
+            states = self.jobs_requester.request(monitor_jobs, self.logger)
 
-        # finally set job status
-        for inst_name, state in states.iteritems():
-            self.job_instances_map[inst_name].set_status(state)
+            # finally set job status
+            for inst_name, state in states.iteritems():
+                self.job_instances_map[inst_name].set_status(state)
+            self.continued_errors = 0
+        except Exception as exp:
+            if self.continued_errors >= Monitor.MAX_ERRORS:
+                self.logger.error(str(exp))
+                raise exp
+            else:
+                self.logger.warning(str(exp))
+                self.continued_errors += 1
 
         # We wait to slow down the loop
         sys.stdout.flush()  # necessary to output work properly with sleep
