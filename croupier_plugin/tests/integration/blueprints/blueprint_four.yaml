@@ -62,37 +62,15 @@ node_templates:
               target: hpc_wm
 
     second_parallel_job:
-        type: croupier.nodes.SingularityJob
+        type: croupier.nodes.Job
         properties:
             job_options:
-                pre:
-                    - { get_input: mpi_load_command }
-                    - { get_input: singularity_load_command }
                 partition: { get_input: partition_name }
-                image:
-                    {
-                        concat:
-                            [
-                                { get_input: singularity_image_storage },
-                                "/",
-                                { get_input: singularity_image_filename },
-                            ],
-                    }
-                volumes:
-                    - { get_input: scratch_voulume_mount_point }
-                    - { get_input: singularity_mount_point }
                 commands: ['touch fourth_example_2.test']
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-            deployment:
-                bootstrap: "scripts/singularity_bootstrap_example.sh"
-                revert: "scripts/singularity_revert_example.sh"
-                inputs:
-                    - { get_input: singularity_image_storage }
-                    - { get_input: singularity_image_filename }
-                    - { get_input: singularity_image_uri }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm
@@ -104,34 +82,14 @@ node_templates:
         type: croupier.nodes.SingularityJob
         properties:
             job_options:
-                pre:
-                    - { get_input: mpi_load_command }
-                    - { get_input: singularity_load_command }
-                partition: { get_input: partition_name }
-                image:
-                    {
-                        concat:
-                            [
-                                { get_input: singularity_image_storage },
-                                "/",
-                                { get_input: singularity_image_filename },
-                            ],
-                    }
-                volumes:
-                    - { get_input: scratch_voulume_mount_point }
-                    - { get_input: singularity_mount_point }
-                commands: ['touch fourth_example_3.test']
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
-                max_time: "00:01:00"
+                script: "touch.script"
+                arguments:
+                - "fourth_example_3.test"
             deployment:
-                bootstrap: "scripts/singularity_bootstrap_example.sh"
-                revert: "scripts/singularity_revert_example.sh"
+                bootstrap: 'scripts/create_script.sh'
+                revert: 'scripts/delete_script.sh'
                 inputs:
-                    - { get_input: singularity_image_storage }
-                    - { get_input: singularity_image_filename }
-                    - { get_input: singularity_image_uri }
+                    - 'third'
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

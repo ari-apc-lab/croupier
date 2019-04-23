@@ -122,17 +122,17 @@ class Slurm(WorkloadManager):
             _settings += _prefix + ' -o ' + \
                 str(job_id + '.out') + _suffix
 
-        if 'scale' in job_settings and \
-                int(job_settings['scale']) > 1:
-
-            # set the job array
-            _settings += ' --array=0-{}'.format(job_settings['scale'] - 1)
-            if 'scale_max_in_parallel' in job_settings and \
-                    int(job_settings['scale_max_in_parallel']) > 0:
-                _settings += '%' + str(job_settings['scale_max_in_parallel'])
-
-        # add executable and arguments
+        # add scale, executable and arguments
         if not script:
+            if 'scale' in job_settings and \
+                    int(job_settings['scale']) > 1:
+                # set the job array
+                _settings += ' --array=0-{}'.format(job_settings['scale'] - 1)
+                if 'scale_max_in_parallel' in job_settings and \
+                        int(job_settings['scale_max_in_parallel']) > 0:
+                    _settings += '%' + \
+                        str(job_settings['scale_max_in_parallel'])
+
             _settings += ' ' + job_settings['script']
             if 'arguments' in job_settings:
                 for arg in job_settings['arguments']:

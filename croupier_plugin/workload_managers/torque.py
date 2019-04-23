@@ -121,18 +121,18 @@ class Torque(WorkloadManager):
             additional_attributes["group_list"] = shlex_quote(
                 job_settings['group_name'])
 
-        if 'scale' in job_settings and \
-                int(job_settings['scale']) > 1:
-
-            # set the job array
-            _settings['data'] += ' -t 0-{}'.format(job_settings['scale'] - 1)
-            if 'scale_max_in_parallel' in job_settings and \
-                    int(job_settings['scale_max_in_parallel']) > 0:
-                _settings['data'] += '%{}'.format(
-                    job_settings['scale_max_in_parallel'])
-
-        # add executable and arguments
+        # add scale, executable and arguments
         if not script:
+            if 'scale' in job_settings and \
+                    int(job_settings['scale']) > 1:
+                # set the job array
+                _settings['data'] += ' -t 0-{}'.format(
+                    job_settings['scale'] - 1)
+                if 'scale_max_in_parallel' in job_settings and \
+                        int(job_settings['scale_max_in_parallel']) > 0:
+                    _settings['data'] += '%{}'.format(
+                        job_settings['scale_max_in_parallel'])
+
             _settings['data'] += ' ' + job_settings['script']
             if _check_job_settings_key('arguments'):
                 args = ''
