@@ -41,7 +41,7 @@ class Slurm(WorkloadManager):
             script=False):
         _settings = ''
         if script:
-            _prefix = '#BATCH'
+            _prefix = '#SBATCH'
             _suffix = '\n'
         else:
             _prefix = ''
