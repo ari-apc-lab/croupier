@@ -51,7 +51,7 @@ node_templates:
         properties:
             job_options:
                 partition: { get_input: partition_name }
-                commands: ['touch fourth_example_1.test']
+                commands: ["touch fourth_example_1.test"]
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
@@ -66,7 +66,7 @@ node_templates:
         properties:
             job_options:
                 partition: { get_input: partition_name }
-                commands: ['touch fourth_example_2.test']
+                commands: ["touch fourth_example_2.test"]
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
@@ -79,17 +79,22 @@ node_templates:
               target: first_job
 
     third_parallel_job:
-        type: croupier.nodes.SingularityJob
+        type: croupier.nodes.Job
         properties:
             job_options:
                 script: "touch.script"
                 arguments:
-                - "fourth_example_3.test"
+                    - "fourth_example_3.test"
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
+                partition: { get_input: partition_name }
             deployment:
-                bootstrap: 'scripts/create_script.sh'
-                revert: 'scripts/delete_script.sh'
+                bootstrap: "scripts/create_script.sh"
+                revert: "scripts/delete_script.sh"
                 inputs:
-                    - 'third'
+                    - "script_"
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm
@@ -103,12 +108,17 @@ node_templates:
             job_options:
                 script: "touch.script"
                 arguments:
-                - "fourth_example_4.test"
+                    - "fourth_example_4.test"
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
+                partition: { get_input: partition_name }
             deployment:
-                bootstrap: 'scripts/create_script.sh'
-                revert: 'scripts/delete_script.sh'
+                bootstrap: "scripts/create_script.sh"
+                revert: "scripts/delete_script.sh"
                 inputs:
-                    - 'fourth'
+                    - "script_"
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

@@ -23,7 +23,6 @@
 #
 # blueprint_singularity.yaml
 
-
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
@@ -44,7 +43,7 @@ node_templates:
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
             skip_cleanup: true
-            simulate: True  # COMMENT to test against a real HPC
+            simulate: True # COMMENT to test against a real HPC
             workdir_prefix: "single_singularity"
 
     single_job:
@@ -52,25 +51,33 @@ node_templates:
         properties:
             job_options:
                 pre:
-                - { get_input: mpi_load_command }
-                - { get_input: singularity_load_command }
+                    - { get_input: mpi_load_command }
+                    - { get_input: singularity_load_command }
                 partition: { get_input: partition_name }
-                image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
+                image:
+                    {
+                        concat:
+                            [
+                                { get_input: singularity_image_storage },
+                                "/",
+                                { get_input: singularity_image_filename },
+                            ],
+                    }
                 volumes:
                     - { get_input: scratch_voulume_mount_point }
                     - { get_input: singularity_mount_point }
-                commands: ['touch job.test']
+                commands: ["touch job.test"]
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:01:00'
+                max_time: "00:01:00"
             deployment:
-                bootstrap: 'scripts/singularity_bootstrap_example.sh'
-                revert: 'scripts/singularity_revert_example.sh'
+                bootstrap: "scripts/singularity_bootstrap_example.sh"
+                revert: "scripts/singularity_revert_example.sh"
                 inputs:
-                - { get_input: singularity_image_storage }
-                - { get_input: singularity_image_filename }
-                - { get_input: singularity_image_uri }
+                    - { get_input: singularity_image_storage }
+                    - { get_input: singularity_image_filename }
+                    - { get_input: singularity_image_uri }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_wm

@@ -161,9 +161,9 @@ class TestPlugin(unittest.TestCase):
         resources_to_copy=[
             (os.path.join('blueprints', 'inputs_def.yaml'), './'),
             (os.path.join('blueprints', 'scripts',
-             'singularity_bootstrap_example.sh'), 'scripts'),
+                          'singularity_bootstrap_example.sh'), 'scripts'),
             (os.path.join('blueprints', 'scripts',
-             'singularity_revert_example.sh'), 'scripts')],
+                          'singularity_revert_example.sh'), 'scripts')],
         inputs='set_inputs')
     def test_singularity(self, cfy_local):
         """ Single Singularity Job Blueprint """
@@ -220,26 +220,10 @@ class TestPlugin(unittest.TestCase):
                                                     'inputs_def.yaml'),
                                        './'),
                                       (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_example.sh'),
+                                       'create_script.sh'),
                                        'scripts'),
                                       (os.path.join('blueprints', 'scripts',
-                                                    'revert_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'bootstrap_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'revert_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_' +
-                                                    'sbatch_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'revert_' +
-                                                    'sbatch_example.sh'),
+                                       'delete_script.sh'),
                                        'scripts')],
                    inputs='set_inputs')
     def test_four(self, cfy_local):
@@ -265,12 +249,6 @@ class TestPlugin(unittest.TestCase):
                                                     'inputs_def.yaml'),
                                        './'),
                                       (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'revert_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
                                                     'singularity_' +
                                                     'bootstrap_example.sh'),
                                        'scripts'),
@@ -279,12 +257,10 @@ class TestPlugin(unittest.TestCase):
                                                     'revert_example.sh'),
                                        'scripts'),
                                       (os.path.join('blueprints', 'scripts',
-                                                    'bootstrap_' +
-                                                    'sbatch_example.sh'),
+                                                    'create_script.sh'),
                                        'scripts'),
                                       (os.path.join('blueprints', 'scripts',
-                                                    'revert_' +
-                                                    'sbatch_example.sh'),
+                                                    'delete_script.sh'),
                                        'scripts')],
                    inputs='set_inputs')
     def test_four_singularity(self, cfy_local):
@@ -314,14 +290,6 @@ class TestPlugin(unittest.TestCase):
                                        'scripts'),
                                       (os.path.join('blueprints', 'scripts',
                                                     'delete_script.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'bootstrap_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'revert_example.sh'),
                                        'scripts')],
                    inputs='set_inputs')
     def test_four_scale(self, cfy_local):

@@ -25,10 +25,10 @@
 #
 # singularity_bootstrap_example.sh
 
-
-module load singularity/2.4.2
+module load singularity/3.1.1
 
 if [ ! -f $1/$2 ]; then
     cd $1
+    # wget -c --no-check-certificate $3 -O $2
     singularity pull $3
 fi

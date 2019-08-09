@@ -25,16 +25,15 @@
 #
 # bootstrap_sbatch_example.sh
 
-
 FILE="touch.script"
 
-cat > $FILE <<- EOM
+cat >$FILE <<-EOM
 #!/bin/bash -l
 
 # DYNAMIC VARIABLES
 
 cd $CURRENT_WORKDIR
 
-touch test_$1.test
+eval touch $1\$1
 
 EOM
