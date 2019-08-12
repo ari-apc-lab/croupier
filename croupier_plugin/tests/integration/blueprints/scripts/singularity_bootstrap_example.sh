@@ -25,7 +25,7 @@
 #
 # singularity_bootstrap_example.sh
 
-module load singularity/3.1.1
+$4 # load singularity
 
 if [ ! -f $1/$2 ]; then
     cd $1
