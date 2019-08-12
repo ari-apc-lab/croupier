@@ -174,7 +174,6 @@ class WorkloadManager(object):
 
         # Build script if there is no one, or Singularity
         if 'script' not in job_settings or is_singularity:
-
             # generate script content
             if is_singularity:
                 script_content = self._build_container_script(
@@ -478,8 +477,9 @@ class WorkloadManager(object):
                     script += '-B ' + volume + ' '
 
             # add executable and arguments
-            script += job_settings['image'] + \
-                ' ' + job_settings['commands'] + '\n'
+            script += job_settings['image'] + ' '
+            separator = ' && '
+            script += separator.join(job_settings['commands']) + '\n'
 
         # NOTE an uploaded script could also be interesting to execute
         if 'post' in job_settings:

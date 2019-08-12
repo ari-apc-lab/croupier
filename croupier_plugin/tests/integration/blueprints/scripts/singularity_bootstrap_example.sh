@@ -29,6 +29,5 @@ module load singularity/3.1.1
 
 if [ ! -f $1/$2 ]; then
     cd $1
-    # wget -c --no-check-certificate $3 -O $2
-    singularity pull $3
+    singularity pull $2 $3
 fi
