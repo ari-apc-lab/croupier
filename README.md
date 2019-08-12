@@ -16,7 +16,7 @@
 
 ## Documentation
 
-TODO reference to readthedocs
+Latest documentation can be found at [Read the Docs](https://croupier.readthedocs.io)
 
 > **TIP:** Example blueprints can be found at the [Croupier resources repository](https://github.com/ari-apc-lab/croupier-resources).
 
@@ -28,11 +28,11 @@ Additionally, Croupier provides [Vagrant](https://www.vagrantup.com/) and [Docke
 
 ## Test
 
-To run the tests Cloudify CLI has to be installed locally. Example blueprints can be found at *tests/blueprint* folder and have the `simulate` option active by default. Blueprint to be tested can be changed at *workflows\_tests.py* in the *tests* folder.
+To run the tests Cloudify CLI has to be installed locally. Example blueprints can be found at _tests/blueprint_ folder and have the `simulate` option active by default. Blueprint to be tested can be changed at _workflows_tests.py_ in the _tests_ folder.
 
-To run the tests against a real HPC / Monitor system, copy the file *blueprint-inputs.yaml* to *local-blueprint-inputs.yaml* and edit with your credentials. Then edit the blueprint commenting the simulate option, and other parameters as you wish (e.g change the name ft2\_node for your own hpc name). To use the openstack integration, your private key must be put in the folder *inputs/keys*.
+To run the tests against a real HPC / Monitor system, copy the file _blueprint-inputs.yaml_ to _local-blueprint-inputs.yaml_ and edit with your credentials. Then edit the blueprint commenting the simulate option, and other parameters as you wish (e.g change the name ft2_node for your own hpc name). To use the openstack integration, your private key must be put in the folder _inputs/keys_.
 
-> **NOTE:** *tox* needs to be installed: `pip install tox`
+> **NOTE:** _tox_ needs to be installed: `pip install tox`
 
 To run the tests, run tox on the root folder
 

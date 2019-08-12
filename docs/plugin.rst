@@ -115,7 +115,7 @@ type <http://docs.getcloudify.org/4.1.0/blueprints/spec-node-types/>`__.
 .. _hpc_nodes_workloadmanager:
 
 croupier.nodes.WorkloadManager
--------------------------
+------------------------------
 
 **Derived From:**
 `cloudify.nodes.Compute <http://docs.getcloudify.org/4.1.0/blueprints/built-in-types/>`__
@@ -202,7 +202,7 @@ This example demonstrates how to add a new HPC.
 .. _hpc_nodes_job:
 
 croupier.nodes.Job
--------------
+------------------
 
 Use this tipe to describe a HPC job.
 
@@ -390,7 +390,7 @@ both Slurm and Torque).
 .. _hpc_nodes_singularityjob:
 
 croupier.nodes.SingularityJob
-------------------------
+-----------------------------
 
 **Derived From:** `??? <#croupier.nodes.job>`__
 

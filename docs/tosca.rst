@@ -305,7 +305,7 @@ Execution
 
 Execution of an application is performed through the `CLI docs <https://github.com/ari-apc-lab/croupier-cli/README.md>`__ in your local machine or a host of your own.
 
-.. __steps:
+.. _steps:
 
 Steps
 -----
@@ -342,7 +342,7 @@ Steps
 
       The CLI has a timeout of 900 seconds, which normally is not enough time for an application to finish. However, if the CLI timeout, the execution will still be running on the MSOOrchestrator. To follow the execution just follow the instructions in the output.
 
-.. __revert_previous_steps:
+.. _revert_previous_steps:
 
 Revert previous Steps
 ~~~~~~~~~~~~~~~~~~~~~
@@ -367,7 +367,7 @@ The following revert the steps above, in order to uninstall the application, rec
 
    ``cfy blueprints delete [BLUEPRINT-NAME]``
 
-.. __troubleshooting:
+.. _troubleshooting:
 
 Troubleshooting
 ~~~~~~~~~~~~~~~
