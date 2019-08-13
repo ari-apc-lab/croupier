@@ -40,7 +40,7 @@ class Shell(workload_manager.WorkloadManager):
 
         # add executable and arguments
         if not script:
-            _settings += ' ' + job_settings['script']
+            _settings += ' ./' + job_settings['script']
             if 'arguments' in job_settings:
                 for arg in job_settings['arguments']:
                     _settings += ' '+arg
