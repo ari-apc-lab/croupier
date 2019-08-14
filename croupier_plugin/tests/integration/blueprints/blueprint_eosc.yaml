@@ -86,6 +86,7 @@ node_templates:
         - { get_input: singularity_image_storage }
         - { get_input: singularity_image_filename }
         - { get_input: singularity_image_uri }
+        - { get_input: singularity_load_command }
       skip_cleanup: True
     relationships:
     - type: job_managed_by_wm
