@@ -28,7 +28,8 @@ slurm_tests.py: Holds the Slurm unit tests
 import logging
 import unittest
 
-from croupier_plugin.workload_managers.workload_manager import WorkloadManager
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
+    InfrastructureInterface)
 
 
 class TestSlurm(unittest.TestCase):
@@ -36,7 +37,7 @@ class TestSlurm(unittest.TestCase):
 
     def __init__(self, methodName='runTest'):
         super(TestSlurm, self).__init__(methodName)
-        self.wm = WorkloadManager.factory("SLURM")
+        self.wm = InfrastructureInterface.factory("SLURM")
         self.logger = logging.getLogger('TestSlurm')
 
     def test_bad_name(self):

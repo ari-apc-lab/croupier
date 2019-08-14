@@ -35,11 +35,11 @@ imports:
     - inputs_def.yaml
 
 node_templates:
-  hpc_wm:
-    type: croupier.nodes.WorkloadManager
+  hpc_interface:
+    type: croupier.nodes.InfrastructureInterface
     properties:
-      config: { get_input: hpc_wm_config }
-      credentials: { get_input: hpc_wm_credentials }
+      config: { get_input: hpc_interface_config }
+      credentials: { get_input: hpc_interface_credentials }
       external_monitor_entrypoint: { get_input: monitor_entrypoint }
       job_prefix: { get_input: job_prefix }
       base_dir: { get_input: hpc_base_dir }
@@ -48,18 +48,18 @@ node_templates:
       workdir_prefix: "single_singularity"
       simulate: True # Comment to test with real infrastructure
 
-  im_wm:
-    type: croupier.nodes.WorkloadManager
+  im_interface:
+    type: croupier.nodes.InfrastructureInterface
     properties:
-      config: { get_input: secondary_cloud_wm_config }
-      credentials: { get_input: secondary_cloud_wm_credentials }
+      config: { get_input: secondary_cloud_interface_config }
+      credentials: { get_input: secondary_cloud_interface_credentials }
       external_monitor_entrypoint: { get_input: monitor_entrypoint }
       job_prefix: { get_input: job_prefix }
       workdir_prefix: "single_eosc"
       skip_cleanup: True
       simulate: True # Comment to test with real infrastructure
     relationships:
-    - type: wm_contained_in
+    - type: interface_contained_in
       target: vitual_machine
 
   hpc_job:
@@ -89,8 +89,8 @@ node_templates:
         - { get_input: singularity_load_command }
       skip_cleanup: True
     relationships:
-    - type: job_managed_by_wm
-      target: hpc_wm
+    - type: job_managed_by_interface
+      target: hpc_interface
 
   vm_job:
     type: croupier.nodes.Job
@@ -104,8 +104,8 @@ node_templates:
         name: "vm_test"
         description: "output test vm"
     relationships:
-    - type: job_managed_by_wm
-      target: im_wm
+    - type: job_managed_by_interface
+      target: im_interface
     - type: job_depends_on
       target: hpc_job
 

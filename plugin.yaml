@@ -39,7 +39,7 @@ workflows:
         mapping: croupier.croupier_plugin.workflows.run_jobs
 
 node_types:
-    croupier.nodes.WorkloadManager:
+    croupier.nodes.InfrastructureInterface:
         derived_from: cloudify.nodes.Compute
         properties:
             config:
@@ -232,12 +232,12 @@ node_types:
         derived_from: croupier.nodes.Job
 
 relationships:
-    wm_contained_in:
+    interface_contained_in:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.preconfigure_wm
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_interface
                     inputs:
                         config:
                             default: { get_property: [SOURCE, config] }
@@ -245,7 +245,7 @@ relationships:
                             default: { get_property: [SOURCE, credentials] }
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
-    job_managed_by_wm:
+    job_managed_by_interface:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:

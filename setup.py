@@ -41,7 +41,7 @@ setup(
 
     # This must correspond to the actual packages in the plugin.
     packages=['croupier_plugin',
-              'croupier_plugin.workload_managers',
+              'croupier_plugin.infrastructure_interfaces',
               'croupier_plugin.external_repositories'],
 
     zip_safe=False,

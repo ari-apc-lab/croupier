@@ -30,12 +30,12 @@ inputs:
     description: HPC working directory
     default: $HOME
 
-  hpc_wm_config:
-    description: timezone and workload manager of the HPC
+  hpc_interface_config:
+    description: timezone and HPC interface
     default:
       country_tz: Europe/Madrid
-      workload_manager: SLURM
-  hpc_wm_credentials:
+      infrastructure_interface: SLURM
+  hpc_interface_credentials:
     description: HPC credentials
     default: {}
   mpi_load_command:
@@ -57,11 +57,11 @@ inputs:
     default: /scratch
 
   ################# Cloud Infrastructre #################
-  cloud_wm_config:
-    description: workload manager of the cloud (Only supported SHELL)
+  cloud_interface_config:
+    description: cloud interface (Only supported SHELL)
     default:
-      workload_manager: SHELL
-  cloud_wm_credentials:
+      infrastructure_interface: SHELL
+  cloud_interface_credentials:
     description: Cloud credentials
     default: {}
   openstack_config:
@@ -77,11 +77,11 @@ inputs:
 
   ################# Second Cloud Infrastructre #################
   # Won't be rendered, their value is a match with other inputs
-  secondary_cloud_wm_config:
-    description: workload manager of the cloud (Only supported SHELL)
+  secondary_cloud_interface_config:
+    description: cloud interface (Only supported SHELL)
     default:
-      workload_manager: SHELL
-  secondary_cloud_wm_credentials:
+      infrastructure_interface: SHELL
+  secondary_cloud_interface_credentials:
     default: {}
   eosc_config:
     default: {}

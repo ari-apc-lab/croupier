@@ -63,7 +63,7 @@ class JobGraphInstance(object):
                             runtime_properties["external_monitor_port"])
                 }
             else:  # internal monitoring
-                self.monitor_type = runtime_properties["workload_manager"]
+                self.monitor_type = runtime_properties["infrastructure_interface"]
                 self.monitor_config = runtime_properties["credentials"]
 
             self.monitor_period = int(runtime_properties["monitor_period"])
@@ -78,7 +78,7 @@ class JobGraphInstance(object):
             self.monitor_url = ""
 
     def queue(self):
-        """ Sends the job's instance to the workload manager queue """
+        """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
 
@@ -96,7 +96,7 @@ class JobGraphInstance(object):
         return result.task
 
     def publish(self):
-        """ Sends the job's instance to the workload manager queue """
+        """ Publish the job's instance outputs """
         if not self.parent_node.is_job:
             return
 
@@ -148,7 +148,7 @@ class JobGraphInstance(object):
         return result.task
 
     def cancel(self):
-        """ Cancels the job instance of the workload manager """
+        """ Cancels the job instance in the infrastructure """
         if not self.parent_node.is_job:
             return
 
@@ -204,7 +204,7 @@ class JobGraphNode(object):
         self.children.append(node)
 
     def queue_all_instances(self):
-        """ Sends all job instances to the workload manager queue """
+        """ Sends all job instances to the infrastructure queue """
         if not self.is_job:
             return []
 
@@ -277,7 +277,7 @@ class JobGraphNode(object):
         return to_print
 
     def clean_all_instances(self):
-        """ Cleans all job's files instances of the workload manager """
+        """ Cleans all job's files instances of the infrastructure """
         if not self.is_job:
             return
 
@@ -286,7 +286,7 @@ class JobGraphNode(object):
         self.status = 'CANCELED'
 
     def cancel_all_instances(self):
-        """ Cancels all job instances of the workload manager """
+        """ Cancels all job instances of the infrastructure """
         if not self.is_job:
             return
 

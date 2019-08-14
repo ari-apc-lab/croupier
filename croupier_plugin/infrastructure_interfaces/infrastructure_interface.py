@@ -21,7 +21,7 @@ license information in the project root.
          Atos Research & Innovation, Atos Spain S.A.
          e-mail: javier.carnero@atos.net
 
-workload_manager.py
+infrastructure_interface.py
 '''
 
 import string
@@ -126,18 +126,18 @@ def get_prevailing_state(state1, state2):
     return state1
 
 
-class WorkloadManager(object):
+class InfrastructureInterface(object):
 
     @staticmethod
-    def factory(workload_manager):
-        if workload_manager == "SLURM":
-            from croupier_plugin.workload_managers.slurm import Slurm
+    def factory(infrastructure_interface):
+        if infrastructure_interface == "SLURM":
+            from croupier_plugin.infrastructure_interfaces.slurm import Slurm
             return Slurm()
-        if workload_manager == "TORQUE":
-            from croupier_plugin.workload_managers.torque import Torque
+        if infrastructure_interface == "TORQUE":
+            from croupier_plugin.infrastructure_interfaces.torque import Torque
             return Torque()
-        if workload_manager == "SHELL":
-            from croupier_plugin.workload_managers.shell import Shell
+        if infrastructure_interface == "SHELL":
+            from croupier_plugin.infrastructure_interfaces.shell import Shell
             return Shell()
         return None
 

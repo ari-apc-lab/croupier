@@ -32,19 +32,20 @@ from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
 from croupier_plugin.ssh import SshClient
-from croupier_plugin.workload_managers.workload_manager import WorkloadManager
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
+    InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (
     ExternalRepository)
 
 
 @operation
-def preconfigure_wm(
+def preconfigure_interface(
         config,
         credentials,
         simulate,
         **kwargs):  # pylint: disable=W0613
-    """ Get workload manager config from infrastructure """
-    ctx.logger.info('Preconfiguring workload manager..')
+    """ Get interface config from infrastructure """
+    ctx.logger.info('Preconfiguring infrastructure interface..')
 
     if not simulate:
         credentials_modified = False
@@ -83,7 +84,7 @@ def preconfigure_wm(
             ctx.source.instance.runtime_properties['networks'] = {}
         ctx.logger.info('..preconfigured ')
     else:
-        ctx.logger.warning('Workload manager simulated')
+        ctx.logger.warning('Infrastructure Interface simulated')
 
 
 @operation
@@ -95,16 +96,17 @@ def configure_execution(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Creates the working directory for the execution """
-    ctx.logger.info('Connecting to workload manager..')
+    ctx.logger.info('Connecting to infrastructure interface..')
     if not simulate:
-        wm_type = config['workload_manager']
-        ctx.logger.info(' - manager: {wm_type}'.format(wm_type=wm_type))
+        interface_type = config['infrastructure_interface']
+        ctx.logger.info(' - manager: {interface_type}'.format(
+            interface_type=interface_type))
 
-        wm = WorkloadManager.factory(wm_type)
+        wm = InfrastructureInterface.factory(interface_type)
         if not wm:
             raise NonRecoverableError(
-                "Workload Manager '" +
-                wm_type +
+                "Infrastructure Interface '" +
+                interface_type +
                 "' not supported.")
 
         if 'credentials' in ctx.instance.runtime_properties:
@@ -113,7 +115,7 @@ def configure_execution(
             client = SshClient(credentials)
         except Exception as exp:
             raise NonRecoverableError(
-                "Failed trying to connect to workload manager: " + str(exp))
+                "Failed trying to connect to infrastructure interface: " + str(exp))
 
         # TODO: use command according to wm
         _, exit_code = client.execute_shell_command(
@@ -123,7 +125,7 @@ def configure_execution(
         if exit_code != 0:
             client.close_connection()
             raise NonRecoverableError(
-                "Failed executing on the workload manager: exit code " +
+                "Failed executing on the infrastructure: exit code " +
                 str(exit_code))
 
         ctx.instance.runtime_properties['login'] = exit_code == 0
@@ -139,12 +141,12 @@ def configure_execution(
                 "failed to create the working directory, base dir: " +
                 base_dir)
         ctx.instance.runtime_properties['workdir'] = workdir
-        ctx.logger.info('..workload manager ready to be used on ' + workdir)
+        ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
         ctx.logger.info(' - [simulation]..')
         ctx.instance.runtime_properties['login'] = True
         ctx.instance.runtime_properties['workdir'] = "simulation"
-        ctx.logger.warning('Workload manager connection simulated')
+        ctx.logger.warning('Infrastructure Interface connection simulated')
 
 
 @operation
@@ -161,12 +163,12 @@ def cleanup_execution(
     ctx.logger.info('Cleaning up...')
     if not simulate:
         workdir = ctx.instance.runtime_properties['workdir']
-        wm_type = config['workload_manager']
-        wm = WorkloadManager.factory(wm_type)
+        interface_type = config['infrastructure_interface']
+        wm = InfrastructureInterface.factory(interface_type)
         if not wm:
             raise NonRecoverableError(
-                "Workload Manager '" +
-                wm_type +
+                "Infrastructure Interface '" +
+                interface_type +
                 "' not supported.")
 
         if 'credentials' in ctx.instance.runtime_properties:
@@ -198,7 +200,7 @@ def start_monitoring_hpc(
         if not simulate:
             if 'credentials' in ctx.instance.runtime_properties:
                 credentials = ctx.instance.runtime_properties['credentials']
-            workload_manager = config['workload_manager']
+            infrastructure_interface = config['infrastructure_interface']
             country_tz = config['country_tz']
 
             url = 'http://' + external_monitor_entrypoint + \
@@ -206,7 +208,7 @@ def start_monitoring_hpc(
 
             # FIXME: credentials doesn't have to have a password anymore
             payload = ("{\n\t\"host\": \"" + credentials['host'] +
-                       "\",\n\t\"type\": \"" + workload_manager +
+                       "\",\n\t\"type\": \"" + infrastructure_interface +
                        "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
                        "user\": \"" + credentials['user'] + "\",\n\t\t\""
                        "pass\": \"" + credentials['password'] + "\",\n\t\t\""
@@ -245,7 +247,7 @@ def stop_monitoring_hpc(
         if not simulate:
             if 'credentials' in ctx.instance.runtime_properties:
                 credentials = ctx.instance.runtime_properties['credentials']
-            workload_manager = config['workload_manager']
+            infrastructure_interface = config['infrastructure_interface']
             country_tz = config['country_tz']
 
             url = 'http://' + external_monitor_entrypoint + \
@@ -253,7 +255,7 @@ def stop_monitoring_hpc(
 
             # FIXME: credentials doesn't have to have a password anymore
             payload = ("{\n\t\"host\": \"" + credentials['host'] +
-                       "\",\n\t\"type\": \"" + workload_manager +
+                       "\",\n\t\"type\": \"" + infrastructure_interface +
                        "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
                        "user\": \"" + credentials['user'] + "\",\n\t\t\""
                        "pass\": \"" + credentials['password'] + "\",\n\t\t\""
@@ -309,8 +311,8 @@ def preconfigure_job(
         external_monitor_type
     ctx.source.instance.runtime_properties['monitor_orchestrator_port'] = \
         external_monitor_orchestrator_port
-    ctx.source.instance.runtime_properties['workload_manager'] = \
-        config['workload_manager']
+    ctx.source.instance.runtime_properties['infrastructure_interface'] = \
+        config['infrastructure_interface']
     ctx.source.instance.runtime_properties['simulate'] = simulate
     ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
     ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
@@ -336,13 +338,13 @@ def bootstrap_job(
         credentials = ctx.instance.runtime_properties['credentials']
         workdir = ctx.instance.runtime_properties['workdir']
         name = "bootstrap_" + ctx.instance.id + ".sh"
-        wm_type = ctx.instance.runtime_properties['workload_manager']
+        interface_type = ctx.instance.runtime_properties['infrastructure_interface']
 
         if deploy_job(
                 deployment['bootstrap'],
                 inputs,
                 credentials,
-                wm_type,
+                interface_type,
                 workdir,
                 name,
                 ctx.logger,
@@ -373,13 +375,13 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
             credentials = ctx.instance.runtime_properties['credentials']
             workdir = ctx.instance.runtime_properties['workdir']
             name = "revert_" + ctx.instance.id + ".sh"
-            wm_type = ctx.instance.runtime_properties['workload_manager']
+            interface_type = ctx.instance.runtime_properties['infrastructure_interface']
 
             if deploy_job(
                     deployment['revert'],
                     inputs,
                     credentials,
-                    wm_type,
+                    interface_type,
                     workdir,
                     name,
                     ctx.logger,
@@ -401,18 +403,18 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
 def deploy_job(script,
                inputs,
                credentials,
-               wm_type,
+               interface_type,
                workdir,
                name,
                logger,
                skip_cleanup):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH credentials as input """
 
-    wm = WorkloadManager.factory(wm_type)
+    wm = InfrastructureInterface.factory(interface_type)
     if not wm:
         raise NonRecoverableError(
-            "Workload Manager '" +
-            wm_type +
+            "Infrastructure Interface '" +
+            interface_type +
             "' not supported.")
 
     # Execute the script and manage the output
@@ -454,7 +456,7 @@ def deploy_job(script,
 
 @operation
 def send_job(job_options, **kwargs):  # pylint: disable=W0613
-    """ Sends a job to the workload manager """
+    """ Sends a job to the infrastructure interface """
     simulate = ctx.instance.runtime_properties['simulate']
 
     name = kwargs['name']
@@ -463,15 +465,15 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
 
     if not simulate:
         workdir = ctx.instance.runtime_properties['workdir']
-        wm_type = ctx.instance.runtime_properties['workload_manager']
+        interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-        wm = WorkloadManager.factory(wm_type)
+        wm = InfrastructureInterface.factory(interface_type)
         if not wm:
             client.close_connection()
             raise NonRecoverableError(
-                "Workload Manager '" +
-                wm_type +
+                "Infrastructure Interface '" +
+                interface_type +
                 "' not supported.")
         context_vars = {
             'CFY_EXECUTION_ID': ctx.execution_id,
@@ -519,16 +521,16 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.\
                 type_hierarchy
             workdir = ctx.instance.runtime_properties['workdir']
-            wm_type = ctx.instance.runtime_properties['workload_manager']
+            interface_type = ctx.instance.runtime_properties['infrastructure_interface']
 
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = WorkloadManager.factory(wm_type)
+            wm = InfrastructureInterface.factory(interface_type)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError(
-                    "Workload Manager '" +
-                    wm_type +
+                    "Infrastructure Interface '" +
+                    interface_type +
                     "' not supported.")
             is_clean = wm.clean_job_aux_files(client,
                                               name,
@@ -556,7 +558,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
 
 @operation
 def stop_job(job_options, **kwargs):  # pylint: disable=W0613
-    """ Stops a job in the workload manager """
+    """ Stops a job in the infrastructure """
     try:
         simulate = ctx.instance.runtime_properties['simulate']
     except KeyError:
@@ -570,15 +572,15 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
 
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
-            wm_type = ctx.instance.runtime_properties['workload_manager']
+            interface_type = ctx.instance.runtime_properties['infrastructure_interface']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = WorkloadManager.factory(wm_type)
+            wm = InfrastructureInterface.factory(interface_type)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError(
-                    "Workload Manager '" +
-                    wm_type +
+                    "Infrastructure Interface '" +
+                    interface_type +
                     "' not supported.")
             is_stopped = wm.stop_job(client,
                                      name,

@@ -26,12 +26,12 @@ slurm.py: Holds the slurm functions
 
 
 from croupier_plugin.ssh import SshClient
-from croupier_plugin.workload_managers.workload_manager import (
-    WorkloadManager,
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
+    InfrastructureInterface,
     get_prevailing_state)
 
 
-class Slurm(WorkloadManager):
+class Slurm(InfrastructureInterface):
     """ Slurm Workload Manger Driver """
 
     def _parse_job_settings(

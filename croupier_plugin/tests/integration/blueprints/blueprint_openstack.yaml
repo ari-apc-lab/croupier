@@ -35,16 +35,16 @@ imports:
     - inputs_def.yaml
 
 node_templates:
-  openstack_wm:
-    type: croupier.nodes.WorkloadManager
+  openstack_interface:
+    type: croupier.nodes.InfrastructureInterface
     properties:
-      config: { get_input: cloud_wm_config }
-      credentials: { get_input: cloud_wm_credentials }
+      config: { get_input: cloud_interface_config }
+      credentials: { get_input: cloud_interface_credentials }
       external_monitor_entrypoint: { get_input: monitor_entrypoint }
       job_prefix: { get_input: job_prefix }
       workdir_prefix: "single_openstack"
     relationships:
-    - type: wm_contained_in
+    - type: interface_contained_in
       target: my_server
 
   vm_job:
@@ -59,8 +59,8 @@ node_templates:
       #   name: "single_vm"
       #   description: "output test vm"
     relationships:
-    - type: job_managed_by_wm
-      target: openstack_wm
+    - type: job_managed_by_interface
+      target: openstack_interface
 
 
   ########### OpenStack plugin ##########

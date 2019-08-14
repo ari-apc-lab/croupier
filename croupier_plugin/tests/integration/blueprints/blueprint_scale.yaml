@@ -33,11 +33,11 @@ imports:
     - inputs_def.yaml
 
 node_templates:
-    hpc_wm:
-        type: croupier.nodes.WorkloadManager
+    hpc_interface:
+        type: croupier.nodes.InfrastructureInterface
         properties:
-            config: { get_input: hpc_wm_config }
-            credentials: { get_input: hpc_wm_credentials }
+            config: { get_input: hpc_interface_config }
+            credentials: { get_input: hpc_interface_credentials }
             external_monitor_entrypoint: { get_input: monitor_entrypoint }
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
@@ -60,8 +60,8 @@ node_templates:
                 partition: { get_input: partition_name }
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_wm
-              target: hpc_wm
+            - type: job_managed_by_interface
+              target: hpc_interface
 
 outputs:
     single_job_name:

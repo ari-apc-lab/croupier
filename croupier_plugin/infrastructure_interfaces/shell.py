@@ -26,10 +26,10 @@ bash.py
 
 
 from croupier_plugin.ssh import SshClient
-from croupier_plugin.workload_managers import workload_manager
+from croupier_plugin.infrastructure_interfaces import infrastructure_interface
 
 
-class Shell(workload_manager.WorkloadManager):
+class Shell(infrastructure_interface.InfrastructureInterface):
 
     def _parse_job_settings(
             self,
@@ -87,14 +87,20 @@ class Shell(workload_manager.WorkloadManager):
 
     def _parse_exit_codes(self, exit_code):
         if exit_code == '0':  # exited normally
-            return workload_manager.JOBSTATESLIST[workload_manager.COMPLETED]
+            return infrastructure_interface.JOBSTATESLIST
+            [infrastructure_interface.COMPLETED]
         elif exit_code == '1':  # general error
-            return workload_manager.JOBSTATESLIST[workload_manager.FAILED]
+            return infrastructure_interface.JOBSTATESLIST
+            [infrastructure_interface.FAILED]
         elif exit_code == '126':  # cannot execute
-            return workload_manager.JOBSTATESLIST[workload_manager.REVOKED]
+            return infrastructure_interface.JOBSTATESLIST
+            [infrastructure_interface.REVOKED]
         elif exit_code == '127':  # not found
-            return workload_manager.JOBSTATESLIST[workload_manager.BOOTFAIL]
+            return infrastructure_interface.JOBSTATESLIST
+            [infrastructure_interface.BOOTFAIL]
         elif exit_code == '130':  # terminated by ctrl+c
-            return workload_manager.JOBSTATESLIST[workload_manager.CANCELLED]
+            return infrastructure_interface.JOBSTATESLIST
+            [infrastructure_interface.CANCELLED]
         else:
-            return workload_manager.JOBSTATESLIST[workload_manager.FAILED]
+            return infrastructure_interface.JOBSTATESLIST
+            [infrastructure_interface.FAILED]

@@ -26,11 +26,11 @@ torque.py
 
 
 from croupier_plugin.ssh import SshClient
-from workload_manager import WorkloadManager
+from infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
 
 
-class Torque(WorkloadManager):
+class Torque(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
 
     def _parse_job_settings(

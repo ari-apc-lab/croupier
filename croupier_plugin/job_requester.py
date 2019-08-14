@@ -30,8 +30,8 @@ from threading import Lock
 
 import requests
 
-from croupier_plugin.workload_managers.workload_manager import (
-    WorkloadManager,
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
+    InfrastructureInterface,
     state_int_to_str)
 
 
@@ -61,7 +61,7 @@ class JobRequester(object):
                         settings['config'],
                         settings['names'])
                 else:  # internal
-                    wm = WorkloadManager.factory(settings['type'])
+                    wm = InfrastructureInterface.factory(settings['type'])
                     if wm:
                         partial_states = wm.get_states(
                             settings['workdir'],

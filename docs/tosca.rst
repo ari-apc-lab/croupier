@@ -93,26 +93,26 @@ Node Templates
 
 In the ``node_templates`` section is where your application is actually defined, by stablishing *nodes* and *relations* between them.
 
-To begin with, every *node* is identified by its name (``hpc_wm`` in the example below), and a type is assigned to it.
+To begin with, every *node* is identified by its name (``hpc_interface`` in the example below), and a type is assigned to it.
 
-**Workload Manager example.**
+**Infrastructure Interface example.**
 
 .. code:: yaml
 
    node_templates:
-      hpc_wm:
-         type: croupier.nodes.WorkloadManager
+      hpc_interface:
+         type: croupier.nodes.InfrastructureInterface
          properties:
-            config: { get_input: hpc_wm_config }
-            credentials: { get_input: hpc_wm_credentials }
+            config: { get_input: hpc_interface_config }
+            credentials: { get_input: hpc_interface_credentials }
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
             workdir_prefix: "single_sbatch"
 
-The example above represents a workload manager, with type `croupier.nodes.WorkloadManager`. All computing infrastructures must have a workload manager defined (_Slurm_ or _Torque_ for HPC supported, plain _SHELL_ for Cloud VMs). Then the WM is configured using the inputs (using fuction `get_input`). Detailed information about how to configure the HPCs is in the `Plugin specification <./plugin.html>`__ section.
+The example above represents a infrastructure interface, with type `croupier.nodes.InfrastructureInterface`. All computing infrastructures must have a infrastructure interface defined (_Slurm_ or _Torque_ for HPC supported, plain _SHELL_ for Cloud VMs). Then the WM is configured using the inputs (using fuction `get_input`). Detailed information about how to configure the HPCs is in the `Plugin specification <./plugin.html>`__ section.
 
-The following code uses ``hpc_wm`` to describe four jobs that should run in the hpc that represents the node. Two of them are of type ``croupier.nodes.SingularityJob`` which means that the job will run using a `Singularity <https://singularity.lbl.gov/>`__ container, while the other two of type `croupier.nodes.Job` describe jobs that are going to run directly in the HPC. Navigate to `Cloudify HPC plugin types <./plugin.html#types>`__ to know more about each parameter.
+The following code uses ``hpc_interface`` to describe four jobs that should run in the hpc that represents the node. Two of them are of type ``croupier.nodes.SingularityJob`` which means that the job will run using a `Singularity <https://singularity.lbl.gov/>`__ container, while the other two of type `croupier.nodes.Job` describe jobs that are going to run directly in the HPC. Navigate to `Cloudify HPC plugin types <./plugin.html#types>`__ to know more about each parameter.
 
 **Four jobs example.**
 
@@ -131,8 +131,8 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
                - 'first_job'
                - { get_input: partition_name }
       relationships:
-         - type: job_managed_by_wm
-           target: hpc_wm
+         - type: job_managed_by_interface
+           target: hpc_interface
 
    second_parallel_job:
       type: croupier.nodes.SingularityJob
@@ -159,8 +159,8 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
                - { get_input: singularity_image_filename }
                - { get_input: singularity_image_uri }
       relationships:
-         - type: job_managed_by_wm
-           target: hpc_wm
+         - type: job_managed_by_interface
+           target: hpc_interface
          - type: job_depends_on
            target: first_job
 
@@ -189,8 +189,8 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
                   - { get_input: singularity_image_filename }
                   - { get_input: singularity_image_uri }
       relationships:
-         - type: job_managed_by_wm
-           target: hpc_wm
+         - type: job_managed_by_interface
+           target: hpc_interface
          - type: job_depends_on
            target: first_job
 
@@ -208,15 +208,15 @@ The following code uses ``hpc_wm`` to describe four jobs that should run in the 
                - { get_input: partition_name }
          skip_cleanup: True
       relationships:
-         - type: job_managed_by_wm
-           target: hpc_wm
+         - type: job_managed_by_interface
+           target: hpc_interface
          - type: job_depends_on
            target: second_parallel_job
          - type: job_depends_on
            target: third_parallel_job
 
 
-Finally, jobs have two main types of relationships: **job_managed_by_wm**, to stablish which workload manager will run the job, and **job_depends_on**, to describe the dependency between jobs. In the example above, `fourth_job` depends on `three_parallel_job` and `second_parallel_job`, so it will not execute until the other two have finished. In the same way, `three_parallel_job` and `second_parallel_job` depends on `first_job`, so they will run in parallel once the first job is finished. All jobs are contained in `hpc_wm`, so they will run on the HPC using the credentials provided. A third one, **wm_contained_in** is used to link the Workload manager to other Cloudify plugins, sush as Openstack. See `relationships <./plugin.html#relationships>`__ for more information.
+Finally, jobs have two main types of relationships: **job_managed_by_interface**, to stablish which infrastructure interface will run the job, and **job_depends_on**, to describe the dependency between jobs. In the example above, `fourth_job` depends on `three_parallel_job` and `second_parallel_job`, so it will not execute until the other two have finished. In the same way, `three_parallel_job` and `second_parallel_job` depends on `first_job`, so they will run in parallel once the first job is finished. All jobs are contained in `hpc_interface`, so they will run on the HPC using the credentials provided. A third one, **interface_contained_in** is used to link the Infrastructure Interface to other Cloudify plugins, sush as Openstack. See `relationships <./plugin.html#relationships>`__ for more information.
 
 
 .. _outputs:

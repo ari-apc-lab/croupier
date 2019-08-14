@@ -29,7 +29,8 @@ import unittest
 
 import logging
 from croupier_plugin.utilities import shlex_quote
-from croupier_plugin.workload_managers.workload_manager import WorkloadManager
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
+    InfrastructureInterface)
 
 
 class TestTorque(unittest.TestCase):
@@ -37,7 +38,7 @@ class TestTorque(unittest.TestCase):
 
     def __init__(self, methodName='runTest'):
         super(TestTorque, self).__init__(methodName)
-        self.wm = WorkloadManager.factory("TORQUE")
+        self.wm = InfrastructureInterface.factory("TORQUE")
         self.logger = logging.getLogger('TestTorque')
 
     def test_bad_name(self):
