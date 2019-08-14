@@ -99,121 +99,107 @@ To begin with, every *node* is identified by its name (``hpc_interface`` in the 
 
 .. code:: yaml
 
-   node_templates:
-      hpc_interface:
-         type: croupier.nodes.InfrastructureInterface
-         properties:
+    node_templates:
+        hpc_interface:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
             config: { get_input: hpc_interface_config }
             credentials: { get_input: hpc_interface_credentials }
+            external_monitor_entrypoint: { get_input: monitor_entrypoint }
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
-            workdir_prefix: "single_sbatch"
+            workdir_prefix: "single"
 
 The example above represents a infrastructure interface, with type `croupier.nodes.InfrastructureInterface`. All computing infrastructures must have a infrastructure interface defined (_Slurm_ or _Torque_ for HPC supported, plain _SHELL_ for Cloud VMs). Then the WM is configured using the inputs (using fuction `get_input`). Detailed information about how to configure the HPCs is in the `Plugin specification <./plugin.html>`__ section.
 
-The following code uses ``hpc_interface`` to describe four jobs that should run in the hpc that represents the node. Two of them are of type ``croupier.nodes.SingularityJob`` which means that the job will run using a `Singularity <https://singularity.lbl.gov/>`__ container, while the other two of type `croupier.nodes.Job` describe jobs that are going to run directly in the HPC. Navigate to `Cloudify HPC plugin types <./plugin.html#types>`__ to know more about each parameter.
+The following code uses ``hpc_interface`` to describe four jobs that should run in the hpc that represents the node. Two of them are of type ``croupier.nodes.SingularityJob`` which means that the job will run using a `Singularity <https://singularity.lbl.gov/>`__ container, while the other two of type `croupier.nodes.Job` describe jobs that are going to run directly in the HPC. Navigate to `Croupier plugin types <./plugin.html#types>`__ to know more about each parameter.
 
 **Four jobs example.**
 
 .. code:: yaml
 
-   first_job:
-      type: croupier.nodes.Job
-      properties:
-         job_options:
-            commands: ['touch.script fourth_example_1.test']
-            scale: 4
-         deployment:
-            bootstrap: 'scripts/bootstrap_sbatch_example.sh'
-            revert: 'scripts/revert_sbatch_example.sh'
-            inputs:
-               - 'first_job'
-               - { get_input: partition_name }
-      relationships:
-         - type: job_managed_by_interface
-           target: hpc_interface
+    first_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                partition: { get_input: partition_name }
+                commands: ["touch fourth_example_1.test"]
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: hpc_interface
 
-   second_parallel_job:
-      type: croupier.nodes.SingularityJob
-      properties:
-         job_options:
-            pre:
-               - { get_input: mpi_load_command }
-               - { get_input: singularity_load_command }
-            partition: { get_input: partition_name }
-            image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
-            volumes:
-               - { get_input: scratch_voulume_mount_point }
-            commands: ['touch job.test']
-            nodes: 1
-            tasks: 1
-            tasks_per_node: 1
-            max_time: '00:01:00'
-            scale: 2
-         deployment:
-            bootstrap: 'scripts/singularity_bootstrap_example.sh'
-            revert: 'scripts/singularity_revert_example.sh'
-            inputs:
-               - { get_input: singularity_image_storage }
-               - { get_input: singularity_image_filename }
-               - { get_input: singularity_image_uri }
-      relationships:
-         - type: job_managed_by_interface
-           target: hpc_interface
-         - type: job_depends_on
-           target: first_job
+    second_parallel_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                partition: { get_input: partition_name }
+                commands: ["touch fourth_example_2.test"]
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: hpc_interface
+            - type: job_depends_on
+              target: first_job
 
-   third_parallel_job:
-      type: croupier.nodes.SingularityJob
-      properties:
-         job_options:
-            pre:
-               - { get_input: mpi_load_command }
-               - { get_input: singularity_load_command }
-            partition: { get_input: partition_name }
-            image: {concat: [{ get_input: singularity_image_storage },'/',{ get_input: singularity_image_filename }] }
-            volumes:
-               - { get_input: scratch_voulume_mount_point }
-            commands: ['touch job.test']
-            nodes: 1
-            tasks: 1
-            tasks_per_node: 1
-            max_time: '00:01:00'
-            scale: 2
-         deployment:
-               bootstrap: 'scripts/singularity_bootstrap_example.sh'
-               revert: 'scripts/singularity_revert_example.sh'
-               inputs:
-                  - { get_input: singularity_image_storage }
-                  - { get_input: singularity_image_filename }
-                  - { get_input: singularity_image_uri }
-      relationships:
-         - type: job_managed_by_interface
-           target: hpc_interface
-         - type: job_depends_on
-           target: first_job
+    third_parallel_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                script: "touch.script"
+                arguments:
+                    - "fourth_example_3.test"
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
+                partition: { get_input: partition_name }
+            deployment:
+                bootstrap: "scripts/create_script.sh"
+                revert: "scripts/delete_script.sh"
+                inputs:
+                    - "script_"
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: hpc_interface
+            - type: job_depends_on
+              target: first_job
 
-   fourth_job:
-      type: croupier.nodes.Job
-      properties:
-         job_options:
-            commands: ['touch.script fourth_example_4.test']
-            scale: 4
-         deployment:
-            bootstrap: 'scripts/bootstrap_sbatch_example.sh'
-            revert: 'scripts/revert_sbatch_example.sh'
-            inputs:
-               - 'fourth_job'
-               - { get_input: partition_name }
-         skip_cleanup: True
-      relationships:
-         - type: job_managed_by_interface
-           target: hpc_interface
-         - type: job_depends_on
-           target: second_parallel_job
-         - type: job_depends_on
-           target: third_parallel_job
+    fourth_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                script: "touch.script"
+                arguments:
+                    - "fourth_example_4.test"
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
+                partition: { get_input: partition_name }
+            deployment:
+                bootstrap: "scripts/create_script.sh"
+                revert: "scripts/delete_script.sh"
+                inputs:
+                    - "script_"
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: hpc_interface
+            - type: job_depends_on
+              target: second_parallel_job
+            - type: job_depends_on
+              target: third_parallel_job
 
 
 Finally, jobs have two main types of relationships: **job_managed_by_interface**, to stablish which infrastructure interface will run the job, and **job_depends_on**, to describe the dependency between jobs. In the example above, `fourth_job` depends on `three_parallel_job` and `second_parallel_job`, so it will not execute until the other two have finished. In the same way, `three_parallel_job` and `second_parallel_job` depends on `first_job`, so they will run in parallel once the first job is finished. All jobs are contained in `hpc_interface`, so they will run on the HPC using the credentials provided. A third one, **interface_contained_in** is used to link the Infrastructure Interface to other Cloudify plugins, sush as Openstack. See `relationships <./plugin.html#relationships>`__ for more information.
@@ -230,19 +216,19 @@ Each output has a name, a description, and value.
 
 .. code:: yaml
 
-   outputs:
-      first_job_name:
-         description: first job name
-         value: { get_attribute: [first_job, job_name] }
-      second_job_name:
-         description: second job name
-         value: { get_attribute: [second_parallel_job, job_name] }
-      third_job_name:
-         description: third job name
-         value: { get_attribute: [third_parallel_job, job_name] }
-      fourth_job_name:
-         description: fourth job name
-         value: { get_attribute: [fourth_job, job_name] }
+outputs:
+    first_job_name:
+        description: first job name
+        value: { get_attribute: [first_job, job_name] }
+    second_job_name:
+        description: second job name
+        value: { get_attribute: [second_parallel_job, job_name] }
+    third_job_name:
+        description: third job name
+        value: { get_attribute: [third_parallel_job, job_name] }
+    fourth_job_name:
+        description: fourth job name
+        value: { get_attribute: [fourth_job, job_name] }
 
 .. _node-types:
 
@@ -255,48 +241,61 @@ Similarly to how `node_templates` are defined, new node types can be defined to 
 
 .. code:: yaml
 
-   node_types:
-      croupier.nodes.fenics_iter:
-         derived_from: croupier.nodes.job
-         properties:
-            iter_number:
-               description: Iteration index (two digits string)
-            job_options:
-               default:
-                  modules:
-                     - 'gcc/5.3.0'
-                     - 'impi'
-                     - 'petsc'
-                     - 'parmetis'
-                     - 'zlib'
-                  commands: [{ concat: ['/mnt/lustre/scratch/home/otras/ari/jci/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/fenics_iter.script ', ' ', { get_property: [SELF, iter_number] }] }]
+    node_types:
+        croupier.nodes.fenics_iter:
+            derived_from: croupier.nodes.Job
+            properties:
+                iter_number:
+                    description: Iteration index (two digits string)
+                job_options:
+                    default:
+                        pre:
+                            - 'module load gcc/5.3.0'
+                            - 'module load impi'
+                            - 'module load petsc'
+                            - 'module load parmetis'
+                            - 'module load zlib'
+                        script: "$HOME/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/fenics_iter.script"
+                        arguments:
+                            - { get_property: [SELF, iter_number] }
 
-      croupier.nodes.fenics_post:
-         derived_from: croupier.nodes.job
-         properties:
-            iter_number:
-                  description: Iteration index (two digits string)
-            file:
-                  description: Input file for dolfin-post postprocessing
-            job_options:
-                  default:
-                     modules:
-                        - 'gcc/5.3.0'
-                        - 'impi'
-                        - 'petsc'
-                        - 'parmetis'
-                        - 'zlib'
-                     commands: [{ concat: ['/mnt/lustre/scratch/home/otras/ari/jci/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/post.script ', { get_property: [SELF, iter_number] }, ' ', { get_property: [SELF, file] }] }]
+        croupier.nodes.fenics_post:
+            derived_from: croupier.nodes.Job
+            properties:
+                iter_number:
+                    description: Iteration index (two digits string)
+                file:
+                    description: Input file for dolfin-post postprocessing
+                job_options:
+                    default:
+                        pre:
+                            - 'module load gcc/5.3.0'
+                            - 'module load impi'
+                            - 'module load petsc'
+                            - 'module load parmetis'
+                            - 'module load zlib'
+                        script: "$HOME/wing_minimal/fenics-hpc_hpfem/unicorn-minimal/nautilus/post.script"
+                        arguments:
+                            - { get_property: [SELF, iter_number] }
 
 Above there is dummy example of two new types of the FEniCS framework, derived from ``croupier.nodes.Job``.
 
-The first type, ``croupier.nodes.fenics_iter``, simulates an iteration of the FEniCS framework. A new property has been defined, ``iter_number``, with a description and no default value (so it is mandatory). Besides the ``job_options`` property default value has been overriden with a concrete list of modules, job type, and a command.
+The first type, ``croupier.nodes.fenics_iter``, defines an iteration of the
+FEniCS framework. A new property has been defined, ``iter_number``, with a
+description and no default value (so it is mandatory). Besides the
+``job_options`` property default value has been overriden with a concrete list
+of modules, script and arguments.
 
-The second type, ``croupier.nodes.fenics_post``, described a simulated postprocessing operation of FEniCS, defining again the ``iter_number`` property and another one ``file``. Finally the job options default value has been overriden with a list of modules, a BATCH type, and a command.
+The second type, ``croupier.nodes.fenics_post``, described a simulated
+postprocessing operation of FEniCS, defining again the ``iter_number`` property
+and another one ``file``. Finally the job options default value has been
+overriden with a list of modules, script and arguments.
 
    **Note**
 
-   The commands are built using the functions ``concat`` and ``get_property``. This allows the orchestrator to compose the command based on other properties. See Cloudify intrinsic functions available for more information.
+   The arguments reference the built-in function ``get_property``. This allows
+   the orchestrator to compose the arguments based on other properties. To see
+   all the functions available, check the Cloudify intrinsic functions.
 
 .. _execution:
 
@@ -389,7 +388,3 @@ If an error occurs the revert steps can be followed revert the last steps made. 
 4. **Hard remove a deployment with all its executions and living nodes**
 
    ``cfy deployments delete [DEPLOYMENT-NAME] -f``
-
-..
-
-   **Tip**
