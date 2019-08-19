@@ -98,6 +98,9 @@ def configure_execution(
     """ Creates the working directory for the execution """
     ctx.logger.info('Connecting to infrastructure interface..')
     if not simulate:
+        if 'infrastructure_interface' not in config:
+            raise NonRecoverableError(
+                "'infrastructure_interface' key missing on config")
         interface_type = config['infrastructure_interface']
         ctx.logger.info(' - manager: {interface_type}'.format(
             interface_type=interface_type))
