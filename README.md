@@ -22,22 +22,32 @@ Latest documentation can be found at [Read the Docs](https://croupier.readthedoc
 
 ## Install and Usage
 
-The plugin is installed as any other plugin. Check [Cloudify Docs](http://docs.getcloudify.org/4.5.5/intro/what-is-cloudify) for general information about how to install and use Cloudify, and [this section](http://docs.getcloudify.org/4.1.0/plugins/using-plugins) for concrete information about using plugins.
+As Cloudify plugin, Croupier needs to operate under a Cloudify Manager instance.
+Check [Cloudify Docs](http://docs.getcloudify.org/4.5.5/intro/what-is-cloudify)
+for general information about how to install and use Cloudify. To easily install
+the manager, check the
+[Croupier resources repository](https://github.com/ari-apc-lab/croupier-resources).
 
-Additionally, Croupier provides [Vagrant](https://www.vagrantup.com/) and [Docker](https://www.docker.com/) images at [croupier-cli](https://github.com/ari-apc-lab/croupier-cli) to remotely install and operate with the orchestrator. An already built docker image is also available at [Docker Hub](https://hub.docker.com/u/croupier/dashboard/).
+The plugin is installed as any other plugin. Using the [Croupier
+CLI](https://github.com/ari-apc-lab/croupier-cli), it is easy to package the
+plugin and install on a manager:
+
+1. Create a zip file of croupier
+2. Package: `wagon create croupier_plugin.zip -a '--no-cache-dir -c constraints.txt'`
+3. Upload: `cfy plugins upload *.wgn -y plugin.yaml -t default_tenant`
 
 ## Test
 
 To run the tests Cloudify CLI has to be installed locally. Example blueprints can be found at _tests/blueprint_ folder and have the `simulate` option active by default. Blueprint to be tested can be changed at _workflows_tests.py_ in the _tests_ folder.
 
-To run the tests against a real HPC / Monitor system, copy the file _blueprint-inputs.yaml_ to _local-blueprint-inputs.yaml_ and edit with your credentials. Then edit the blueprint commenting the simulate option, and other parameters as you wish (e.g change the name ft2_node for your own hpc name). To use the openstack integration, your private key must be put in the folder _inputs/keys_.
+To run the tests against a real HPC / Monitor system, copy the file _blueprint-inputs.yaml_ to _local-blueprint-inputs.yaml_ and edit with your credentials. Then edit the blueprint commenting the simulate option, and other parameters as you wish (e.g change the name ft2*node for your own hpc name). To use the openstack integration, your private key must be put in the folder \_inputs/keys*.
 
 > **NOTE:** _tox_ needs to be installed: `pip install tox`
 
 To run the tests, run tox on the root folder
 
 ```shell
-tox -e flake8,py27
+tox -e flake8,unit,integration
 ```
 
 ## License
