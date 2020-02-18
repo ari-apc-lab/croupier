@@ -31,7 +31,7 @@ plugins:
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
         source: https://github.com/ari-apc-lab/croupier/archive/master.zip
-        package_name: croupier-plugin
+        package_name: croupier
         package_version: "2.3.0"
 
 workflows:
