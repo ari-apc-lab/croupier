@@ -35,7 +35,7 @@ plugin and install on a manager:
 1. Clone this repository into your local folder, using `git clone https://github.com/ari-apc-lab/croupier.git`. Go to the created croupier folder.
 2. Package Croupier as a Wagon archive: `wagon . -a '--no-cache-dir -c constraints.txt'`
 3. Upload the plugin archive using the CLI: `cfy plugins upload *.wgn -y plugin.yaml -t default_tenant`
-4. Alternatively, upload the plugin using the Cloudify GUI dashboard: Dashboard/Upload Plugin/. Select teh Wagon file and plugin.yaml from the Croupier folder you cloned in step 1
+4. Alternatively, upload the plugin using the Cloudify GUI dashboard: Dashboard/Upload Plugin/. Select the Wagon file and plugin.yaml from the Croupier folder you cloned in step 1
 
 ## Test
 
