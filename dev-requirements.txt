@@ -1,6 +1,4 @@
-https://github.com/cloudify-cosmo/cloudify-dsl-parser/archive/18.1.11.zip
-https://github.com/cloudify-cosmo/cloudify-rest-client/archive/18.1.11.zip
-https://github.com/cloudify-cosmo/cloudify-plugins-common/archive/18.1.11.zip
+git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==5.1.0.dev1
 nose
 mock
 pycrypto
