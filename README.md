@@ -37,6 +37,16 @@ plugin and install on a manager:
 3. Upload the plugin archive using the CLI: `cfy plugins upload *.wgn -y plugin.yaml -t default_tenant`
 4. Alternatively, upload the plugin using the Cloudify GUI dashboard: Dashboard/Upload Plugin/. Select the Wagon file and plugin.yaml from the Croupier folder you cloned in step 1
 
+## Setup a Python development environment
+Croupier requires Python 2.7:
+
+1. Install Python virtualenv: `pip install virtualenv`
+2. Create a Python 2.7 virtual environment: `virtualenv -p /usr/bin/python2.7 croupier`
+3. Activate environment: `source croupier/bin/activate`
+4. Install Tox: `pip install tox`
+In croupier folder, remove a pre-existing .tox folder
+5. Run test cases: tox
+
 ## Test
 
 To run the tests Cloudify CLI has to be installed locally. Example blueprints can be found at _tests/blueprint_ folder and have the `simulate` option active by default. Blueprint to be tested can be changed at _workflows_tests.py_ in the _tests_ folder.
