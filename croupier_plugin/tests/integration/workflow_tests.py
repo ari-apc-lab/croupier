@@ -46,6 +46,7 @@ class TestPlugin(unittest.TestCase):
                                        'local-blueprint-inputs.yaml')):
             inputs_file = 'local-blueprint-inputs.yaml'
         inputs = {}
+        print("Using inputs file:", inputs_file)
         with open(os.path.join('croupier_plugin',
                                'tests',
                                'integration',

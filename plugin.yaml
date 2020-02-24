@@ -32,7 +32,7 @@ plugins:
         # "plugins" directory.
         source: https://github.com/ari-apc-lab/croupier/archive/master.zip
         package_name: croupier
-        package_version: "2.3.0"
+        package_version: "3.0.0"
 
 workflows:
     run_jobs:
