@@ -31,7 +31,6 @@ plugins:
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
         # source: https://github.com/ari-apc-lab/croupier/archive/euxdat.zip
-        install: false
         package_name: croupier
         package_version: "3.0.0"
 
