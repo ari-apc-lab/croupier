@@ -1,0 +1,2 @@
+cloudify-common>=5.0.5
+paramiko===2.7.1
