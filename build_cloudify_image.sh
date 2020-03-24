@@ -1,1 +1,1 @@
-docker build -t cloudify-croupier:v3.0 .
+docker build --rm --pull --no-cache -t cloudify-croupier:v3.0 .
