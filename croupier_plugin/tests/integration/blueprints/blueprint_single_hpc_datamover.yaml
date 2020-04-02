@@ -46,7 +46,7 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
-                    implementation: scripts/move_input_data.py
+                    implementation: "scripts/data_mover.sh"
                     executor: central_deployment_agent
 
     output_mover_node:
@@ -56,7 +56,7 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
-                    implementation: scripts/move_output_data.py
+                    implementation: scripts/data_mover.sh
                     executor: central_deployment_agent
                     inputs:
                         workspace: { default: { get_property: [ SELF, workspace ] } }

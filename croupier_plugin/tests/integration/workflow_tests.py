@@ -87,7 +87,9 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'blueprint_single_hpc_datamover.yaml'),
         copy_plugin_yaml=True,
         resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
+            (os.path.join('blueprints', 'scripts', 'data_mover.sh'),
+             'scripts')],
         inputs='set_inputs')
     def test_single_hpc_datamover(self, cfy_local):
         """ Single BATCH Job Blueprint """
