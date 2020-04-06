@@ -187,6 +187,8 @@ node_types:
                 description: True to not clean after execution (debug purposes)
                 type: boolean
                 default: False
+            data_mover_options:
+                description: Data Mover options
         interfaces:
             cloudify.interfaces.lifecycle:
                 start: # needs to be 'start' to have the wm credentials
@@ -211,11 +213,15 @@ node_types:
                     inputs:
                         job_options:
                             default: { get_property: [SELF, job_options] }
+                        data_mover_options:
+                            default: { get_property: [SELF, data_mover_options] }
                 publish:
                     implementation: croupier.croupier_plugin.tasks.publish
                     inputs:
                         publish_list:
                             default: { get_property: [SELF, publish] }
+                        data_mover_options:
+                            default: { get_property: [SELF, data_mover_options] }
                 cleanup:
                     implementation: croupier.croupier_plugin.tasks.cleanup_job
                     inputs:

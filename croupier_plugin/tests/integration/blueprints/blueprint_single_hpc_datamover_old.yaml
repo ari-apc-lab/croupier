@@ -33,7 +33,41 @@ imports:
     - plugin.yaml
     - inputs_def.yaml
 
+inputs:
+    cloud_instance_ip:
+        default: localhost
+
+node_types:
+
+    input_mover_node:
+        derived_from: cloudify.nodes.Root
+        properties:
+            workspace: { default: "/tmp" }
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: "scripts/data_mover.sh"
+                    executor: central_deployment_agent
+
+    output_mover_node:
+        derived_from: cloudify.nodes.Root
+        properties:
+            workspace: { default: "/tmp" }
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: scripts/data_mover.sh
+                    executor: central_deployment_agent
+                    inputs:
+                        workspace: { default: { get_property: [ SELF, workspace ] } }
+
 node_templates:
+
+    cloud_instance: # same host as cloudify manager (localhost)
+        type: cloudify.nodes.Compute
+        properties:
+            ip: { get_input: cloud_instance_ip }
+            install_agent: false
 
     hpc_interface:
         type: croupier.nodes.InfrastructureInterface
@@ -48,6 +82,12 @@ node_templates:
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"
 
+    input_mover: # input data handler
+        type: input_mover_node
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: cloud_instance # should be checked
+
     single_job:
         type: croupier.nodes.Job
         properties:
@@ -61,24 +101,22 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '00:01:00'
                 partition: { get_input: partition_name }
-                queue: batch
             skip_cleanup: True
-            data_mover_options:
-                #server parameters should be explicitly set by users, not based on predefined options
-                server: ATOSFR #Predefined options: ATOSFR | HLRS
-                workspace: tmp #Check to use workspace managed by Croupier job
-                upload: True
-                download: True
-                source_input: y.gorronogoitia/files/ #This path is relative to the server default data path
-                dest_output: my_euxdat_files/ #This path is relative to user $HOME (only Cloud->User computer scenario works at this moment
-                life_time: 1 #What is this?
-                #type_transfer: provided by Croupier based on upload/download flags
-                #user_id: taken from hpc_interface.credentials.user. Is this the HPC user or the Cloud user?
-                globus_userkey: #File content provided (filesystem access not possible)
-                globus_usercert: #File content provided (filesystem access not possible)
         relationships:
             - type: job_managed_by_interface
               target: hpc_interface
+            - type: job_depends_on
+              target: input_mover
+
+    output_mover: # output data handler
+        type: output_mover_node
+        properties:
+            workspace: { get_property: [ input_mover, workspace ] } # should be checked
+        relationships:
+            - type: cloudify.relationships.contained_in
+              target: cloud_instance # should be checked
+            - type: job_depends_on
+              target: single_job
 
 outputs:
     single_job_name:

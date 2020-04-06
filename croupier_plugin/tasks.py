@@ -458,7 +458,7 @@ def deploy_job(script,
 
 
 @operation
-def send_job(job_options, **kwargs):  # pylint: disable=W0613
+def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W0613
     """ Sends a job to the infrastructure interface """
     simulate = ctx.instance.runtime_properties['simulate']
 
@@ -467,6 +467,11 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
         type_hierarchy
 
     if not simulate:
+        #Do data download (from Cloud to HPC) if requested
+        if data_mover_options['download']:
+            download_data(data_mover_options)
+
+        #Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         client = SshClient(ctx.instance.runtime_properties['credentials'])
@@ -612,7 +617,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
 
 
 @operation
-def publish(publish_list, **kwargs):
+def publish(publish_list, data_mover_options, **kwargs):
     """ Publish the job outputs """
     try:
         simulate = ctx.instance.runtime_properties['simulate']
@@ -627,6 +632,10 @@ def publish(publish_list, **kwargs):
         name = kwargs['name']
         published = True
         if not simulate:
+            # Do data upload (from HPC to Cloud) if requested
+            if data_mover_options['upload']:
+                upload_data(data_mover_options)
+
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
@@ -658,3 +667,14 @@ def publish(publish_list, **kwargs):
         print(traceback.format_exc())
         ctx.logger.error(
             'Cannot publish: ' + exp.message)
+
+def download_data(data_mover_options):
+    '''Downloads data from Cloud to the HPC workspace'''
+    move_data(data_mover_options, type_transfer='download')
+
+def upload_data(data_mover_options):
+    '''Uploads data from the HPC workspace to the Cloud'''
+    move_data(data_mover_options, type_transfer='upload')
+
+def move_data(data_mover_options, type_transfer):
+    '''Invokes the data mover to transfer data'''
