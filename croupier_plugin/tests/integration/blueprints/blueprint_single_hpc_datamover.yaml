@@ -63,19 +63,19 @@ node_templates:
                 partition: { get_input: partition_name }
                 queue: batch
             skip_cleanup: True
-            data_mover_options:
-                #server parameters should be explicitly set by users, not based on predefined options
-                server: ATOSFR #Predefined options: ATOSFR | HLRS
-                workspace: tmp #Check to use workspace managed by Croupier job
-                upload: True
-                download: True
-                source_input: y.gorronogoitia/files/ #This path is relative to the server default data path
-                dest_output: my_euxdat_files/ #This path is relative to user $HOME (only Cloud->User computer scenario works at this moment
-                life_time: 1 #What is this?
-                #type_transfer: provided by Croupier based on upload/download flags
-                #user_id: taken from hpc_interface.credentials.user. Is this the HPC user or the Cloud user?
-                globus_userkey: #File content provided (filesystem access not possible)
-                globus_usercert: #File content provided (filesystem access not possible)
+            data_mover_options: { get_input: data_mover_options }
+            #These are the data_mover_options:
+            #server: ATOSFR #Predefined options: ATOSFR | HLRS
+            #workspace: wsdata #Workspace to be created in the HPC
+            #upload: True #Whether to invoke data mover for data upload after job execution
+            #download: True #Whether to invoke data mover for data download before job execution
+            #cloud_folder: y.gorronogoitia/files/ #This path is relative to the server default data path
+            #local_folder: my_euxdat_files/ #This path is relative to user $HOME (only Cloud->User computer scenario works at this moment
+            #ws_lifetime: 1 #defines the number of days between the creation of the workspace until its automatic deletion. The maximum value is 30 days.
+            #grid_userkey: #GridFTP user key as content string
+            #grid_usercert: #GridFTP user cert as content string
+            #grid_certpass: #GridFTP user cert password as string
+
         relationships:
             - type: job_managed_by_interface
               target: hpc_interface

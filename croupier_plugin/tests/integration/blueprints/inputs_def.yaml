@@ -56,6 +56,11 @@ inputs:
   scratch_voulume_mount_point:
     default: /scratch
 
+  ################### Data Mover ##################
+  data_mover_options:
+    description: Data Mover options
+    default: {}
+
   ################# Cloud Infrastructre #################
   cloud_interface_config:
     description: cloud interface (Only supported SHELL)
