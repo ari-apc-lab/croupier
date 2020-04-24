@@ -189,6 +189,7 @@ node_types:
                 default: False
             data_mover_options:
                 description: Data Mover options
+                default: {}
         interfaces:
             cloudify.interfaces.lifecycle:
                 start: # needs to be 'start' to have the wm credentials
