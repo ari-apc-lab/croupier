@@ -1,7 +1,5 @@
-#!/usr/bin/env python
-
 #Author: Jose Miguel Montanana, montanana@hlrs.de
-#version 1.21, 7-Apr-2020.
+#version 1.22, 21-Apr-2020.
 
 #This script has to be executed with the vendor account
 #it is assumed that the vendor has GridFtp credentials, and it is installed the grid-proxy in the machine where this script is executed.
@@ -20,47 +18,44 @@ import wget
 import os.path
 import tarfile
 import time
-import subprocess
 import requests
-from os import path
-from cloudify import ctx
-from shutil import copyfile
-from pathlib import Path
+#from pathlib import Path #This module is incompatible with Croupier
 import subprocess
 from os.path import expanduser
 
 home = expanduser("~")
-DEBUG="TRUE"
+user_ssh_credentials = home+"/.ssh/id_rsa" #this path is not needed if we receive the ssh credentials as parameter
+DEBUG = "TRUE"
 
 class Workspaces:
 	############## Allocate workspace via SSH
 	# The workspace will be reused if it already exists, and the lifetime will not be extended
-	def create_ws(self,user_id, SSH_HOST, user_ssh_credentials, ws_name, LIFETIME):
-		#example of exec: ssh $user_id@$SSH_HOST -i $user_ssh_credentials "module load system/ws_tools; ws_allocate $ws_name $LIFETIME;";
-		command="ssh " + user_id+"@"+SSH_HOST+" -i "+user_ssh_credentials+" \"module load system/ws_tools; ws_allocate "+ws_name+" "+format(lifetime, "d")+"\""
+	def create_ws(self,hlrs_user_id, SSH_HOST, user_ssh_credentials, ws_name, lifetime):
+		#example of exec: ssh $hlrs_user_id@$SSH_HOST -i $user_ssh_credentials "module load system/ws_tools; ws_allocate $ws_name $LIFETIME;";
+		command="ssh "+ hlrs_user_id+"@"+SSH_HOST+" -i "+user_ssh_credentials+" \"module load system/ws_tools; ws_allocate "+ws_name+" "+format(lifetime, "d")+"\""
 		print (" create_ws "+ command)
 		try:
-			server_response=subprocess.check_output(command, shell=True)
+			srv_response=subprocess.check_output(command, shell=True)
 		except subprocess.CalledProcessError as grepexc:
 			print ("Error creating workspace.")
 			print ("error code", grepexc.returncode, grepexc.output)
 			sys.exit(1)
-		response=server_response.decode("utf-8")
+		response=srv_response.decode("utf-8")
 		return response
 
 	#TODO: need a timeout for not whilisted ip_addresses
 	############## delete the workspace via SSH after end the application and we collected the outputs
 	# Warning this must be done ONLY after the output result-files are copied in a external storage!
-	#example: ssh user_id@SSH_HOST -i user_ssh_credentials "module load system/ws_tools ws_release ws_name"
-	def delete_ws(self,user_id, SSH_HOST, user_ssh_credentials, ws_name):
-		command="ssh "+ user_id+"@"+SSH_HOST+" -i "+user_ssh_credentials+" \"module load system/ws_tools; ws_release "+ws_name+"\""
+	#example: ssh hlrs_user_id@SSH_HOST -i user_ssh_credentials "module load system/ws_tools ws_release ws_name"
+	def delete_ws(self,hlrs_user_id, SSH_HOST, user_ssh_credentials, ws_name):
+		command="ssh "+ hlrs_user_id+"@"+SSH_HOST+" -i "+user_ssh_credentials+" \"module load system/ws_tools; ws_release "+ws_name+"\""
 		try:
-			server_response=subprocess.check_output(command, shell=True)
+			srv_response=subprocess.check_output(command, shell=True)
 		except subprocess.CalledProcessError as grepexc:
 			print ("Error removing workspace.")
 			print ("error code", grepexc.returncode, grepexc.output)
 			sys.exit(1)
-		response=server_response.decode("utf-8")
+		response=srv_response.decode("utf-8")
 		return response
 
 class Local_gridftp_conf:
@@ -72,8 +67,9 @@ class Local_gridftp_conf:
 			os.chdir(download_folder)
 			url = " https://winnetou.surfsara.nl/prace/certs/globuscerts.tar.gz"
 			wget.download(url, download_folder)
-			my_file = Path(download_folder+"globuscerts.tar.gz")
-			if not my_file.is_file():
+			#my_file = Path(download_folder+"globuscerts.tar.gz")
+			#if not my_file.is_file():
+			if not os.path.isfile (download_folder+"globuscerts.tar.gz"):
 				print ("Error: file globuscerts.tar.gz not found.")
 				sys.exit(1)
 			tar = tarfile.open("globuscerts.tar.gz")
@@ -124,12 +120,14 @@ class Local_gridftp_conf:
 
 		thecertpath=home+"/.globus/usercert.pem"
 		thecertkey=home+"/.globus/userkey.pem"
-		my_file = Path(thecertpath)
-		if not my_file.is_file():
+		# my_file = Path(thecertpath)
+		# if not my_file.is_file():
+		if not os.path.isfile(thecertpath):
 			print ("Error: missing credentials (cert)")
 			sys.exit(1)
-		my_file = Path(thecertkey)
-		if not my_file.is_file():
+		# my_file = Path(thecertkey)
+		# if not my_file.is_file():
+		if not os.path.isfile(thecertkey):
 			print ("Error: missing credentials (key)")
 			sys.exit(1)
 		os.chmod(home+"/.globus/usercert.pem", 0o0644)
@@ -154,31 +152,18 @@ class DataMover:
 #globus_gsi_gssapi: Authorization denied: The expected name for the remote host (host@ecs-80-158-5-38.reverse.open-telekom-cloud.com) does not match the authenticated name of the remote host (host@gridftp-s1.euxdat.eu). This happens when the name in the host certificate does not match the information obtained from DNS and is often a DNS configuration problem.
 
 
-
-	def __init__(self, SERVER, user_id, user_ssh_credentials, ws_name, ws_lifetime, userkey, usercert,grid_cert_passwd ):
+	def __init__(self, new_ws, hlrs_user_id, atosfr_user_id, user_ssh_credentials, ws_name, ws_lifetime, userkey, usercert,grid_cert_passwd ):
 		self.size_bytes=0
 		self.start_time=0
 		self.end_time=0
-		self.gridftpserver=SERVER
-		self.WS_BASE_PATH=""
-		self.GRIDFTP_PORT=""
-		self.GRIDFTP_HOST=""
-		self.SSH_HOST=""
+		self.hlrs_user_id=hlrs_user_id
+		self.atosfr_user_id=atosfr_user_id
 		self.new_wspath=""
-		if self.gridftpserver == "HLRS":
-			self.WS_BASE_PATH=self.HLRS_WS_BASE_PATH
-			self.GRIDFTP_PORT=self.HLRS_GRIDFTP_PORT
-			self.GRIDFTP_HOST=self.HLRS_GRIDFTP_HOST
-			self.SSH_HOST=self.HLRS_SSH_HOST
-		else:
-			self.WS_BASE_PATH=self.ATOSFR_WS_BASE_PATH
-			self.GRIDFTP_PORT=self.ATOSFR_GRIDFTP_PORT
-			self.GRIDFTP_HOST=self.ATOSFR_GRIDFTP_HOST
 		hlrs_workspace = Workspaces()
 		if DEBUG == "TRUE":
 			print ("Allocate workspace via SSH.")
-		if SERVER == "HLRS":
-			new_wspath=hlrs_workspace.create_ws(user_id, SSH_HOST, user_ssh_credentials, ws_name, ws_lifetime)
+		if new_ws == True:
+			new_wspath=hlrs_workspace.create_ws(hlrs_user_id, self.HLRS_SSH_HOST, user_ssh_credentials, ws_name, ws_lifetime)
 		if (userkey) and (usercert) : #if both certificates are not empty
 			############## PREPARATION OF THE GRIDFTP CERTIFICATES
 			# notice that starting the grid-proxy-init may ask for a password if the keys are encrypted.
@@ -205,55 +190,86 @@ class DataMover:
 						total_size += os.path.getsize(fp)
 		return total_size
 
-	def make_destination_folder(self, dest_output):# needed because gridFTP transfer will fail it it not exists.
+	def make_destination_folder(self, server, dest_output):# needed because gridFTP transfer will fail it it not exists.
 		#first, need to know if the destination is a folder, then we remove the end before the last character "/"
 		if DEBUG == "TRUE":
 			print ("Request to create the destination folder, it may not exists yet.")
 		new_folder=dest_output
-		if "/" not in new_folder:
+		if "/" in new_folder:
 			while new_folder and new_folder[-1] != "/":
 				new_folder=new_folder[:-1]
-			if new_folder != '/' and self.gridftpserver == "HLRS":
+			if new_folder != '/' and server == "HLRS":
 				#now, request to create that folder at destination
-				command="ssh "+ user_id+"@"+SSH_HOST+" -i "+user_ssh_credentials+" \"mkdir -p /"+WS_BASE_PATH+"/"+user_id+"-"+ws_name+"/"+new_folder+"\""
+				command="ssh "+ self.hlrs_user_id+"@"+self.HLRS_SSH_HOST+" -i "+user_ssh_credentials+" \"mkdir -p /"+self.HLRS_WS_BASE_PATH+"/"+self.hlrs_user_id+"-"+self.ws_name+"/"+new_folder+"\""
 				try:
-					server_response=subprocess.check_output(self.command, shell=True)
+					srv_response=subprocess.check_output(self.command, shell=True)
 				except subprocess.CalledProcessError as grepexc:
 					print("Error creating folder in the workspace")
 					print ("error code", grepexc.returncode, grepexc.output)
 					sys.exit(1)
-			elif new_folder != '/' and self.gridftpserver == "ATOSFR":
+			elif new_folder != '/' and server == "ATOSFR":
 				#now, request to create that folder at destination
 				#Using the GSI security files created by grid-init-proxy
-				command="uberftp -mkdir gsiftp://"+self.GRIDFTP_HOST+":"+str(self.GRIDFTP_PORT)+"/"+self.WS_BASE_PATH+"/"+dest_output
+				command="uberftp -mkdir gsiftp://"+self.ATOSFR_GRIDFTP_HOST+":"+str(self.ATOSFR_GRIDFTP_PORT)+"/"+self.ATOSFR_WS_BASE_PATH+"/"+dest_output
 				try:
-					server_response=subprocess.check_output(command, shell=True)
+					srv_response=subprocess.check_output(command, shell=True)
 				except subprocess.CalledProcessError as grepexc:
 					print("Error creating folder in the workspace")
-					print ("error code", grepexc.returncode, grepexc.output)
+					print("error code", grepexc.returncode, grepexc.output)
 					sys.exit(1)
 
-	def run_transference(self, type_transfer, source_input, dest_output):
+	#source and destination define the machines, values can be "localhost" "HLRS" "ATOSFR"
+	def run_transference(self, source, destination, source_input, dest_output):
 		self.size_bytes=0
 		self.start_time=time.time()
+		if source == "HLRS":
+			src_user_id=self.hlrs_user_id;
+			src_WS_BASE_PATH=self.HLRS_WS_BASE_PATH
+			src_GRIDFTP_PORT=self.HLRS_GRIDFTP_PORT
+			src_GRIDFTP_HOST=self.HLRS_GRIDFTP_HOST
+			src_path=self.hlrs_user_id+"-"+self.ws_name+"/"+source_input
+		elif source == "ATOSFR":
+			src_user_id=self.atosfr_user_id;
+			src_WS_BASE_PATH=self.ATOSFR_WS_BASE_PATH
+			src_GRIDFTP_PORT=self.ATOSFR_GRIDFTP_PORT
+			src_GRIDFTP_HOST=self.ATOSFR_GRIDFTP_HOST
+			src_path=source_input
+		elif source != "localhost":
+			print("Error source paramter not valid")
+			sys.exit(1)
+		if destination == "HLRS":
+			dst_user_id=self.hlrs_user_id;
+			dst_WS_BASE_PATH=self.HLRS_WS_BASE_PATH
+			dst_GRIDFTP_PORT=self.HLRS_GRIDFTP_PORT
+			dst_GRIDFTP_HOST=self.HLRS_GRIDFTP_HOST
+			dst_path=self.hlrs_user_id+"-"+self.ws_name+"/"+dest_output
+		elif destination == "ATOSFR":
+			dst_user_id=self.atosfr_user_id;
+			dst_WS_BASE_PATH=self.ATOSFR_WS_BASE_PATH
+			dst_GRIDFTP_PORT=self.ATOSFR_GRIDFTP_PORT
+			dst_GRIDFTP_HOST=self.ATOSFR_GRIDFTP_HOST
+			dst_path=dest_output
+		elif destination != "localhost":
+			print("Error destination paramter not valid")
+			sys.exit(1)
+
 
 		if DEBUG == "TRUE":
 			print ("start transfer.")
-		if type_transfer == "upload":
-			self.make_destination_folder(dest_output )
-		if type_transfer == "upload" and self.gridftpserver == "HLRS":
-			command="globus-url-copy file://"+home+"/"+source_input+" gsiftp://"+user_id+"@"+self.GRIDFTP_HOST+":"+str(self.GRIDFTP_PORT)+"/"+self.WS_BASE_PATH+"/"+user_id+"-"+ws_name+"/"+dest_output
-		elif type_transfer == "download" and self.gridftpserver == "HLRS":
-			command="globus-url-copy gsiftp://"+user_id+"@"+self.GRIDFTP_HOST+":"+str(self.GRIDFTP_PORT)+"/"+self.WS_BASE_PATH+"/"+user_id+"-"+ws_name+"/"+source_input+" file://"+home+"/"+dest_output
-		elif type_transfer == "upload" and self.gridftpserver == "ATOSFR":
-			command="globus-url-copy file://"+home+"/"+source_input+" gsiftp://"+self.GRIDFTP_HOST+":"+str(self.GRIDFTP_PORT)+"/"+self.WS_BASE_PATH+"/"+dest_output
-		elif type_transfer == "download" and self.gridftpserver == "ATOSFR":
-			command="globus-url-copy gsiftp://"+self.GRIDFTP_HOST+":"+str(self.GRIDFTP_PORT)+"/"+self.WS_BASE_PATH+"/"+source_input+" file://"+home+"/"+dest_output
-		elif type_transfer == "grid2grid":
-			command="globus-url-copy gsiftp://"+user_id+"@"+self.GRIDFTP_HOST+":"+self.GRIDFTP_PORT+"/"+self.WS_BASE_PATH+"/"+user_id+"-"+ws_name+"/"+source_input+" gsiftp://"+user_id+"@"+self.GRIDFTP_HOST+":"+self.GRIDFTP_PORT+"/"+self.WS_BASE_PATH+"/"+user_id+"-"+ws_name+"/"+dest_output
+		if destination != "localhost":
+			self.make_destination_folder(destination, dest_output )
+		if source == "localhost" :
+			command="globus-url-copy" + \
+				" file://"+home+"/"+source_input+ \
+				" gsiftp://"+dst_user_id+"@"+dst_GRIDFTP_HOST+":"+str(dst_GRIDFTP_PORT)+"/"+dst_WS_BASE_PATH+"/"+dst_path
+		elif destination == "localhost" :
+			command="globus-url-copy" + \
+				" gsiftp://"+src_user_id+"@"+src_GRIDFTP_HOST+":"+str(src_GRIDFTP_PORT)+"/"+src_WS_BASE_PATH+"/"+src_path+ \
+				" file://"+home+"/"+dest_output
 		else:
-			print ("Error: type of transfer not supported.")
-			sys.exit(1)
+			command="globus-url-copy" + \
+				" gsiftp://"+src_user_id+"@"+src_GRIDFTP_HOST+":"+str(src_GRIDFTP_PORT)+"/"+src_WS_BASE_PATH+"/"+src_path+ \
+				" gsiftp://"+dst_user_id+"@"+dst_GRIDFTP_HOST+":"+str(dst_GRIDFTP_PORT)+"/"+dst_WS_BASE_PATH+"/"+dst_path
 		if DEBUG == "TRUE":
 			print ("command is " + command)
 		try:
@@ -262,10 +278,10 @@ class DataMover:
 			print("Error transfering data")
 			print ("error code", grepexc.returncode, grepexc.output)
 			sys.exit(1)
-		if type_transfer == "upload":
+		if source == "localhost":
 			source_folder=home+"/"+source_input
 			self.size_bytes=str(int(self.get_size(source_folder)))
-		elif type_transfer == "download":
+		elif destination == "localhost":
 			dest_folder=home+"/"+dest_output
 			self.size_bytes=str(int(self.get_size(dest_folder)))
 		self.end_time=time.time()
@@ -290,5 +306,3 @@ class Metricspublisher:
 	def new_metric(self,job_name,instance_name,payload_key,payload_value, team_name):
 		response = requests.post(self.prometheus_server+'/metrics/job/{j}/instance/{i}/team/{t}'.format(j=job_name, i=instance_name, t=team_name), data='{k} {v}\n'.format(k=payload_key, v=payload_value))
 		return response
-
-
