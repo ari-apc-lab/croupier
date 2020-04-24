@@ -17,9 +17,9 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Javier Carnero, Jesús Gorroñogoitia
+# @author: Yosu Gorroñogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: javier.carnero@atos.net, jesus.gorronogoitia@atos.net
+#          e-mail: jesus.gorronogoitia@atos.net
 #
 # blueprint_single.yaml
 
@@ -34,7 +34,6 @@ imports:
     - inputs_def.yaml
 
 node_templates:
-
     hpc_interface:
         type: croupier.nodes.InfrastructureInterface
         properties:
@@ -48,34 +47,23 @@ node_templates:
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"
 
-    single_job:
+    benchmark_job:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "touch test_$1.output"
+                - "cd $PBS_O_WORKDIR; module load python/3; mpirun -np 4 ./python_code/frostdates > my_output_file 2>&1"
                 arguments:
                 - script
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:01:00'
+                max_time: '00:05:00'
                 partition: { get_input: partition_name }
-                queue: batch
+                queue: single
+                type: rome
+                mpiprocs: 4
             skip_cleanup: True
-            data_mover_options: { get_input: data_mover_options }
-            #These are the data_mover_options:
-            #workspace: wsdata #Workspace to be created in the HPC
-            #upload: True #Whether to invoke data mover for data upload after job execution
-            #download: True #Whether to invoke data mover for data download before job execution
-            #cloud_user: user name to get access to the Cloud data
-            #cloud_folder: y.gorronogoitia/files/ #This path is relative to the server default data path. It could point to a file
-            #hpc_folder: files/ #This path is relative to HPC workspace data path. It could point to a file
-            #ws_lifetime: 1 #defines the number of days between the creation of the workspace until its automatic deletion. The maximum value is 30 days.
-            #grid_userkey: #GridFTP user key as content string
-            #grid_usercert: #GridFTP user cert as content string
-            #grid_certpass: #GridFTP user cert password as string
-
         relationships:
             - type: job_managed_by_interface
               target: hpc_interface

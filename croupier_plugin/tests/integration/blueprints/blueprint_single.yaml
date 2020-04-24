@@ -60,6 +60,7 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '00:01:00'
                 partition: { get_input: partition_name }
+                queue: batch
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
