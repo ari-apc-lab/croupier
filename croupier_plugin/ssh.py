@@ -193,6 +193,8 @@ class SshClient(object):
                 stdout_chunks = []
                 stdout_chunks.append(stdout.channel.recv(
                     len(stdout.channel.in_buffer)))
+                stdout_chunks.append(stderr.channel.recv(
+                    len(stderr.channel.in_buffer)))
                 # chunked read to prevent stalls
                 while (not channel.closed
                        or channel.recv_ready()
@@ -211,7 +213,7 @@ class SshClient(object):
                             got_chunk = True
                         if c.recv_stderr_ready():
                             # make sure to read stderr to prevent stall
-                            stderr.channel.recv_stderr(len(c.in_stderr_buffer))
+                            stdout_chunks.append(stderr.channel.recv_stderr(len(c.in_stderr_buffer)))
                             got_chunk = True
                     '''
                     1) make sure that there are at least 2 cycles with no data
@@ -244,7 +246,7 @@ class SshClient(object):
                 if exit_code == 0:
                     output = ''.join(stdout_chunks)
                 else:
-                    output = ''.join(stdout_chunks)  # TODO stderr
+                    output = ''.join(stdout_chunks)
                 return (output, exit_code)
             else:
                 return True

@@ -52,17 +52,11 @@ node_templates:
         properties:
             job_options:
                 commands:
-                - "cd $PBS_O_WORKDIR; module load python/3; mpirun -np 4 ./python_code/frostdates > my_output_file 2>&1"
-                arguments:
-                - script
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
-                max_time: '00:05:00'
-                partition: { get_input: partition_name }
-                queue: single
-                type: rome
+                - "cd $HOME/sc3_agroclimatic/frostdates/cloudify_integration; module load python/3; mpirun -np 4 ./python_code/frostdates > my_output_file 2>&1"
+                select: 1
+                node_type: rome
                 mpiprocs: 4
+                max_time: '00:05:00'
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -71,4 +65,4 @@ node_templates:
 outputs:
     single_job_name:
         description: single job name in the HPC
-        value: { get_attribute: [single_job, job_name] }
+        value: { get_attribute: [benchmark_job, job_name] }

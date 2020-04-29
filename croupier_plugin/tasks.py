@@ -36,7 +36,7 @@ from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
     InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (
     ExternalRepository)
-from croupier_plugin.data_mover.croupier2datamover import upload_data, download_data
+from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
 
 
 @operation
@@ -469,8 +469,9 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     if not simulate:
         #Do data download (from Cloud to HPC) if requested
-        if data_mover_options['download']:
-            download_data(data_mover_options)
+        if len(data_mover_options) > 0 and data_mover_options['download']:
+            dmp = DataMoverProxy(data_mover_options)
+            dmp.download_data()
 
         #Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -634,8 +635,9 @@ def publish(publish_list, data_mover_options, **kwargs):
         published = True
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
-            if data_mover_options['upload']:
-                upload_data(data_mover_options)
+            if len(data_mover_options) > 0 and data_mover_options['upload']:
+                dmp = DataMoverProxy(data_mover_options)
+                dmp.upload_data()
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])

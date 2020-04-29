@@ -21,6 +21,10 @@ license information in the project root.
          High-Performance Computing Center. Stuttgart
          e-mail: hpcgogol@hlrs.de
 
+@author: Yosu Gorronogoitia
+         Atos Spain S.A.
+         e-mail: jesus.gorronogoitia@atos.net
+
 torque.py
 '''
 
@@ -75,6 +79,21 @@ class Torque(InfrastructureInterface):
             if _check_job_settings_key('tasks_per_node'):
                 node_request += ':ppn={}'.format(
                     job_settings['tasks_per_node'])
+
+            _add_setting('-l', node_request)
+
+        # HLRS Hawk Torque flags
+        # Documentation: https://kb.hlrs.de/platforms/index.php/Batch_System_PBSPro_(Hawk)#Node_types
+        if _check_job_settings_key('select'):
+            node_request = "select={}".format(job_settings['select'])
+
+            if _check_job_settings_key('node_type'):
+                node_request += ':node_type={}'.format(
+                    job_settings['node_type'])
+
+            if _check_job_settings_key('mpiprocs'):
+                node_request += ':mpiprocs={}'.format(
+                    job_settings['mpiprocs'])
 
             _add_setting('-l', node_request)
 
