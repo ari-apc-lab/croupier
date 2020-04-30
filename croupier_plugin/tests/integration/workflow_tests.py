@@ -31,7 +31,6 @@ import errno
 import yaml
 from cloudify.test_utils import workflow_test
 
-
 class TestPlugin(unittest.TestCase):
     """ Test workflows class """
 
@@ -70,7 +69,7 @@ class TestPlugin(unittest.TestCase):
                                        'integration',
                                        'inputs',
                                        inputs_file)):
-            raise FileNotFoundError(
+            raise IOError(
                 errno.ENOENT, os.strerror(errno.ENOENT), inputs_file)
         inputs = {}
         print("Using inputs file:", inputs_file)
@@ -94,6 +93,60 @@ class TestPlugin(unittest.TestCase):
             (os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='set_inputs')
     def test_single(self, cfy_local):
+        """ Single BATCH Job Blueprint """
+        cfy_local.execute('install', task_retries=0)
+        cfy_local.execute('run_jobs', task_retries=0)
+        cfy_local.execute('uninstall', task_retries=0)
+
+        # extract single node instance
+        instance = cfy_local.storage.get_node_instances()[0]
+
+        # due to a cfy bug sometimes login keyword is not ready in the tests
+        if 'login' in instance.runtime_properties:
+            # assert runtime properties is properly set in node instance
+            self.assertEqual(instance.runtime_properties['login'],
+                             True)
+        else:
+            logging.warning('[WARNING] Login could not be tested')
+
+    # Single test in Sodalite HPC
+    def load_sodalite_hpc_inputs(self, *args, **kwargs):
+        return self.load_inputs('blueprint-sodalite-inputs.yaml')
+
+    @workflow_test(
+        os.path.join('blueprints', 'blueprint_single.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[
+            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        inputs='load_sodalite_hpc_inputs')
+    def test_single_sodalite(self, cfy_local):
+        """ Single BATCH Job Blueprint """
+        cfy_local.execute('install', task_retries=0)
+        cfy_local.execute('run_jobs', task_retries=0)
+        cfy_local.execute('uninstall', task_retries=0)
+
+        # extract single node instance
+        instance = cfy_local.storage.get_node_instances()[0]
+
+        # due to a cfy bug sometimes login keyword is not ready in the tests
+        if 'login' in instance.runtime_properties:
+            # assert runtime properties is properly set in node instance
+            self.assertEqual(instance.runtime_properties['login'],
+                             True)
+        else:
+            logging.warning('[WARNING] Login could not be tested')
+
+    #Single test in Hawk HPC
+    def load_hawk_hpc_inputs(self, *args, **kwargs):
+        return self.load_inputs('blueprint-hawk-inputs.yaml')
+
+    @workflow_test(
+        os.path.join('blueprints', 'blueprint_single.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[
+            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        inputs='load_hawk_hpc_inputs')
+    def test_single_hawk(self, cfy_local):
         """ Single BATCH Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)

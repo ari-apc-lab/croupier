@@ -54,7 +54,9 @@ class Torque(InfrastructureInterface):
 
         if not script:
             # qsub command plus job name
-            _settings['data'] += "qsub -V -N {}".format(
+            # Read environment, required by some HPC (e.g. HLRS Hawk)
+            read_environment = "source /etc/profile; "
+            _settings['data'] += read_environment + "qsub -V -N {}".format(
                 shlex_quote(job_id))
 
         # Check if exists and has content
