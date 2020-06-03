@@ -23,12 +23,12 @@ license information in the project root.
 
 infrastructure_interface.py
 '''
-
+import io
+import os
 import string
 import random
 from datetime import datetime
 from croupier_plugin.ssh import SshClient
-
 
 BOOTFAIL = 0
 CANCELLED = 1
@@ -127,18 +127,22 @@ def get_prevailing_state(state1, state2):
 
 
 class InfrastructureInterface(object):
+    infrastructure_interface = None
+
+    def __init__(self, infrastructure_interface):
+        self.infrastructure_interface = infrastructure_interface
 
     @staticmethod
     def factory(infrastructure_interface):
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
-            return Slurm()
+            return Slurm(infrastructure_interface)
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
-            return Torque()
+            return Torque(infrastructure_interface)
         if infrastructure_interface == "SHELL":
             from croupier_plugin.infrastructure_interfaces.shell import Shell
-            return Shell()
+            return Shell(infrastructure_interface)
         return None
 
     def submit_job(self,
@@ -209,6 +213,12 @@ class InfrastructureInterface(object):
                         job_settings['scale_max_in_parallel']
         else:
             settings = job_settings
+
+        # Collect HPC resource consumption metrics for Accounting, using prologue/epilogue
+        # Only for TORQUE orchestrator
+        # Send prologue/epilogue scripts with right permissions to job submission directory
+        if self.infrastructure_interface == 'TORQUE':
+            self.sendPrologueAndEpilogue(workdir, ssh_client, logger)
 
         # build the call to submit the job
         response = self._build_job_submission_call(
@@ -330,7 +340,7 @@ class InfrastructureInterface(object):
                            "/" + workdir + "' directory.")
             return None
 
-#   ################ ABSTRACT METHODS ################
+    #   ################ ABSTRACT METHODS ################
 
     def _parse_job_settings(
             self,
@@ -402,7 +412,8 @@ class InfrastructureInterface(object):
         @return a dictionary of job names and its states
         """
         raise NotImplementedError("'get_states' not implemented.")
-#   ##################################################
+
+    #   ##################################################
 
     def _build_script(self, name, job_settings, logger, container=False):
         """
@@ -585,7 +596,7 @@ class InfrastructureInterface(object):
             .replace('"', '\\"')
 
         create_call = "echo \"" + script_data + "\" >> " + name + \
-            "; chmod +x " + name
+                      "; chmod +x " + name
         _, exit_code = ssh_client.execute_shell_command(
             create_call,
             workdir=workdir,
@@ -643,3 +654,41 @@ class InfrastructureInterface(object):
             return True
         else:
             return False
+
+    def sendPrologueAndEpilogue(self, workdir, ssh_client, logger):
+        # Read prologue.sh and epilog.sh from current module folder
+        module_dir = os.path.abspath(__file__)
+        index = module_dir.rindex('/')
+        prologue_path = module_dir[:index] + '/prologue.sh'
+        epilogue_path = module_dir[:index] + '/epilogue.sh'
+        with io.open(prologue_path, mode='r', encoding='utf-8') as prologue_file:
+            prologue_content = prologue_file.read()
+            self.sendScript('prologue.sh', prologue_content, '500', workdir, ssh_client, logger)
+        with io.open(epilogue_path, mode='r', encoding='utf-8') as epilogue_file:
+            epilogue_content = epilogue_file.read()
+            self.sendScript('epilogue.sh', epilogue_content, '500', workdir, ssh_client, logger)
+
+    def sendScript(self, name, script, permissions, workdir, ssh_client, logger):
+        # Create invocation with ssh to send script and set its permissions
+        # escape for echo command
+        script_data = script \
+            .replace("\\", "\\\\") \
+            .replace("$", "\\$") \
+            .replace("`", "\\`") \
+            .replace('"', '\\"')
+
+        create_call = u'echo \"{script_data}\" >> {name}; chmod {permissions} {name}'\
+            .format(script_data=script_data, name=name, permissions=permissions)
+
+        _, exit_code = ssh_client.execute_shell_command(
+            create_call,
+            workdir=workdir,
+            wait_result=True)
+
+        if exit_code != 0:
+            logger.error(
+                "failed to send script: call '" + create_call +
+                "', exit code " + str(exit_code))
+            return False
+
+        return True

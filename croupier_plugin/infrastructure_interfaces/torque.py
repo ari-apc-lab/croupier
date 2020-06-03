@@ -56,7 +56,8 @@ class Torque(InfrastructureInterface):
             # qsub command plus job name
             # Read environment, required by some HPC (e.g. HLRS Hawk)
             read_environment = "source /etc/profile; "
-            _settings['data'] += read_environment + "qsub -V -N {}".format(
+            # Add prologue/epilogue flags in submission job call (e.g. qsub -l prologue=prologue.sh ...)
+            _settings['data'] += read_environment + "qsub -V -N {} -l prologue=prologue.sh -l epilogue=epilogue.sh".format(
                 shlex_quote(job_id))
 
         # Check if exists and has content

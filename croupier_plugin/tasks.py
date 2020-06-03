@@ -23,8 +23,7 @@ license information in the project root.
 
 tasks.py: Holds the plugin tasks
 '''
-
-
+import socket
 import traceback
 import requests
 from cloudify import ctx
@@ -208,16 +207,16 @@ def start_monitoring_hpc(
             country_tz = config['country_tz']
 
             url = 'http://' + external_monitor_entrypoint + \
-                external_monitor_orchestrator_port + '/exporters/add'
+                  external_monitor_orchestrator_port + '/exporters/add'
 
             # FIXME: credentials doesn't have to have a password anymore
             payload = ("{\n\t\"host\": \"" + credentials['host'] +
                        "\",\n\t\"type\": \"" + infrastructure_interface +
                        "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
                        "user\": \"" + credentials['user'] + "\",\n\t\t\""
-                       "pass\": \"" + credentials['password'] + "\",\n\t\t\""
-                       "tz\": \"" + country_tz + "\",\n\t\t\""
-                       "log\": \"debug\"\n\t}\n}")
+                                                            "pass\": \"" + credentials['password'] + "\",\n\t\t\""
+                                                                                                     "tz\": \"" + country_tz + "\",\n\t\t\""
+                                                                                                                               "log\": \"debug\"\n\t}\n}")
             headers = {
                 'content-type': "application/json",
                 'cache-control': "no-cache",
@@ -255,16 +254,16 @@ def stop_monitoring_hpc(
             country_tz = config['country_tz']
 
             url = 'http://' + external_monitor_entrypoint + \
-                external_monitor_orchestrator_port + '/exporters/remove'
+                  external_monitor_orchestrator_port + '/exporters/remove'
 
             # FIXME: credentials doesn't have to have a password anymore
             payload = ("{\n\t\"host\": \"" + credentials['host'] +
                        "\",\n\t\"type\": \"" + infrastructure_interface +
                        "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
                        "user\": \"" + credentials['user'] + "\",\n\t\t\""
-                       "pass\": \"" + credentials['password'] + "\",\n\t\t\""
-                       "tz\": \"" + country_tz + "\",\n\t\t\""
-                       "log\": \"debug\"\n\t}\n}")
+                                                            "pass\": \"" + credentials['password'] + "\",\n\t\t\""
+                                                                                                     "tz\": \"" + country_tz + "\",\n\t\t\""
+                                                                                                                               "log\": \"debug\"\n\t}\n}")
             headers = {
                 'content-type': "application/json",
                 'cache-control': "no-cache",
@@ -330,7 +329,7 @@ def bootstrap_job(
         deployment,
         skip_cleanup,
         **kwarsgs):  # pylint: disable=W0613
-    """Bootstrap a job with a script that receives SSH credentials as imput"""
+    """Bootstrap a job with a script that receives SSH credentials as input"""
     if not deployment:
         return
 
@@ -464,16 +463,16 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     simulate = ctx.instance.runtime_properties['simulate']
 
     name = kwargs['name']
-    is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.\
+    is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
         type_hierarchy
 
     if not simulate:
-        #Do data download (from Cloud to HPC) if requested
+        # Do data download (from Cloud to HPC) if requested
         if len(data_mover_options) > 0 and data_mover_options['download']:
             dmp = DataMoverProxy(data_mover_options)
             dmp.download_data()
 
-        #Prepare HPC interface to send job
+        # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         client = SshClient(ctx.instance.runtime_properties['credentials'])
@@ -528,7 +527,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
     try:
         name = kwargs['name']
         if not simulate:
-            is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.\
+            is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
                 type_hierarchy
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
@@ -577,7 +576,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
 
     try:
         name = kwargs['name']
-        is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.\
+        is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
             type_hierarchy
 
         if not simulate:
@@ -618,6 +617,72 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             'Something happend when trying to stop: ' + exp.message)
 
 
+def read_job_output(name, workdir, client, logger):
+    # Invoke command cat atosf9affs.out
+    command = 'cat {}.out'.format(name)
+    output, exit_code = client.execute_shell_command(
+        command,
+        workdir=workdir,
+        wait_result=True)
+    if exit_code != 0:
+        logger.error('read_job_output: {command} failed with code: {code}:\n{output}'.format(
+            command=command, code=str(exit_code), output=output))
+        return False
+    else:
+        return output
+
+
+def process_job_output(job_output):
+    job_metrics = {}
+    index = job_output.index('Resources Used:')
+    cput_index = job_output.index('cput=', index)
+    cput = job_output[cput_index + len('cput='):job_output.index(',', cput_index)]
+    job_metrics['cput'] = cput
+
+    vmem_index = job_output.index('vmem=', index)
+    vmem = job_output[vmem_index + len('vmem='):job_output.index(',', vmem_index)]
+    job_metrics['vmem'] = vmem
+
+    walltime_index = job_output.index('walltime=', index)
+    walltime = job_output[walltime_index + len('walltime='):job_output.index(',', walltime_index)]
+    job_metrics['walltime'] = walltime
+
+    mem_index = job_output.index('mem=', index)
+    mem = job_output[mem_index + len('mem='):job_output.index(',', mem_index)]
+    job_metrics['mem'] = mem
+
+    energy_used_index = job_output.index('energy_used=', index)
+    energy_used = job_output[energy_used_index + len('energy_used='):job_output.index('\n', mem_index)]
+    job_metrics['energy_used'] = energy_used
+
+    # TODO Read start_transaction and stop_transaction from prologue and epilogue timestamps
+
+    return job_metrics
+
+
+def report_metrics_to_accounting(job_metrics, workflow_id, job_id, workflow_parameters, user_id, provider_id_for_accounting, logger):
+    hostname = socket.gethostname()
+    ip_address = socket.gethostbyname(hostname)
+    ip = requests.get('https://api.ipify.org').text
+
+    start_transaction = None  # TODO Read from job_metrics
+    stop_transaction = None  # TODO Read from job_metrics
+
+    #TODO Register Croupier in Accounting upon starting if not already registered
+
+    #TODO Register HPC CPU total is not available
+    # cpu_resource = accounting_client.get_resource_by_type(provider_id, infra_id, 'CPU')
+    #
+    #
+    # consumptions = []
+    # consumption1 = ResourceConsumption(6, MeasureUnit.NumberOf, resource_id)
+    # consumptions.append(consumption1)
+    #
+    # record = ResourceConsumptionRecord(start_transaction, stop_transaction, workflow_id,
+    #                                    job_id, workflow_parameters, consumptions, user_id, provider_id_for_accounting)
+    # new_record = accounting_client.add_consumption_record(record)
+
+
 @operation
 def publish(publish_list, data_mover_options, **kwargs):
     """ Publish the job outputs """
@@ -641,6 +706,15 @@ def publish(publish_list, data_mover_options, **kwargs):
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
+
+            # Read job output file and collect job consumed resource metrics
+            job_output = read_job_output(name, workdir, client, ctx.logger)
+            job_metrics = process_job_output(job_output)
+
+            # Report metrics to Accounting component
+            # TODO report metrics to Accounting
+            workflow_id = None
+            # report_metrics_to_accounting(workflow_id, name, job_metrics, ctx.logger)
 
             for publish_item in publish_list:
                 if not published:
@@ -670,5 +744,3 @@ def publish(publish_list, data_mover_options, **kwargs):
         print(traceback.format_exc())
         ctx.logger.error(
             'Cannot publish: ' + exp.message)
-
-
