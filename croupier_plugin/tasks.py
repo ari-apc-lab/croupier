@@ -26,6 +26,7 @@ tasks.py: Holds the plugin tasks
 import socket
 import traceback
 import requests
+from datetime import datetime
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -36,7 +37,12 @@ from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
 from croupier_plugin.external_repositories.external_repository import (
     ExternalRepository)
 from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
+from accounting_client import accounting_client
+from accounting_client.model.resource_consumption_record import ResourceConsumptionRecord
+from accounting_client.model.resource_consumption import ResourceConsumption, MeasureUnit
+from accounting_client.model.reporter import Reporter, ReporterType
 
+croupier_reporter_id = None
 
 @operation
 def preconfigure_interface(
@@ -144,6 +150,10 @@ def configure_execution(
                 "failed to create the working directory, base dir: " +
                 base_dir)
         ctx.instance.runtime_properties['workdir'] = workdir
+
+        # Register Croupier instance in Accounting if not done before
+        registerOrchestratorInstanceInAccounting()
+
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
         ctx.logger.info(' - [simulation]..')
@@ -655,32 +665,80 @@ def process_job_output(job_output):
     energy_used = job_output[energy_used_index + len('energy_used='):job_output.index('\n', mem_index)]
     job_metrics['energy_used'] = energy_used
 
-    # TODO Read start_transaction and stop_transaction from prologue and epilogue timestamps
+    # Read start_transaction and stop_transaction from prologue and epilogue timestamps
+    start_timestamp_index = job_output.index('Timestamp:')
+    start_timestamp = job_output[
+                      start_timestamp_index + len('Timestamp:'):job_output.index('\n', start_timestamp_index)]
+    start_timestamp_datetime = datetime.fromtimestamp(float(start_timestamp.strip()))
+    job_metrics['start_timestamp'] = start_timestamp_datetime
+
+    stop_timestamp_index = job_output.index('Timestamp:', start_timestamp_index + len('Timestamp:'))
+    stop_timestamp = job_output[stop_timestamp_index + len('Timestamp:'):job_output.index('\n', stop_timestamp_index)]
+    stop_timestamp_datetime = datetime.fromtimestamp(float(stop_timestamp.strip()))
+    job_metrics['stop_timestamp'] = stop_timestamp_datetime
+
+    workflow_parameters_index = job_output.index('Requested resource limits:')
+    workflow_parameters = \
+        job_output[
+        workflow_parameters_index + len('Requested resource limits:'):
+        job_output.index('\n', workflow_parameters_index) - 1]
+    job_metrics['workflow_parameters'] = workflow_parameters
 
     return job_metrics
 
 
-def report_metrics_to_accounting(job_metrics, workflow_id, job_id, workflow_parameters, user_id, provider_id_for_accounting, logger):
+def parseHours(cput):
+    return cput
+
+
+def registerOrchestratorInstanceInAccounting():
+    global croupier_reporter_id
     hostname = socket.gethostname()
-    ip_address = socket.gethostbyname(hostname)
-    ip = requests.get('https://api.ipify.org').text
+    reporter_name = 'croupier@' + hostname
+    try:
+        reporter = accounting_client.get_reporter_by_name(reporter_name)
+        croupier_reporter_id = reporter.id
+    except Exception as err:
+        # Croupier not registered in Accounting
+        try:
+            ip = requests.get('https://api.ipify.org').text
+            reporter = Reporter(reporter_name, ip, ReporterType.Orchestrator)
+            accounting_client.add_reporter(reporter)
+            croupier_reporter_id = reporter.id
+        except Exception as err:
+            ctx.logger.warning(
+                'Croupier orchestrator instance could not be registered into Accounting, raising an error: {err}',
+                err=err)
 
-    start_transaction = None  # TODO Read from job_metrics
-    stop_transaction = None  # TODO Read from job_metrics
 
-    #TODO Register Croupier in Accounting upon starting if not already registered
+def report_metrics_to_accounting(job_metrics, job_id):
+    try:
+        if croupier_reporter_id is None:
+            raise Exception('Croupier instance not registered in Acccounting')
+        start_transaction = job_metrics['start_timestamp']
+        stop_transaction = job_metrics['stop_timestamp']
+        workflow_id = ctx.workflow_id
+        workflow_parameters = job_metrics['workflow_parameters']
+        user_id = ctx.instance.runtime_properties['credentials']['user']
 
-    #TODO Register HPC CPU total is not available
-    # cpu_resource = accounting_client.get_resource_by_type(provider_id, infra_id, 'CPU')
-    #
-    #
-    # consumptions = []
-    # consumption1 = ResourceConsumption(6, MeasureUnit.NumberOf, resource_id)
-    # consumptions.append(consumption1)
-    #
-    # record = ResourceConsumptionRecord(start_transaction, stop_transaction, workflow_id,
-    #                                    job_id, workflow_parameters, consumptions, user_id, provider_id_for_accounting)
-    # new_record = accounting_client.add_consumption_record(record)
+        # Register HPC CPU total
+        server = ctx.instance.runtime_properties['credentials']['host']
+        infra = accounting_client.get_infrastructure_by_server(server)
+        cpu_resource = accounting_client.get_resources_by_type(infra.id, 'CPU')
+
+        consumptions = []
+        cput = parseHours (job_metrics["cput"])
+        cpu_consumption = ResourceConsumption(cput, MeasureUnit.NumberOf, cpu_resource.id)
+        consumptions.append(cpu_consumption)
+
+        record = ResourceConsumptionRecord(start_transaction, stop_transaction, workflow_id,
+                                           job_id, workflow_parameters, consumptions, user_id, croupier_reporter_id)
+        new_record = accounting_client.add_consumption_record(record)
+        ctx.logger.info("Resource consumption record registered into Acccounting with id {}".format(new_record.id))
+    except Exception as err:
+        ctx.logger.warning(
+            'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}',
+            workflow_id=workflow_id, err=err)
 
 
 @operation
@@ -708,13 +766,12 @@ def publish(publish_list, data_mover_options, **kwargs):
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
             # Read job output file and collect job consumed resource metrics
+            # TODO Implement support for a workflow with multiple jobs
             job_output = read_job_output(name, workdir, client, ctx.logger)
             job_metrics = process_job_output(job_output)
 
             # Report metrics to Accounting component
-            # TODO report metrics to Accounting
-            workflow_id = None
-            # report_metrics_to_accounting(workflow_id, name, job_metrics, ctx.logger)
+            report_metrics_to_accounting(job_metrics, job_id=name)
 
             for publish_item in publish_list:
                 if not published:
