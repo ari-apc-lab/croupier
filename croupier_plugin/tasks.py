@@ -574,8 +574,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             ctx.logger.info(
                 'Job ' + name + ' (' + ctx.instance.id + ') cleaned.')
         else:
-            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id +
-                             ') not cleaned.')
+            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not cleaned.')
     except Exception as exp:
         print(traceback.format_exc())
         ctx.logger.error(
@@ -729,8 +728,8 @@ def registerOrchestratorInstanceInAccounting():
             croupier_reporter_id = reporter.id
         except Exception as err:
             ctx.logger.warning(
-                'Croupier orchestrator instance could not be registered into Accounting, raising an error: {err}',
-                err=err)
+                'Croupier orchestrator instance could not be registered into Accounting, raising an error: {err}'.
+                    format(err=err))
 
 
 def report_metrics_to_accounting(job_metrics, job_id):
@@ -752,8 +751,8 @@ def report_metrics_to_accounting(job_metrics, job_id):
                 user = accounting_client.add_user(user)
             except Exception as err:
                 ctx.logger.warning(
-                    'User {username} could not be registered into Accounting, raising an error: {err}',
-                    username=username, err=err)
+                    'User {username} could not be registered into Accounting, raising an error: {err}'.
+                        format(username=username, err=err))
 
         # Register HPC CPU total
         server = ctx.instance.runtime_properties['credentials']['host']
@@ -777,8 +776,8 @@ def report_metrics_to_accounting(job_metrics, job_id):
         ctx.logger.info("Resource consumption record registered into Accounting with id {}".format(new_record.id))
     except Exception as err:
         ctx.logger.warning(
-            'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}',
-            workflow_id=workflow_id, err=err)
+            'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
+                format(workflow_id=workflow_id, err=err))
 
 
 @operation
