@@ -47,6 +47,22 @@ singularity_image_storage: $HOME
 singularity_mount_point: /mnt
 scratch_voulume_mount_point: /scratch
 
+################### Data Mover ##################
+data_mover_options:
+  workspace: <ws_name> #HPC workspace where to move data from Cloud
+  upload: True  #Defines whether to move data from HPC to Cloud (after job execution)
+  download: True #Defines whether to move data from Cloud to HPC (before job execution)
+  cloud_user: euxdat_user
+  cloud_folder: <path> #This path is relative to the server default data path
+  hpc_folder: <path> #This path is relative to user workspace
+  create_ws: True #Defines whether or not to create a workspace in the HPC where to host moved data
+  ws_lifetime: 1 #defines the number of days between the creation of the workspace until its automatic deletion. The maximum value is 30 days.
+  grid_userkey: |
+    <gridftp_userkey>
+  grid_usercert: |
+    <gridftp_usercert>
+  grid_certpass: <gridftp_certificate_password>
+
 ################# Cloud Infrastructre #################
 cloud_interface_config:
   infrastructure_interface: SHELL
