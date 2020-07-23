@@ -33,19 +33,16 @@ from datetime import datetime
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
-
-from croupier_plugin.accounting_client.model.user import User
 from croupier_plugin.ssh import SshClient
-from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
-    InfrastructureInterface)
-from croupier_plugin.external_repositories.external_repository import (
-    ExternalRepository)
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
+from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
 from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
-from croupier_plugin.accounting_client.accounting_client import AccountingClient
-from croupier_plugin.accounting_client.model.resource_consumption_record import ResourceConsumptionRecord
-from croupier_plugin.accounting_client.model.resource_consumption import ResourceConsumption, MeasureUnit
-from croupier_plugin.accounting_client.model.reporter import Reporter, ReporterType
-from croupier_plugin.accounting_client.model.resource import ResourceType
+from croupier_plugin.accounting_client.model.user import (User)
+from croupier_plugin.accounting_client.accounting_client import (AccountingClient)
+from croupier_plugin.accounting_client.model.resource_consumption_record import (ResourceConsumptionRecord)
+from croupier_plugin.accounting_client.model.resource_consumption import (ResourceConsumption, MeasureUnit)
+from croupier_plugin.accounting_client.model.reporter import (Reporter, ReporterType)
+from croupier_plugin.accounting_client.model.resource import (ResourceType)
 
 croupier_reporter_id = None
 accounting_client = AccountingClient()

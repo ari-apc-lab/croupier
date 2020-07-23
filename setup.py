@@ -42,7 +42,11 @@ setup(
     # This must correspond to the actual packages in the plugin.
     packages=['croupier_plugin',
               'croupier_plugin.infrastructure_interfaces',
-              'croupier_plugin.external_repositories'],
+              'croupier_plugin.external_repositories',
+              'croupier_plugin.accounting_client',
+              'croupier_plugin.accounting_client.model',
+              'croupier_plugin.data_mover',
+              ],
 
     zip_safe=False,
     install_requires=[
