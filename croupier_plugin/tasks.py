@@ -43,6 +43,7 @@ from croupier_plugin.accounting_client.model.resource_consumption_record import 
 from croupier_plugin.accounting_client.model.resource_consumption import (ResourceConsumption, MeasureUnit)
 from croupier_plugin.accounting_client.model.reporter import (Reporter, ReporterType)
 from croupier_plugin.accounting_client.model.resource import (ResourceType)
+from celery.contrib import rdb
 
 croupier_reporter_id = None
 accounting_client = AccountingClient()
@@ -504,6 +505,8 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
             'CFY_JOB_NAME': name
         }
         ctx.logger.info('Submitting the job ...')
+        rdb.set_trace()
+
         is_submitted = wm.submit_job(
             client,
             name,
