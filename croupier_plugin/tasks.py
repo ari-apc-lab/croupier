@@ -512,6 +512,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
             ctx.logger,
             workdir=workdir,
             context=context_vars)
+        ctx.logger.info('Job submitted')
         client.close_connection()
     else:
         ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')

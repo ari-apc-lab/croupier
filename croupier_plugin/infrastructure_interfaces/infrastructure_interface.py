@@ -174,6 +174,7 @@ class InfrastructureInterface(object):
         @return Slurm's job name sent. None if an error arise.
         """
         if not SshClient.check_ssh_client(ssh_client, logger):
+            logger.error('check_ssh_client failed')
             return False
 
         # Build script if there is no one, or Singularity
@@ -188,6 +189,7 @@ class InfrastructureInterface(object):
                 script_content = self._build_script(name, job_settings, logger)
 
             if script_content is None:
+                logger.error('script_content is None')
                 return False
 
             if not self._create_shell_script(
@@ -196,6 +198,7 @@ class InfrastructureInterface(object):
                     script_content,
                     logger,
                     workdir=workdir):
+                logger.error('_create_shell_script failed')
                 return False
 
             # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
