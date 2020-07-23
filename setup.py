@@ -53,7 +53,8 @@ setup(
         # Necessary dependency for developing plugins, do not remove!
         "cloudify-common>=5.0.5",
         "paramiko==2.7.1",
-        "pyyaml"
+        "pyyaml",
+        "wget"
     ],
     license='LICENSE'
 )
