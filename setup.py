@@ -47,7 +47,9 @@ setup(
               'croupier_plugin.accounting_client.model',
               'croupier_plugin.data_mover',
               ],
-
+    package_data={'croupier_plugin.infrastructure_interfaces': ['*.sh'],
+                  'croupier_plugin': ['*.cfg']},
+    include_package_data=True,
     zip_safe=False,
     install_requires=[
         # Necessary dependency for developing plugins, do not remove!
