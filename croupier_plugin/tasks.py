@@ -474,6 +474,7 @@ def deploy_job(script,
 @operation
 def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W0613
     """ Sends a job to the infrastructure interface """
+    ctx.logger.info('Executing send_job task')
     simulate = ctx.instance.runtime_properties['simulate']
 
     name = kwargs['name']
@@ -502,6 +503,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
             'CFY_EXECUTION_ID': ctx.execution_id,
             'CFY_JOB_NAME': name
         }
+        ctx.logger.info('Submitting the job ...')
         is_submitted = wm.submit_job(
             client,
             name,
