@@ -31,7 +31,6 @@ import os
 
 import requests
 from requests import HTTPError
-from cloudify import ctx
 
 from model.base import AccountingBase
 from model.user import User
@@ -81,7 +80,7 @@ class AccountingClient:
         # Configure Accounting endpoint from configuration file
         config = ConfigParser.RawConfigParser()
         config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/../Croupier.cfg'
-        ctx.logger.info('Reading Accounting configuration from file {file}'.format(
+        print('Reading Accounting configuration from file {file}'.format(
             file=config_file))
         config.read(config_file)
         self.endpoint = endpoint
