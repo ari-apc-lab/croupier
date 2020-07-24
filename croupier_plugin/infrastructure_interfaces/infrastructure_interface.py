@@ -661,9 +661,9 @@ class InfrastructureInterface(object):
     def sendPrologueAndEpilogue(self, workdir, ssh_client, logger):
         # Read prologue.sh and epilog.sh from current module folder
         module_dir = os.path.abspath(__file__)
-        index = module_dir.rindex('/')
-        prologue_path = module_dir[:index] + '/prologue.sh'
-        epilogue_path = module_dir[:index] + '/epilogue.sh'
+        index = module_dir.rindex(os.path.sep)
+        prologue_path = module_dir[:index] + os.path.sep + 'prologue.sh'
+        epilogue_path = module_dir[:index] + os.path.sep + 'epilogue.sh'
         with io.open(prologue_path, mode='r', encoding='utf-8') as prologue_file:
             prologue_content = prologue_file.read()
             self.sendScript('prologue.sh', prologue_content, '500', workdir, ssh_client, logger)
