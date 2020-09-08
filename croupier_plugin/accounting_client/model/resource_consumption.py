@@ -10,6 +10,7 @@ class MeasureUnit(enum.Enum):
     Tb = 3
     Mbps = 4
     Gbps = 5
+    Hours = 6
 
 
 class ResourceConsumption (AccountingBase):

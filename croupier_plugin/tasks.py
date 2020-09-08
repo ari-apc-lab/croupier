@@ -657,6 +657,11 @@ def process_job_output(job_output):
     cput = job_output[cput_index + len('cput='):job_output.index(',', cput_index)]
     job_metrics['cput'] = cput
 
+    processorsPerNode_index = job_output.index('ProcessorsPerNode:')
+    processorsPerNode = job_output[processorsPerNode_index +
+                                   len('ProcessorsPerNode:'):job_output.index('\n', processorsPerNode_index)]
+    job_metrics['processorsPerNode'] = processorsPerNode
+
     vmem_index = job_output.index('vmem=', index)
     vmem = job_output[vmem_index + len('vmem='):job_output.index(',', vmem_index)]
     job_metrics['vmem'] = vmem
@@ -768,8 +773,8 @@ def report_metrics_to_accounting(job_metrics, job_id):
         cpu_resource = cpu_resources[0]
 
         consumptions = []
-        cput = parseHours(job_metrics["cput"])
-        cpu_consumption = ResourceConsumption(cput, MeasureUnit.NumberOf, cpu_resource.id)
+        cput = parseHours(job_metrics["cput"]) * int(job_metrics["processorsPerNode"])
+        cpu_consumption = ResourceConsumption(cput, MeasureUnit.Hours, cpu_resource.id)
         consumptions.append(cpu_consumption)
 
         record = ResourceConsumptionRecord(start_transaction, stop_transaction, workflow_id,
