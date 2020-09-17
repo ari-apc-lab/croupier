@@ -37,7 +37,7 @@ class TestSlurm(unittest.TestCase):
 
     def __init__(self, methodName='runTest'):
         super(TestSlurm, self).__init__(methodName)
-        self.wm = InfrastructureInterface.factory("SLURM")
+        self.wm = InfrastructureInterface.factory("SLURM", False)
         self.logger = logging.getLogger('TestSlurm')
 
     def test_bad_name(self):

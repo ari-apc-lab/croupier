@@ -113,10 +113,11 @@ def configure_execution(
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
         interface_type = config['infrastructure_interface']
+        accounting_type = config['accounting']
         ctx.logger.info(' - manager: {interface_type}'.format(
             interface_type=interface_type))
 
-        wm = InfrastructureInterface.factory(interface_type)
+        wm = InfrastructureInterface.factory(interface_type, accounting_type)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -182,7 +183,8 @@ def cleanup_execution(
     if not simulate:
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = config['infrastructure_interface']
-        wm = InfrastructureInterface.factory(interface_type)
+        accounting_type = config['accounting']
+        wm = InfrastructureInterface.factory(interface_type, accounting_type)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -331,6 +333,8 @@ def preconfigure_job(
         external_monitor_orchestrator_port
     ctx.source.instance.runtime_properties['infrastructure_interface'] = \
         config['infrastructure_interface']
+    ctx.source.instance.runtime_properties['accounting_type'] = \
+        config['accounting']
     ctx.source.instance.runtime_properties['simulate'] = simulate
     ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
     ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
@@ -357,12 +361,14 @@ def bootstrap_job(
         workdir = ctx.instance.runtime_properties['workdir']
         name = "bootstrap_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+        accounting_type = ctx.instance.runtime_properties['accounting_type']
 
         if deploy_job(
                 deployment['bootstrap'],
                 inputs,
                 credentials,
                 interface_type,
+                accounting_type,
                 workdir,
                 name,
                 ctx.logger,
@@ -394,12 +400,14 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
             workdir = ctx.instance.runtime_properties['workdir']
             name = "revert_" + ctx.instance.id + ".sh"
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+            accounting_type = ctx.instance.runtime_properties['accounting_type']
 
             if deploy_job(
                     deployment['revert'],
                     inputs,
                     credentials,
                     interface_type,
+                    accounting_type,
                     workdir,
                     name,
                     ctx.logger,
@@ -422,13 +430,14 @@ def deploy_job(script,
                inputs,
                credentials,
                interface_type,
+               accounting_type,
                workdir,
                name,
                logger,
                skip_cleanup):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH credentials as input """
 
-    wm = InfrastructureInterface.factory(interface_type)
+    wm = InfrastructureInterface.factory(interface_type, accounting_type)
     if not wm:
         raise NonRecoverableError(
             "Infrastructure Interface '" +
@@ -491,9 +500,10 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+        accounting_type = ctx.instance.runtime_properties['accounting_type']
         client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-        wm = InfrastructureInterface.factory(interface_type)
+        wm = InfrastructureInterface.factory(interface_type, accounting_type)
         if not wm:
             client.close_connection()
             raise NonRecoverableError(
@@ -550,10 +560,10 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
                 type_hierarchy
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-
+            accounting_type = ctx.instance.runtime_properties['accounting_type']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = InfrastructureInterface.factory(interface_type)
+            wm = InfrastructureInterface.factory(interface_type, accounting_type)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError(
@@ -600,9 +610,10 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+            accounting_type = ctx.instance.runtime_properties['accounting_type']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = InfrastructureInterface.factory(interface_type)
+            wm = InfrastructureInterface.factory(interface_type, accounting_type)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError(
@@ -813,11 +824,17 @@ def publish(publish_list, data_mover_options, **kwargs):
 
             # Read job output file and collect job consumed resource metrics
             # TODO Implement support for a workflow with multiple jobs
-            job_output = read_job_output(name, workdir, client, ctx.logger)
-            job_metrics = process_job_output(job_output)
+            accounting_type = ctx.instance.runtime_properties['accounting_type']
+            job_metrics = None
+            if accounting_type.lower() == 'epilogue':
+                job_output = read_job_output(name, workdir, client, ctx.logger)
+                job_metrics = process_job_output(job_output)
+            elif  accounting_type.lower() == 'qstat':
+                pass
 
             # Report metrics to Accounting component
-            report_metrics_to_accounting(job_metrics, job_id=name)
+            if job_metrics is not None:
+                report_metrics_to_accounting(job_metrics, job_id=name)
 
             for publish_item in publish_list:
                 if not published:

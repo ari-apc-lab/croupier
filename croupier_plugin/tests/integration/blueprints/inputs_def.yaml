@@ -35,6 +35,7 @@ inputs:
     default:
       country_tz: Europe/Madrid
       infrastructure_interface: SLURM
+      accounting: qstat
   hpc_interface_credentials:
     description: HPC credentials
     default: {}

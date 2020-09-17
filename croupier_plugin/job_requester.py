@@ -61,7 +61,7 @@ class JobRequester(object):
                         settings['config'],
                         settings['names'])
                 else:  # internal
-                    wm = InfrastructureInterface.factory(settings['type'])
+                    wm = InfrastructureInterface.factory(settings['type'], settings['accounting_type'])
                     if wm:
                         partial_states = wm.get_states(
                             settings['workdir'],

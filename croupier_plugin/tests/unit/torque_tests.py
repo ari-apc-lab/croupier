@@ -38,7 +38,7 @@ class TestTorque(unittest.TestCase):
 
     def __init__(self, methodName='runTest'):
         super(TestTorque, self).__init__(methodName)
-        self.wm = InfrastructureInterface.factory("TORQUE")
+        self.wm = InfrastructureInterface.factory("TORQUE", False)
         self.logger = logging.getLogger('TestTorque')
 
     def test_bad_name(self):

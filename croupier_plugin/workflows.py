@@ -65,6 +65,7 @@ class JobGraphInstance(object):
                 }
             else:  # internal monitoring
                 self.monitor_type = runtime_properties["infrastructure_interface"]
+                self.accounting_type = runtime_properties["accounting_type"]
                 self.monitor_config = runtime_properties["credentials"]
 
             self.monitor_period = int(runtime_properties["monitor_period"])
@@ -353,6 +354,7 @@ class Monitor(object):
                             monitor_jobs[job_instance.host] = {
                                 'config': job_instance.monitor_config,
                                 'type': job_instance.monitor_type,
+                                'accounting_type': job_instance.accounting_type,
                                 'workdir': job_instance.workdir,
                                 'names': [job_instance.name],
                                 'period': job_instance.monitor_period

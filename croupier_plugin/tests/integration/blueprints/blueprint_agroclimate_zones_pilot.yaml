@@ -56,7 +56,7 @@ node_templates:
                 select: 1
                 node_type: rome
                 mpiprocs: 4
-                max_time: '00:05:00'
+                max_time: '00:10:00'
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface

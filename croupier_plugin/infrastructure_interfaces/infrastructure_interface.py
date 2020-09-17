@@ -129,17 +129,18 @@ def get_prevailing_state(state1, state2):
 class InfrastructureInterface(object):
     infrastructure_interface = None
 
-    def __init__(self, infrastructure_interface):
+    def __init__(self, infrastructure_interface, accounting_type):
         self.infrastructure_interface = infrastructure_interface
+        self.accounting_type = accounting_type
 
     @staticmethod
-    def factory(infrastructure_interface):
+    def factory(infrastructure_interface, accounting_type):
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
             return Slurm(infrastructure_interface)
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
-            return Torque(infrastructure_interface)
+            return Torque(infrastructure_interface, accounting_type)
         if infrastructure_interface == "SHELL":
             from croupier_plugin.infrastructure_interfaces.shell import Shell
             return Shell(infrastructure_interface)
@@ -220,7 +221,8 @@ class InfrastructureInterface(object):
         # Collect HPC resource consumption metrics for Accounting, using prologue/epilogue
         # Only for TORQUE orchestrator
         # Send prologue/epilogue scripts with right permissions to job submission directory
-        if self.infrastructure_interface == 'TORQUE':
+        settings['accounting_type'] = self.accounting_type
+        if self.infrastructure_interface == 'TORQUE' and self.accounting_type.lower() == 'epilogue':
             self.sendPrologueAndEpilogue(workdir, ssh_client, logger)
 
         # build the call to submit the job
