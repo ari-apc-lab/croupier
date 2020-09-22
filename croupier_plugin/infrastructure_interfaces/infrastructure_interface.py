@@ -129,18 +129,17 @@ def get_prevailing_state(state1, state2):
 class InfrastructureInterface(object):
     infrastructure_interface = None
 
-    def __init__(self, infrastructure_interface, accounting_type):
+    def __init__(self, infrastructure_interface):
         self.infrastructure_interface = infrastructure_interface
-        self.accounting_type = accounting_type
 
     @staticmethod
-    def factory(infrastructure_interface, accounting_type):
+    def factory(infrastructure_interface):
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
             return Slurm(infrastructure_interface)
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
-            return Torque(infrastructure_interface, accounting_type)
+            return Torque(infrastructure_interface)
         if infrastructure_interface == "SHELL":
             from croupier_plugin.infrastructure_interfaces.shell import Shell
             return Shell(infrastructure_interface)
@@ -217,13 +216,6 @@ class InfrastructureInterface(object):
                         job_settings['scale_max_in_parallel']
         else:
             settings = job_settings
-
-        # Collect HPC resource consumption metrics for Accounting, using prologue/epilogue
-        # Only for TORQUE orchestrator
-        # Send prologue/epilogue scripts with right permissions to job submission directory
-        settings['accounting_type'] = self.accounting_type
-        if self.infrastructure_interface == 'TORQUE' and self.accounting_type.lower() == 'epilogue':
-            self.sendPrologueAndEpilogue(workdir, ssh_client, logger)
 
         # build the call to submit the job
         response = self._build_job_submission_call(
@@ -659,19 +651,6 @@ class InfrastructureInterface(object):
             return True
         else:
             return False
-
-    def sendPrologueAndEpilogue(self, workdir, ssh_client, logger):
-        # Read prologue.sh and epilog.sh from current module folder
-        module_dir = os.path.abspath(__file__)
-        index = module_dir.rindex(os.path.sep)
-        prologue_path = module_dir[:index] + os.path.sep + 'prologue.sh'
-        epilogue_path = module_dir[:index] + os.path.sep + 'epilogue.sh'
-        with io.open(prologue_path, mode='r', encoding='utf-8') as prologue_file:
-            prologue_content = prologue_file.read()
-            self.sendScript('prologue.sh', prologue_content, '500', workdir, ssh_client, logger)
-        with io.open(epilogue_path, mode='r', encoding='utf-8') as epilogue_file:
-            epilogue_content = epilogue_file.read()
-            self.sendScript('epilogue.sh', epilogue_content, '500', workdir, ssh_client, logger)
 
     def sendScript(self, name, script, permissions, workdir, ssh_client, logger):
         # Create invocation with ssh to send script and set its permissions

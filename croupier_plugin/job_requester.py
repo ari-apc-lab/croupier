@@ -44,6 +44,7 @@ class JobRequester(object):
         def request(self, monitor_jobs, logger):
             """ Retrieves the status of every job"""
             states = {}
+            audits = {}
 
             for host, settings in monitor_jobs.iteritems():
                 # Only get info when it is safe
@@ -61,9 +62,9 @@ class JobRequester(object):
                         settings['config'],
                         settings['names'])
                 else:  # internal
-                    wm = InfrastructureInterface.factory(settings['type'], settings['accounting_type'])
+                    wm = InfrastructureInterface.factory(settings['type'])
                     if wm:
-                        partial_states = wm.get_states(
+                        partial_states, audits = wm.get_states(
                             settings['workdir'],
                             settings['config'],
                             settings['names'],
@@ -77,7 +78,7 @@ class JobRequester(object):
                             logger)
                 states.update(partial_states)
 
-            return states
+            return states, audits
 
         def _get_prometheus(self, host, config, names):
             states = {}

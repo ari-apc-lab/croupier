@@ -44,6 +44,7 @@ class JobGraphInstance(object):
 
         self.completed = not self.parent_node.is_job  # True if is not a job
         self.failed = False
+        self.audit = None
 
         if parent.is_job:
             self._status = 'WAITING'
@@ -65,7 +66,6 @@ class JobGraphInstance(object):
                 }
             else:  # internal monitoring
                 self.monitor_type = runtime_properties["infrastructure_interface"]
-                self.accounting_type = runtime_properties["accounting_type"]
                 self.monitor_config = runtime_properties["credentials"]
 
             self.monitor_period = int(runtime_properties["monitor_period"])
@@ -105,7 +105,7 @@ class JobGraphInstance(object):
         self.winstance.send_event('Publishing job outputs..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
-                                                  kwargs={"name": self.name})
+                                                  kwargs={"name": self.name, "audit": self.audit})
         result.task.wait_for_terminated()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
@@ -354,7 +354,6 @@ class Monitor(object):
                             monitor_jobs[job_instance.host] = {
                                 'config': job_instance.monitor_config,
                                 'type': job_instance.monitor_type,
-                                'accounting_type': job_instance.accounting_type,
                                 'workdir': job_instance.workdir,
                                 'names': [job_instance.name],
                                 'period': job_instance.monitor_period
@@ -368,11 +367,16 @@ class Monitor(object):
 
         # then look for the status of the instances through its name
         try:
-            states = self.jobs_requester.request(monitor_jobs, self.logger)
+            states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
+
+            # set job audit
+            for inst_name, audit in audits.iteritems():
+                self.job_instances_map[inst_name].audit = audit
 
             # finally set job status
             for inst_name, state in states.iteritems():
                 self.job_instances_map[inst_name].set_status(state)
+
             self.continued_errors = 0
         except Exception as exp:
             if self.continued_errors >= Monitor.MAX_ERRORS:

@@ -43,7 +43,8 @@ from croupier_plugin.accounting_client.model.resource_consumption_record import 
 from croupier_plugin.accounting_client.model.resource_consumption import (ResourceConsumption, MeasureUnit)
 from croupier_plugin.accounting_client.model.reporter import (Reporter, ReporterType)
 from croupier_plugin.accounting_client.model.resource import (ResourceType)
-#from celery.contrib import rdb
+
+# from celery.contrib import rdb
 
 croupier_reporter_id = None
 accounting_client = AccountingClient()
@@ -113,11 +114,10 @@ def configure_execution(
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
         interface_type = config['infrastructure_interface']
-        accounting_type = config['accounting']
         ctx.logger.info(' - manager: {interface_type}'.format(
             interface_type=interface_type))
 
-        wm = InfrastructureInterface.factory(interface_type, accounting_type)
+        wm = InfrastructureInterface.factory(interface_type)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -183,8 +183,7 @@ def cleanup_execution(
     if not simulate:
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = config['infrastructure_interface']
-        accounting_type = config['accounting']
-        wm = InfrastructureInterface.factory(interface_type, accounting_type)
+        wm = InfrastructureInterface.factory(interface_type)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -333,8 +332,6 @@ def preconfigure_job(
         external_monitor_orchestrator_port
     ctx.source.instance.runtime_properties['infrastructure_interface'] = \
         config['infrastructure_interface']
-    ctx.source.instance.runtime_properties['accounting_type'] = \
-        config['accounting']
     ctx.source.instance.runtime_properties['simulate'] = simulate
     ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
     ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
@@ -361,14 +358,12 @@ def bootstrap_job(
         workdir = ctx.instance.runtime_properties['workdir']
         name = "bootstrap_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        accounting_type = ctx.instance.runtime_properties['accounting_type']
 
         if deploy_job(
                 deployment['bootstrap'],
                 inputs,
                 credentials,
                 interface_type,
-                accounting_type,
                 workdir,
                 name,
                 ctx.logger,
@@ -400,14 +395,12 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
             workdir = ctx.instance.runtime_properties['workdir']
             name = "revert_" + ctx.instance.id + ".sh"
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-            accounting_type = ctx.instance.runtime_properties['accounting_type']
 
             if deploy_job(
                     deployment['revert'],
                     inputs,
                     credentials,
                     interface_type,
-                    accounting_type,
                     workdir,
                     name,
                     ctx.logger,
@@ -430,14 +423,13 @@ def deploy_job(script,
                inputs,
                credentials,
                interface_type,
-               accounting_type,
                workdir,
                name,
                logger,
                skip_cleanup):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH credentials as input """
 
-    wm = InfrastructureInterface.factory(interface_type, accounting_type)
+    wm = InfrastructureInterface.factory(interface_type)
     if not wm:
         raise NonRecoverableError(
             "Infrastructure Interface '" +
@@ -500,10 +492,9 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        accounting_type = ctx.instance.runtime_properties['accounting_type']
         client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-        wm = InfrastructureInterface.factory(interface_type, accounting_type)
+        wm = InfrastructureInterface.factory(interface_type)
         if not wm:
             client.close_connection()
             raise NonRecoverableError(
@@ -560,10 +551,9 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
                 type_hierarchy
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-            accounting_type = ctx.instance.runtime_properties['accounting_type']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = InfrastructureInterface.factory(interface_type, accounting_type)
+            wm = InfrastructureInterface.factory(interface_type)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError(
@@ -610,10 +600,9 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-            accounting_type = ctx.instance.runtime_properties['accounting_type']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = InfrastructureInterface.factory(interface_type, accounting_type)
+            wm = InfrastructureInterface.factory(interface_type)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError(
@@ -643,73 +632,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
     except Exception as exp:
         print(traceback.format_exc())
         ctx.logger.error(
-            'Something happend when trying to stop: ' + exp.message)
-
-
-def read_job_output(name, workdir, client, logger):
-    # Invoke command cat atosf9affs.out
-    command = 'cat {}.out'.format(name)
-    output, exit_code = client.execute_shell_command(
-        command,
-        workdir=workdir,
-        wait_result=True)
-    if exit_code != 0:
-        logger.error('read_job_output: {command} failed with code: {code}:\n{output}'.format(
-            command=command, code=str(exit_code), output=output))
-        return False
-    else:
-        return output
-
-
-def process_job_output(job_output):
-    job_metrics = {}
-    index = job_output.index('Resources Used:')
-    cput_index = job_output.index('cput=', index)
-    cput = job_output[cput_index + len('cput='):job_output.index(',', cput_index)]
-    job_metrics['cput'] = cput
-
-    processorsPerNode_index = job_output.index('ProcessorsPerNode:')
-    processorsPerNode = job_output[processorsPerNode_index +
-                                   len('ProcessorsPerNode:'):job_output.index('\n', processorsPerNode_index)]
-    job_metrics['processorsPerNode'] = processorsPerNode
-
-    vmem_index = job_output.index('vmem=', index)
-    vmem = job_output[vmem_index + len('vmem='):job_output.index(',', vmem_index)]
-    job_metrics['vmem'] = vmem
-
-    walltime_index = job_output.index('walltime=', index)
-    walltime = job_output[walltime_index + len('walltime='):job_output.index(',', walltime_index)]
-    job_metrics['walltime'] = walltime
-
-    mem_index = job_output.index('mem=', index)
-    mem = job_output[mem_index + len('mem='):job_output.index(',', mem_index)]
-    job_metrics['mem'] = mem
-
-    energy_used_index = job_output.index('energy_used=', index)
-    energy_used = job_output[energy_used_index + len('energy_used='):job_output.index('\n', mem_index)]
-    job_metrics['energy_used'] = energy_used
-
-    # Read start_transaction and stop_transaction from prologue and epilogue timestamps
-    format = '%Y-%m-%d %H:%M:%S.%f'
-    start_timestamp_index = job_output.index('Timestamp:')
-    start_timestamp = job_output[
-                      start_timestamp_index + len('Timestamp:'):job_output.index('\n', start_timestamp_index)]
-    start_timestamp_datetime = datetime.fromtimestamp(float(start_timestamp.strip())).strftime(format)
-    job_metrics['start_timestamp'] = start_timestamp_datetime
-
-    stop_timestamp_index = job_output.index('Timestamp:', start_timestamp_index + len('Timestamp:'))
-    stop_timestamp = job_output[stop_timestamp_index + len('Timestamp:'):job_output.index('\n', stop_timestamp_index)]
-    stop_timestamp_datetime = datetime.fromtimestamp(float(stop_timestamp.strip())).strftime(format)
-    job_metrics['stop_timestamp'] = stop_timestamp_datetime
-
-    workflow_parameters_index = job_output.index('Requested resource limits:')
-    workflow_parameters = unicode(
-        job_output[
-        workflow_parameters_index + len('Requested resource limits:'):
-        job_output.index('\n', workflow_parameters_index)], "utf-8")[:-1]  # Remove leading quotes
-    job_metrics['workflow_parameters'] = workflow_parameters
-
-    return job_metrics
+            'Something happened when trying to stop: ' + exp.message)
 
 
 def getHours(cput):
@@ -750,14 +673,14 @@ def registerOrchestratorInstanceInAccounting():
                     format(err=err))
 
 
-def report_metrics_to_accounting(job_metrics, job_id):
+def report_metrics_to_accounting(audit, job_id):
     try:
         if croupier_reporter_id is None:
             raise Exception('Croupier instance not registered in Accounting')
-        start_transaction = job_metrics['start_timestamp']
-        stop_transaction = job_metrics['stop_timestamp']
+        start_transaction = audit['start_timestamp']
+        stop_transaction = audit['stop_timestamp']
         workflow_id = ctx.workflow_id
-        workflow_parameters = job_metrics['workflow_parameters']
+        workflow_parameters = audit['workflow_parameters']
 
         username = ctx.instance.runtime_properties['credentials']['user']
         try:
@@ -784,7 +707,7 @@ def report_metrics_to_accounting(job_metrics, job_id):
         cpu_resource = cpu_resources[0]
 
         consumptions = []
-        cput = parseHours(job_metrics["cput"]) * int(job_metrics["processorsPerNode"])
+        cput = parseHours(audit["cput"]) # FIXME multiply this value by the number of processors per node
         cpu_consumption = ResourceConsumption(cput, MeasureUnit.Hours, cpu_resource.id)
         consumptions.append(cpu_consumption)
 
@@ -812,6 +735,7 @@ def publish(publish_list, data_mover_options, **kwargs):
 
     try:
         name = kwargs['name']
+        audit = kwargs['audit']
         published = True
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
@@ -822,19 +746,8 @@ def publish(publish_list, data_mover_options, **kwargs):
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            # Read job output file and collect job consumed resource metrics
-            # TODO Implement support for a workflow with multiple jobs
-            accounting_type = ctx.instance.runtime_properties['accounting_type']
-            job_metrics = None
-            if accounting_type.lower() == 'epilogue':
-                job_output = read_job_output(name, workdir, client, ctx.logger)
-                job_metrics = process_job_output(job_output)
-            elif  accounting_type.lower() == 'qstat':
-                pass
-
             # Report metrics to Accounting component
-            if job_metrics is not None:
-                report_metrics_to_accounting(job_metrics, job_id=name)
+            report_metrics_to_accounting(audit, job_id=name)
 
             for publish_item in publish_list:
                 if not published:

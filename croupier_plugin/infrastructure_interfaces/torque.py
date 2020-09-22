@@ -32,6 +32,8 @@ torque.py
 from croupier_plugin.ssh import SshClient
 from infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
+import re
+import datetime
 
 
 class Torque(InfrastructureInterface):
@@ -56,14 +58,9 @@ class Torque(InfrastructureInterface):
             # qsub command plus job name
             # Read environment, required by some HPC (e.g. HLRS Hawk)
             read_environment = "source /etc/profile; "
-            # Add prologue/epilogue flags in submission job call (e.g. qsub -l prologue=prologue.sh ...)
-            if job_settings["accounting_type"].lower() == "epilogue":
-                _settings['data'] += read_environment + "qsub -V -N {} -l prologue=prologue.sh -l epilogue=epilogue.sh".format(
-                    shlex_quote(job_id))
-            else:
-                _settings[
-                    'data'] += read_environment + "qsub -V -N {}".format(
-                    shlex_quote(job_id))
+            _settings[
+                'data'] += read_environment + "qsub -V -N {}".format(
+                shlex_quote(job_id))
 
         # Check if exists and has content
         def _check_job_settings_key(key):
@@ -226,7 +223,7 @@ class Torque(InfrastructureInterface):
             wait_result=True)
         client.close_connection()
         try:
-            job_states = Torque._parse_qstat_detailed(output)
+            job_states, audits = Torque._parse_qstat_detailed(output)
         except SyntaxError as e:
             logger.warning(
                 "cannot parse state response for job ids=[{}]".format(
@@ -238,7 +235,7 @@ class Torque(InfrastructureInterface):
             #       for the correct lifecycle
             raise e
 
-        return job_states
+        return job_states, audits
 
     @staticmethod
     def _parse_qselect(qselect_output):
@@ -253,19 +250,35 @@ class Torque(InfrastructureInterface):
     def _parse_qstat_detailed(qstat_output):
         from StringIO import StringIO
         jobs = {}
+        audits = {}
         for job in Torque._tokenize_qstat_detailed(StringIO(qstat_output)):
             # ignore job['Job_Id'], use identification by name
             name = job.get('Job_Name', '')
             state_code = job.get('job_state', None)
+            audit = {}
             if name and state_code:
                 if state_code == 'C':
+                    # Process timestamps from this format 'Tue Sep 22 13:29:49 2020'
+                    # to this one "2020-04-15 01:26:59.000403"
+                    start_time = datetime.datetime.strptime(job.get("start_time"), '%a %b %d %H:%M:%S %Y')
+                    comp_time = datetime.datetime.strptime(job.get("comp_time"), '%a %b %d %H:%M:%S %Y')
+                    audit["start_timestamp"] = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+                    audit["stop_timestamp"] = comp_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+                    audit["cput"] = job.get("resources_used.cput")
+                    audit["vmem"] = job.get("resources_used.vmem")
+                    audit["walltime"] = job.get("resources_used.walltime")
+                    audit["mem"] = job.get("resources_used.mem")
+                    audit["energy_used"] = job.get("resources_used.energy_used")
+                    pattern = re.compile('-l ([a-zA-Z0-9=:]*)')
+                    audit["workflow_parameters"] = ','.join(pattern.findall(job.get("submit_args")))
                     exit_status = int(job.get('exit_status', 0))
                     state = Torque._job_exit_status.get(
                         exit_status, "FAILED")  # unknown failure by default
                 else:
                     state = Torque._job_states[state_code]
             jobs[name] = state
-        return jobs
+            audits[name] = audit
+        return jobs, audits
 
     @staticmethod
     def _tokenize_qstat_detailed(fp):
