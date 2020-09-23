@@ -673,7 +673,7 @@ def registerOrchestratorInstanceInAccounting():
                     format(err=err))
 
 
-def report_metrics_to_accounting(audit, job_id):
+def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
     try:
         if croupier_reporter_id is None:
             raise Exception('Croupier instance not registered in Accounting')
@@ -681,6 +681,8 @@ def report_metrics_to_accounting(audit, job_id):
         stop_transaction = audit['stop_timestamp']
         workflow_id = ctx.workflow_id
         workflow_parameters = audit['workflow_parameters']
+
+        processors_per_node = read_processors_per_node(job_id, workdir, ssh_client, logger)
 
         username = ctx.instance.runtime_properties['credentials']['user']
         try:
@@ -707,7 +709,7 @@ def report_metrics_to_accounting(audit, job_id):
         cpu_resource = cpu_resources[0]
 
         consumptions = []
-        cput = parseHours(audit["cput"]) # FIXME multiply this value by the number of processors per node
+        cput = parseHours(audit["cput"]) * processors_per_node # FIXME multiply this value by the number of processors per node
         cpu_consumption = ResourceConsumption(cput, MeasureUnit.Hours, cpu_resource.id)
         consumptions.append(cpu_consumption)
 
@@ -719,6 +721,21 @@ def report_metrics_to_accounting(audit, job_id):
         ctx.logger.warning(
             'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
                 format(workflow_id=workflow_id, err=err))
+
+
+def read_processors_per_node(job_id, workdir, ssh_client, logger):
+    # Invoke command cat atosf9affs.audit
+    command = 'cat {workdir}/{job_id}.audit'.format(job_id=job_id, workdir=workdir)
+    output, exit_code = ssh_client.execute_shell_command(
+        command,
+        workdir=workdir,
+        wait_result=True)
+    if exit_code != 0:
+        logger.error('read_job_output: {command} failed with code: {code}:\n{output}'.format(
+            command=command, code=str(exit_code), output=output))
+        return False
+    else:
+        return int(output[output.find('=')+1:].rstrip("\n"))
 
 
 @operation
@@ -747,7 +764,7 @@ def publish(publish_list, data_mover_options, **kwargs):
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
             # Report metrics to Accounting component
-            report_metrics_to_accounting(audit, job_id=name)
+            report_metrics_to_accounting(audit, job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
 
             for publish_item in publish_list:
                 if not published:

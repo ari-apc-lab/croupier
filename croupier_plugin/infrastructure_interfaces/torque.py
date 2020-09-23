@@ -171,13 +171,25 @@ class Torque(InfrastructureInterface):
             # Read script and add audit header
             pattern = re.compile('([a-zA-Z-9_]*).script')
             script_name = pattern.findall(job_settings['data'])[0]+'.script'
-            command = None
+
+            audit_instruction = "echo ProcessorsPerNode=$(( 1 + $(cat /proc/cpuinfo | grep processor | " \
+                                "tail -n1 | cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit"\
+                .format(job_id=job_id, workdir=workdir)
+
+            # Remove previous audit line
+            command = "cd {workdir}; sed -i '/ProcessorsPerNode/d' {script_name}" \
+                .format(workdir=workdir, script_name=script_name, audit_instruction=audit_instruction)
+            result = execute_ssh_command(command, workdir, ssh_client, logger)
+
+            # Add audit line
+            command = "cd {workdir}; sed -i '1i {audit_instruction}' {script_name}"\
+                .format(workdir=workdir, script_name=script_name, audit_instruction=audit_instruction)
             result = execute_ssh_command(command, workdir, ssh_client, logger)
         else:
             # Add audit entry
             job_settings['data'] += \
                 "\necho ProcessorsPerNode =$((1 + $(cat /proc/cpuinfo | grep processor | tail -n1 | " \
-                "cut -d':' -f2 | xargs))) > $PBS_O_WORKDIR\\{job_id}.audit\n\n".format(job_id=job_id)
+                "cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit\n\n".format(job_id=job_id, workdir=workdir)
         return job_settings
 
     def _build_job_cancellation_call(self, name, job_settings, logger):
