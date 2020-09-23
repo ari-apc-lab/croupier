@@ -218,9 +218,7 @@ class InfrastructureInterface(object):
             settings = job_settings
 
         # build the call to submit the job
-        response = self._build_job_submission_call(
-            name,
-            settings)
+        response = self._build_job_submission_call(name, settings, ssh_client, workdir, logger)
 
         if 'error' in response:
             logger.error(
@@ -454,6 +452,9 @@ class InfrastructureInterface(object):
             job_settings,
             script=True)
 
+        # TODO Add extra audit support to response
+        response = self._add_audit(name, job_settings=response, script=False)
+
         if 'error' in response and response['error']:
             logger.error(response['error'])
             return None
@@ -497,7 +498,7 @@ class InfrastructureInterface(object):
 
         return script
 
-    def _build_job_submission_call(self, name, job_settings):
+    def _build_job_submission_call(self, name, job_settings, ssh_client, workdir, logger):
         """
         Generates submission command line as a string
 
@@ -533,6 +534,10 @@ class InfrastructureInterface(object):
         response = self._parse_job_settings(
             name,
             job_settings)
+
+        # TODO Add extra audit support to the beginning of given script
+        response = self._add_audit(
+            name, job_settings=response, script=True, ssh_client=ssh_client, workdir=workdir, logger=logger)
 
         if 'error' in response and response['error']:
             return response
@@ -676,3 +681,29 @@ class InfrastructureInterface(object):
             return False
 
         return True
+
+    def _add_audit(self, job_id, job_settings, script=False, ssh_client=None, workdir=None, logger=None):
+        """
+        Adds extra audit support for job execution
+
+         @type job_id: string
+        @param job_id: name of the job
+        @type job_settings: dictionary
+        @param job_settings: dictionary with the job options
+        @type job_settings: dictionary
+        @param job_settings: dictionary with the job options
+        @type script: boolean
+        @param script: whether to apply the audit instructions on a submission script
+        @type ssh_client: SshClient
+        @param ssh_client: ssh client
+        @type workdir: str
+        @param workdir: directory where to locate the script
+        @type workdir: Logger
+        @param workdir: logger to output logs
+        @rtype dict
+        @return dict with two keys:
+         'data' parsed data with its parameters, and
+         'error' if an error arise.
+        """
+        raise NotImplementedError(
+            "'_build_job_cancellation_call' not implemented.")

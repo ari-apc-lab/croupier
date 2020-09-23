@@ -28,7 +28,6 @@ license information in the project root.
 torque.py
 '''
 
-
 from croupier_plugin.ssh import SshClient
 from infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
@@ -161,11 +160,25 @@ class Torque(InfrastructureInterface):
             if _check_job_settings_key('arguments'):
                 args = ''
                 for arg in job_settings['arguments']:
-                    args += arg+' '
+                    args += arg + ' '
                 _settings['data'] += ' -F "{}"'.format(args)
             _settings['data'] += '; '
 
         return _settings
+
+    def _add_audit(self, job_id, job_settings, script=False, ssh_client=None, workdir=None, logger=None):
+        if script:
+            # Read script and add audit header
+            pattern = re.compile('([a-zA-Z-9_]*).script')
+            script_name = pattern.findall(job_settings['data'])[0]+'.script'
+            command = None
+            result = execute_ssh_command(command, workdir, ssh_client, logger)
+        else:
+            # Add audit entry
+            job_settings['data'] += \
+                "\necho ProcessorsPerNode =$((1 + $(cat /proc/cpuinfo | grep processor | tail -n1 | " \
+                "cut -d':' -f2 | xargs))) > $PBS_O_WORKDIR\\{job_id}.audit\n\n".format(job_id=job_id)
+        return job_settings
 
     def _build_job_cancellation_call(self, name, job_settings, logger):
         return r"qselect -N {} | xargs qdel".format(shlex_quote(name))
@@ -175,7 +188,8 @@ class Torque(InfrastructureInterface):
             return '$PBS_ARRAYID'
         else:
             return default
-# Monitor
+
+    # Monitor
 
     def get_states(self, workdir, credentials, job_names, logger):
         return self._get_states_detailed(
@@ -298,21 +312,21 @@ class Torque(InfrastructureInterface):
             if len(line) > 1:  # skip empty lines
                 # find match for the new attribute
                 match = pattern_attribute_first.match(line)
-                if match:      # start to handle new job descriptor
+                if match:  # start to handle new job descriptor
                     if len(job_attr_tokens) > 0:
                         yield job_attr_tokens
                     job_attr_tokens = {}
                 else:
                     match = pattern_attribute_next.match(line)
 
-                if match:      # line corresponds to the new attribute
+                if match:  # line corresponds to the new attribute
                     attr = match.group('key').replace(' ', '_')
                     job_attr_tokens[attr] = match.group('value')
-                else:          # either multiline attribute or broken line
+                else:  # either multiline attribute or broken line
                     match = pattern_attribute_continue.match(line)
                     if match:  # multiline attribute value continues
                         job_attr_tokens[attr] += match.group('value')
-                    elif len(job_attr_tokens[attr]) > 0\
+                    elif len(job_attr_tokens[attr]) > 0 \
                             and job_attr_tokens[attr][-1] == '\\':
                         # multiline attribute with newline character
                         job_attr_tokens[attr] = "{0}\n{1}".format(
@@ -327,37 +341,37 @@ class Torque(InfrastructureInterface):
     _job_states = dict(
         # C includes completion by both success and fail: "COMPLETED",
         #     "TIMEOUT", "FAILED","CANCELLED", #"BOOT_FAIL", and "REVOKED"
-        C="COMPLETED",   # Job is completed after having run
+        C="COMPLETED",  # Job is completed after having run
         E="COMPLETING",  # Job is exiting after having run
-        H="PENDING",     # (@TODO like "RESV_DEL_HOLD" in Slurm) Job is held
-        Q="PENDING",     # Job is queued, eligible to run or routed
-        R="RUNNING",     # Job is running
-        T="PENDING",     # (nothng in Slurm) Job is being moved to new location
-        W="PENDING",     # (nothng in Slurm) Job is waiting for the time after
+        H="PENDING",  # (@TODO like "RESV_DEL_HOLD" in Slurm) Job is held
+        Q="PENDING",  # Job is queued, eligible to run or routed
+        R="RUNNING",  # Job is running
+        T="PENDING",  # (nothng in Slurm) Job is being moved to new location
+        W="PENDING",  # (nothng in Slurm) Job is waiting for the time after
         #                  which the job is eligible for execution (`qsub -a`)
-        S="SUSPENDED",   # (Unicos only) Job is suspended
+        S="SUSPENDED",  # (Unicos only) Job is suspended
         # The latter states have no analogues
         #   "CONFIGURING", "STOPPED", "NODE_FAIL", "PREEMPTED", "SPECIAL_EXIT"
     )
 
     _job_exit_status = {
-        0:   "COMPLETED",  # OK             Job execution successful
-        -1:  "FAILED",     # FAIL1          Job execution failed, before
+        0: "COMPLETED",  # OK             Job execution successful
+        -1: "FAILED",  # FAIL1          Job execution failed, before
         #                                   files, no retry
-        -2:  "FAILED",     # FAIL2          Job execution failed, after
+        -2: "FAILED",  # FAIL2          Job execution failed, after
         #                                    files, no retry
-        -3:  "FAILED",     # RETRY          Job execution failed, do retry
-        -4:  "BOOT_FAIL",  # INITABT        Job aborted on MOM initialization
-        -5:  "BOOT_FAIL",  # INITRST        Job aborted on MOM init, chkpt,
+        -3: "FAILED",  # RETRY          Job execution failed, do retry
+        -4: "BOOT_FAIL",  # INITABT        Job aborted on MOM initialization
+        -5: "BOOT_FAIL",  # INITRST        Job aborted on MOM init, chkpt,
         #                                    no migrate
-        -6:  "BOOT_FAIL",  # INITRMG        Job aborted on MOM init, chkpt,
+        -6: "BOOT_FAIL",  # INITRMG        Job aborted on MOM init, chkpt,
         #                                    ok migrate
-        -7:  "FAILED",     # BADRESRT       Job restart failed
-        -8:  "FAILED",     # CMDFAIL        Exec() of user command failed
-        -9:  "NODE_FAIL",  # STDOUTFAIL     Couldn't create/open stdout/stderr
+        -7: "FAILED",  # BADRESRT       Job restart failed
+        -8: "FAILED",  # CMDFAIL        Exec() of user command failed
+        -9: "NODE_FAIL",  # STDOUTFAIL     Couldn't create/open stdout/stderr
         -10: "NODE_FAIL",  # OVERLIMIT_MEM  Job exceeded a memory limit
         -11: "NODE_FAIL",  # OVERLIMIT_WT   Job exceeded a walltime limit
-        -12: "TIMEOUT",    # OVERLIMIT_CPUT Job exceeded a CPU time limit
+        -12: "TIMEOUT",  # OVERLIMIT_CPUT Job exceeded a CPU time limit
     }
 
     @staticmethod
@@ -376,9 +390,9 @@ class Torque(InfrastructureInterface):
         # TODO:(emepetres) set start day of consulting
         # @caution This code fails to manage the situation
         #          if several jobs have the same name
-        call = "qstat -i `echo {} | xargs -n 1 qselect -N` "\
-            "| tail -n+6 | awk '{{ print $4 \"|\" $10 }}'".format(
-                shlex_quote(' '.join(map(shlex_quote, job_names))))
+        call = "qstat -i `echo {} | xargs -n 1 qselect -N` " \
+               "| tail -n+6 | awk '{{ print $4 \"|\" $10 }}'".format(
+            shlex_quote(' '.join(map(shlex_quote, job_names))))
         output, exit_code = ssh_client.send_command(call, wait_result=True)
 
         return Torque._parse_qstat_tabular(output) if exit_code == 0 else {}
@@ -386,6 +400,7 @@ class Torque(InfrastructureInterface):
     @staticmethod
     def _parse_qstat_tabular(qstat_output):
         """ Parse two colums `qstat` entries into a dict """
+
         def parse_qstat_record(record):
             name, state_code = map(str.strip, record.split('|'))
             return name, Torque._job_states[state_code]
@@ -397,3 +412,11 @@ class Torque(InfrastructureInterface):
             parsed = dict(map(parse_qstat_record, jobs))
 
         return parsed
+
+
+def execute_ssh_command(command, workdir, ssh_client, logger):
+    _, exit_code = ssh_client.execute_shell_command(command, workdir=workdir, wait_result=True)
+    if exit_code != 0:
+        logger.error("failed to execute command '" + command + "', exit code " + str(exit_code))
+        return False
+    return True
