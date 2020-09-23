@@ -35,7 +35,7 @@ import re
 import datetime
 
 
-class Torque(InfrastructureInterface):
+class Pbspro(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
 
     def _parse_job_settings(
@@ -86,7 +86,7 @@ class Torque(InfrastructureInterface):
 
             _add_setting('-l', node_request)
 
-        # HLRS Hawk Torque flags
+        # PBSPro flags
         # Documentation: https://kb.hlrs.de/platforms/index.php/Batch_System_PBSPro_(Hawk)#Node_types
         if _check_job_settings_key('select'):
             node_request = "select={}".format(job_settings['select'])
@@ -190,6 +190,7 @@ class Torque(InfrastructureInterface):
             job_settings['data'] += \
                 "\necho ProcessorsPerNode =$((1 + $(cat /proc/cpuinfo | grep processor | tail -n1 | " \
                 "cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit\n\n".format(job_id=job_id, workdir=workdir)
+        self.audit_inserted = True
         return job_settings
 
     def _build_job_cancellation_call(self, name, job_settings, logger):

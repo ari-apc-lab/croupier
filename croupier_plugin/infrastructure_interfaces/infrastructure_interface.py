@@ -131,6 +131,7 @@ class InfrastructureInterface(object):
 
     def __init__(self, infrastructure_interface):
         self.infrastructure_interface = infrastructure_interface
+        self.audit_inserted = False
 
     @staticmethod
     def factory(infrastructure_interface):
@@ -140,6 +141,9 @@ class InfrastructureInterface(object):
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
             return Torque(infrastructure_interface)
+        if infrastructure_interface == "PBSPRO":
+            from croupier_plugin.infrastructure_interfaces.pbspro import Pbspro
+            return Pbspro(infrastructure_interface)
         if infrastructure_interface == "SHELL":
             from croupier_plugin.infrastructure_interfaces.shell import Shell
             return Shell(infrastructure_interface)
@@ -178,6 +182,7 @@ class InfrastructureInterface(object):
             return False
 
         # Build script if there is no one, or Singularity
+        self.audit_inserted = False
         if 'script' not in job_settings or is_singularity:
             # generate script content
             if is_singularity:
@@ -186,7 +191,7 @@ class InfrastructureInterface(object):
                     job_settings,
                     logger)
             else:
-                script_content = self._build_script(name, job_settings, logger)
+                script_content = self._build_script(name, job_settings, workdir, ssh_client, logger)
 
             if script_content is None:
                 logger.error('script_content is None')
@@ -410,7 +415,7 @@ class InfrastructureInterface(object):
 
     #   ##################################################
 
-    def _build_script(self, name, job_settings, logger, container=False):
+    def _build_script(self, name, job_settings, workdir, ssh_client, logger, container=False):
         """
         Creates a script to run batch jobs
 
@@ -453,7 +458,9 @@ class InfrastructureInterface(object):
             script=True)
 
         # TODO Add extra audit support to response
-        response = self._add_audit(name, job_settings=response, script=False)
+        if not self.audit_inserted:
+            response = self._add_audit(
+                name, job_settings=response, script=False, ssh_client=ssh_client, workdir=workdir, logger=logger)
 
         if 'error' in response and response['error']:
             logger.error(response['error'])
@@ -535,9 +542,10 @@ class InfrastructureInterface(object):
             name,
             job_settings)
 
-        # TODO Add extra audit support to the beginning of given script
-        response = self._add_audit(
-            name, job_settings=response, script=True, ssh_client=ssh_client, workdir=workdir, logger=logger)
+        # Add extra audit support
+        if not self.audit_inserted:
+            response = self._add_audit(
+                name, job_settings=response, script=True, ssh_client=ssh_client, workdir=workdir, logger=logger)
 
         if 'error' in response and response['error']:
             return response
