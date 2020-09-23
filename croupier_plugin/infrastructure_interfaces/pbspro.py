@@ -216,8 +216,8 @@ class Pbspro(InfrastructureInterface):
         """
         Get job states by job names
 
-        This function uses `qstat` command to query Torque.
-        Please don't launch this call very friquently. Polling it
+        This function uses `qstat` command to query PBSPro.
+        Please don't launch this call very frequently. Polling it
         frequently, especially across all users on the cluster,
         will slow down response times and may bring
         scheduling to a crawl.
@@ -228,7 +228,9 @@ class Pbspro(InfrastructureInterface):
         and uses several SSH commands.
         """
         # identify job ids
-        call = "echo {} | xargs -n 1 qselect -N".format(
+        # Read environment, required by some HPC (e.g. HLRS Hawk)
+        read_environment = "source /etc/profile > /dev/null 2>&1; "
+        call = read_environment + "echo {} | xargs -n 1 qselect -x -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
         client = SshClient(credentials)
@@ -237,12 +239,12 @@ class Pbspro(InfrastructureInterface):
             call,
             workdir=workdir,
             wait_result=True)
-        job_ids = Torque._parse_qselect(output)
+        job_ids = Pbspro._parse_qselect(output)
         if not job_ids:
             return {}
 
         # get detailed information about jobs
-        call = "qstat -f {}".format(' '.join(map(str, job_ids)))
+        call = read_environment + "qstat -x -w -f {}".format(' '.join(map(str, job_ids)))
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -250,7 +252,7 @@ class Pbspro(InfrastructureInterface):
             wait_result=True)
         client.close_connection()
         try:
-            job_states, audits = Torque._parse_qstat_detailed(output)
+            job_states, audits = Pbspro._parse_qstat_detailed(output)
         except SyntaxError as e:
             logger.warning(
                 "cannot parse state response for job ids=[{}]".format(
@@ -278,31 +280,31 @@ class Pbspro(InfrastructureInterface):
         from StringIO import StringIO
         jobs = {}
         audits = {}
-        for job in Torque._tokenize_qstat_detailed(StringIO(qstat_output)):
-            # ignore job['Job_Id'], use identification by name
+        for job in Pbspro._tokenize_qstat_detailed(StringIO(qstat_output)):
             name = job.get('Job_Name', '')
             state_code = job.get('job_state', None)
             audit = {}
             if name and state_code:
-                if state_code == 'C':
+                if state_code == 'F':
                     # Process timestamps from this format 'Tue Sep 22 13:29:49 2020'
                     # to this one "2020-04-15 01:26:59.000403"
-                    start_time = datetime.datetime.strptime(job.get("start_time"), '%a %b %d %H:%M:%S %Y')
-                    comp_time = datetime.datetime.strptime(job.get("comp_time"), '%a %b %d %H:%M:%S %Y')
+                    start_time = datetime.datetime.strptime(job.get("stime"), '%a %b %d %H:%M:%S %Y')
+                    comp_time = datetime.datetime.strptime(job.get("mtime"), '%a %b %d %H:%M:%S %Y')
                     audit["start_timestamp"] = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")
                     audit["stop_timestamp"] = comp_time.strftime("%Y-%m-%d %H:%M:%S.%f")
                     audit["cput"] = job.get("resources_used.cput")
+                    audit["cpupercent"] = job.get("resources_used.cpupercent")
+                    audit["ncpus"] = job.get("resources_used.ncpus")
                     audit["vmem"] = job.get("resources_used.vmem")
                     audit["walltime"] = job.get("resources_used.walltime")
                     audit["mem"] = job.get("resources_used.mem")
-                    audit["energy_used"] = job.get("resources_used.energy_used")
                     pattern = re.compile('-l ([a-zA-Z0-9=:]*)')
-                    audit["workflow_parameters"] = ','.join(pattern.findall(job.get("submit_args")))
+                    audit["workflow_parameters"] = ','.join(pattern.findall(job.get("Submit_arguments")))
                     exit_status = int(job.get('exit_status', 0))
-                    state = Torque._job_exit_status.get(
+                    state = Pbspro._job_exit_status.get(
                         exit_status, "FAILED")  # unknown failure by default
                 else:
-                    state = Torque._job_states[state_code]
+                    state = Pbspro._job_states[state_code]
             jobs[name] = state
             audits[name] = audit
         return jobs, audits
@@ -310,7 +312,7 @@ class Pbspro(InfrastructureInterface):
     @staticmethod
     def _tokenize_qstat_detailed(fp):
         import re
-        # regexps for tokenization (buiding AST) of `qstat -f` output
+        # regexps for tokenization (buiding AST) of `qstat -x -f` output
         pattern_attribute_first = re.compile(
             r"^(?P<key>Job Id): (?P<value>(\w|\.)+)", re.M)
         pattern_attribute_next = re.compile(
@@ -352,19 +354,15 @@ class Pbspro(InfrastructureInterface):
             yield job_attr_tokens
 
     _job_states = dict(
-        # C includes completion by both success and fail: "COMPLETED",
-        #     "TIMEOUT", "FAILED","CANCELLED", #"BOOT_FAIL", and "REVOKED"
-        C="COMPLETED",  # Job is completed after having run
-        E="COMPLETING",  # Job is exiting after having run
-        H="PENDING",  # (@TODO like "RESV_DEL_HOLD" in Slurm) Job is held
-        Q="PENDING",  # Job is queued, eligible to run or routed
+        F="FINISH",  # Job is finished
+        E="EXITING",  # Job is exiting after having run
+        H="PENDING",  # Job is held
+        Q="PENDING",  # Job is queued
         R="RUNNING",  # Job is running
-        T="PENDING",  # (nothng in Slurm) Job is being moved to new location
-        W="PENDING",  # (nothng in Slurm) Job is waiting for the time after
-        #                  which the job is eligible for execution (`qsub -a`)
-        S="SUSPENDED",  # (Unicos only) Job is suspended
-        # The latter states have no analogues
-        #   "CONFIGURING", "STOPPED", "NODE_FAIL", "PREEMPTED", "SPECIAL_EXIT"
+        T="PENDING",  # Job is being moved to new location
+        W="PENDING",  # Job is waiting for its submitter-assigned start time to be reached
+        S="SUSPENDED",  # Job is suspended
+        M="PENDING",  # Job was moved to another server
     )
 
     _job_exit_status = {
@@ -408,7 +406,7 @@ class Pbspro(InfrastructureInterface):
             shlex_quote(' '.join(map(shlex_quote, job_names))))
         output, exit_code = ssh_client.send_command(call, wait_result=True)
 
-        return Torque._parse_qstat_tabular(output) if exit_code == 0 else {}
+        return Pbspro._parse_qstat_tabular(output) if exit_code == 0 else {}
 
     @staticmethod
     def _parse_qstat_tabular(qstat_output):
@@ -416,7 +414,7 @@ class Pbspro(InfrastructureInterface):
 
         def parse_qstat_record(record):
             name, state_code = map(str.strip, record.split('|'))
-            return name, Torque._job_states[state_code]
+            return name, Pbspro._job_states[state_code]
 
         jobs = qstat_output.splitlines()
         parsed = {}
