@@ -108,9 +108,7 @@ class Pbspro(InfrastructureInterface):
                 _check_job_settings_key('partition'):
             if _check_job_settings_key('queue'):
                 queue = job_settings['queue']
-            else:
-                queue = job_settings['partition']
-            _add_setting('-q', shlex_quote(queue))
+                _add_setting('-q', shlex_quote(queue))
 
         if _check_job_settings_key('memory'):
             _add_setting('-l', 'mem={}'.format(job_settings('memory')))

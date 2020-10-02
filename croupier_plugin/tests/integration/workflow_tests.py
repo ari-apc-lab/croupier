@@ -137,8 +137,8 @@ class TestPlugin(unittest.TestCase):
             logging.warning('[WARNING] Login could not be tested')
 
     # Bernoulli test in Sodalite HPC
-    def load_sodalite_hpc_inputs(self, *args, **kwargs):
-        return self.load_inputs('blueprint-sodalite-inputs.yaml')
+    # def load_sodalite_hpc_inputs(self, *args, **kwargs):
+    #     return self.load_inputs('blueprint-sodalite-inputs.yaml')
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_bernoulli.yaml'),
@@ -171,7 +171,7 @@ class TestPlugin(unittest.TestCase):
         return self.load_inputs('blueprint-hawk-inputs.yaml')
 
     @workflow_test(
-        os.path.join('blueprints', 'blueprint_single.yaml'),
+        os.path.join('blueprints', 'blueprint_single_hawk.yaml'),
         copy_plugin_yaml=True,
         resources_to_copy=[
             (os.path.join('blueprints', 'inputs_def.yaml'), './')],
