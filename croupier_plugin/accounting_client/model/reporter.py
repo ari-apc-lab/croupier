@@ -6,6 +6,7 @@ from base import AccountingBase
 class ReporterType(enum.Enum):
     Orchestrator = 0
     DataProvider = 1
+    Prometheus = 2
 
 
 class Reporter (AccountingBase):
