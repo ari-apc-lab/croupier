@@ -485,9 +485,13 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     if not simulate:
         # Do data download (from Cloud to HPC) if requested
-        if len(data_mover_options) > 0 and data_mover_options['download']:
+        if len(data_mover_options) > 0 and data_mover_options['download_ATOSFR']:
             dmp = DataMoverProxy(data_mover_options)
-            dmp.download_data()
+            dmp.download_data_ATOSFR()
+
+        if len(data_mover_options) > 0 and data_mover_options['download_WRLS']:
+            dmp = DataMoverProxy(data_mover_options)
+            dmp.download_data_WRLS()
 
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -756,9 +760,12 @@ def publish(publish_list, data_mover_options, **kwargs):
         published = True
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
-            if len(data_mover_options) > 0 and data_mover_options['upload']:
+            if len(data_mover_options) > 0 and data_mover_options['upload_ATOSFR']:
                 dmp = DataMoverProxy(data_mover_options)
-                dmp.upload_data()
+                dmp.upload_data_ATOSFR()
+            if len(data_mover_options) > 0 and data_mover_options['upload_WRLS']:
+                dmp = DataMoverProxy(data_mover_options)
+                dmp.upload_data_WRLS()
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
