@@ -66,10 +66,16 @@ node_templates:
             data_mover_options: { get_input: data_mover_options }
             #These are the data_mover_options:
             #workspace: wsdata #Workspace to be created in the HPC
-            #upload: True #Whether to invoke data mover for data upload after job execution
-            #download: True #Whether to invoke data mover for data download before job execution
+            #upload_ATOSFR: True #Whether to invoke data mover for data upload after job execution
+            #download_ATOSFR: True #Whether to invoke data mover for data download before job execution
+            #upload_WRLS: True #Whether to invoke data mover for data upload after job execution
+            #download_WRLS: True #Whether to invoke data mover for data download before job execution
+
             #cloud_user: user name to get access to the Cloud data
             #cloud_folder: y.gorronogoitia/files/ #This path is relative to the server default data path. It could point to a file
+            #wrls_user: xeupmara           #user name to get access to WRLS
+            #wrls_folder: /home/xeupmara  #This path is relative to the server default data path. It could point to a file
+
             #hpc_folder: files/ #This path is relative to HPC workspace data path. It could point to a file
             #ws_lifetime: 1 #defines the number of days between the creation of the workspace until its automatic deletion. The maximum value is 30 days.
             #grid_userkey: #GridFTP user key as content string
