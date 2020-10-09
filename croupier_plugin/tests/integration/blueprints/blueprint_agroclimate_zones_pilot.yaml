@@ -30,8 +30,8 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
-    - inputs_def.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/euxdat/plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/euxdat/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
 
 node_templates:
     hpc_interface:
