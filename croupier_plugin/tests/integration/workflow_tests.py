@@ -247,6 +247,34 @@ class TestPlugin(unittest.TestCase):
         else:
             logging.warning('[WARNING] Login could not be tested')
 
+    # Agroclimate Zones Pilot Test with data mover
+    def load_agroclimate_zones_data_mover_inputs(self, *args, **kwargs):
+        return self.load_inputs('blueprint-inputs-agroclimaticzones-datamover.yaml')
+
+    @workflow_test(
+        os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot_datamover.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[
+            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        inputs='load_agroclimate_zones_data_mover_inputs')
+    def test_agroclimate_zones_pilot_datamover(self, cfy_local):
+        """ Single BATCH Job Blueprint """
+        cfy_local.execute('install', task_retries=0)
+        cfy_local.execute('run_jobs', task_retries=0)
+        cfy_local.execute('uninstall', task_retries=0)
+
+        # extract single node instance
+        instance = cfy_local.storage.get_node_instances()[0]
+
+        # due to a cfy bug sometimes login keyword is not ready in the tests
+        if 'login' in instance.runtime_properties:
+            # assert runtime properties is properly set in node instance
+            self.assertEqual(instance.runtime_properties['login'],
+                             True)
+        else:
+            logging.warning('[WARNING] Login could not be tested')
+
+
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single_script.yaml'),
         copy_plugin_yaml=True,

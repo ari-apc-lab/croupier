@@ -485,11 +485,11 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     if not simulate:
         # Do data download (from Cloud to HPC) if requested
-        if len(data_mover_options) > 0 and data_mover_options['download_ATOSFR']:
+        if len(data_mover_options) > 0 and 'download_ATOSFR' in data_mover_options:
             dmp = DataMoverProxy(data_mover_options)
             dmp.download_data_ATOSFR()
 
-        if len(data_mover_options) > 0 and data_mover_options['download_WRLS']:
+        if len(data_mover_options) > 0 and 'download_WRLS' in data_mover_options:
             dmp = DataMoverProxy(data_mover_options)
             dmp.download_data_WRLS()
 
