@@ -99,32 +99,36 @@ class DataMoverProxy:
                 destination = "HLRS"
                 source_input = self.cloud_folder
                 dest_output = self.hpc_folder
-                source_server = self.my_servers["ATOSFR"]
+                source_server = self.my_servers[source]
+                dest_server = self.my_servers[destination]
 
             elif type_transfer == "download_WRLS":
                 source = "WRLS"
                 destination = "HLRS"
                 source_input = self.cloud_folder
                 dest_output = self.hpc_folder
-                source_server = self.my_servers["WRLS"]
+                source_server = self.my_servers[source]
+                dest_server = self.my_servers[destination]
 
             elif type_transfer == "upload_ATOFR":
                 source = "HLRS"
                 destination = "ATOSFR"
                 source_input = self.hpc_folder
                 dest_output = self.cloud_folder
-                source_server = self.my_servers["HLRS"]
+                source_server = self.my_servers[source]
+                dest_server = self.my_servers[destination]
 
             elif type_transfer == "upload_WRLS":
                 source = "HLRS"
                 destination = "WRLS"
                 source_input = self.hpc_folder
                 dest_output = self.cloud_folder
-                source_server = self.my_servers["HLRS"]
+                source_server = self.my_servers[source]
+                dest_server = self.my_servers[destination]
             else:
                 raise Exception('Not support type of transfer {}'.format(type_transfer))
 
-            size_bytes = self.mydatamover.run_transference(source_server, source, destination, source_input, dest_output)
+            size_bytes = self.mydatamover.run_transference(source_server, dest_server, source, destination, source_input, dest_output)
         except Exception as exp:
             print(traceback.format_exc())
             ctx.logger.error(

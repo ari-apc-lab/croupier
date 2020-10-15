@@ -239,39 +239,20 @@ class DataMover:
                         total_size += os.path.getsize(fp)
         return total_size
 
-    def make_destination_folder(self, my_server, server,
+    def make_destination_folder(self, dest_server, server,
                                 dest_output):  # needed because gridFTP transfer will fail it it not exists.
         # first, need to know if the destination is a folder, then we remove the end before the last character "/"
-        # if DEBUG == "TRUE":
-        # print ("[DEBUG] Request to create the destination folder, it may not exists yet.")
-        i = 0
-        while i < len(my_server) and my_server[i].get_name() != server:
-            i = i + 1
-        if i == len(my_server):
-            raise Exception("Error resquested make_destination_folder but there is not defined the server name: " + str(server))
-        # sys.exit(1)
 
         new_folder = dest_output
         if "/" in new_folder:
             while new_folder and new_folder[-1] != "/":
                 new_folder = new_folder[:-1]
-            # if new_folder != '/' and server == "HLRS":
-            ##now, request to create that folder at destination
-            # command="ssh "+ self.hlrs_user_id+"@"+self.HLRS_SSH_HOST+" -i "+user_ssh_credentials+" \"mkdir -p /"+self.HLRS_WS_BASE_PATH+"/"+self.hlrs_user_id+"-"+ws_name+"/"+new_folder+"\""
-            # try:
-            # srv_response=subprocess.check_output(self.command, shell=True)
-            # except subprocess.CalledProcessError as grepexc:
-            # print("Error creating folder in the workspace")
-            # print("Error code", grepexc.returncode, grepexc.output)
-            # sys.exit(1)
-            # elif new_folder != '/' and server == "ATOSFR":
             if new_folder != '/':
                 # now, request to create that folder at destination
                 # Using the GSI security files created by grid-init-proxy
-                # my_server[i].get_user_id()+"@"+
-                command = "uberftp -mkdir gsiftp://" + my_server[i].get_GRIDFTP_HOST() + ":" + str(
-                    my_server[i].get_GRIDFTP_PORT()) + "/" + my_server[i].get_WS_BASE_PATH() + "/" + my_server[
-                              i].get_srv_path() + dest_output
+                command = "uberftp -mkdir gsiftp://" + dest_server.get_GRIDFTP_HOST() + ":" + str(
+                    dest_server.get_GRIDFTP_PORT()) + "/" + dest_server.get_WS_BASE_PATH() + "/" + \
+                          dest_server.get_srv_path() + dest_output
 
                 print ("cmd " + command)
                 try:
@@ -279,55 +260,30 @@ class DataMover:
                 except subprocess.CalledProcessError as grepexc:
                     raise Exception("Error creating folder in the workspace. Error code", grepexc.returncode, grepexc.output)
                 	# sys.exit(1)
-                # openssl x509 -in /etc/grid-security/hostcert.pem -noout -subject
+
 
     # source and destination define the machines, values can be "localhost" or a name in the data-structure my_server
-    def run_transference(self, my_server, source, destination, source_input, dest_output):
+    def run_transference(self, source_server, dest_server, source, destination, source_input, dest_output):
         self.size_bytes = 0
         self.start_time = time.time()
         # FIND THE PARAMETERS OF THE SOURCE
         if source != "localhost":
-            i_src = 0
-            while (i_src < len(my_server) and my_server[i_src].get_name() != source):
-                i_src = i_src + 1
-            if i_src == len(my_server):
-                raise Exception("Error: requested transference but there is not defined the src server name: " + str(source))
-            # sys.exit(1)
-            src_user_id = my_server[i_src].get_user_id()
-            src_WS_BASE_PATH = my_server[i_src].get_WS_BASE_PATH()
-            src_GRIDFTP_PORT = my_server[i_src].get_GRIDFTP_PORT()
-            src_GRIDFTP_HOST = my_server[i_src].get_GRIDFTP_HOST()
-
-            # if source == "HLRS":
-            # src_path=src_user_id+"-"+ws_name+"/"+source_input
-            # elif source == "ATOSFR":
-            # src_path=source_input
-            src_path = my_server[i_src].get_srv_path() + source_input
+            src_user_id = source_server.get_user_id()
+            src_WS_BASE_PATH = source_server.get_WS_BASE_PATH()
+            src_GRIDFTP_PORT = source_server.get_GRIDFTP_PORT()
+            src_GRIDFTP_HOST = source_server.get_GRIDFTP_HOST()
+            src_path = source_server.get_srv_path() + source_input
 
         # FIND THE PARAMETERS OF THE DESTINATION
         if destination != "localhost":
-            i_dst = 0
-            while i_dst < len(my_server) and my_server[i_dst].get_name() != destination:
-                i_dst = i_dst + 1
-            if i_dst == len(my_server):
-                raise Exception("Error: resquested transference but there is not defined the dst server name: " + str(
-                    destination))
-            # sys.exit(1)
-            dst_user_id = my_server[i_dst].get_user_id()
-            dst_WS_BASE_PATH = my_server[i_dst].get_WS_BASE_PATH()
-            dst_GRIDFTP_PORT = my_server[i_dst].get_GRIDFTP_PORT()
-            dst_GRIDFTP_HOST = my_server[i_dst].get_GRIDFTP_HOST()
+            dst_user_id = dest_server.get_user_id()
+            dst_WS_BASE_PATH = dest_server.get_WS_BASE_PATH()
+            dst_GRIDFTP_PORT = dest_server.get_GRIDFTP_PORT()
+            dst_GRIDFTP_HOST = dest_server.get_GRIDFTP_HOST()
+            dst_path = dest_server.get_srv_path() + dest_output
 
-            # if destination == "HLRS":
-            # dst_path=dst_user_id+"-"+ws_name+"/"+dest_output
-            # elif destination == "ATOSFR":
-            # dst_path=dest_output
-            dst_path = my_server[i_dst].get_srv_path() + dest_output
-
-        # if DEBUG == "TRUE":
-        # print ("[DEBUG] start transfer.")
         if destination != "localhost":
-            self.make_destination_folder(my_server, destination, dest_output)
+            self.make_destination_folder(dest_server, destination, dest_output)
         if source == "localhost":
             command = "globus-url-copy" + \
                       " file://" + source_input + \
