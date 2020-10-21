@@ -681,30 +681,41 @@ def registerOrchestratorInstanceInAccounting():
                     format(err=err))
 
 
-def report_metrics_to_monitoring(audit, logger):
+def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, logger):
     try:
-        monitoring_client.publish_job_queued_time(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                  ctx.workflow_id, audit['queue'], audit['queued_time'])
-        monitoring_client.publish_job_execution_start_time(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                           ctx.workflow_id, audit['queue'], audit['start_time'])
-        monitoring_client.publish_job_execution_completion_time(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                                ctx.workflow_id, audit['queue'], audit['completion_time'])
-        monitoring_client.publish_job_execution_exit_status(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                            ctx.workflow_id, audit['queue'], audit['exit_status'])
-        monitoring_client.publish_job_execution_queue(audit['job_id'], audit['job_name'], audit['job_owner'],
+        monitoring_client.publish_job_queued_time(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['queued_time'])
+        monitoring_client.publish_job_execution_start_time(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['start_time'])
+        monitoring_client.publish_job_execution_completion_time(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['completion_time'])
+        monitoring_client.publish_job_execution_exit_status(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['exit_status'])
+        monitoring_client.publish_job_execution_queue(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
                                                       ctx.workflow_id, audit['queue'], audit['queue'])
-        monitoring_client.publish_job_resources_used_cput(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                          ctx.workflow_id, audit['queue'], audit['cput'])
-        monitoring_client.publish_job_resources_used_cpupercent(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                                ctx.workflow_id, audit['queue'], audit['cpupercent'])
-        monitoring_client.publish_job_resources_used_ncpus(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                           ctx.workflow_id, audit['queue'], audit['ncpus'])
-        monitoring_client.publish_job_resources_used_vmem(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                          ctx.workflow_id, audit['queue'], audit['vmem'])
-        monitoring_client.publish_job_resources_used_mem(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                         ctx.workflow_id, audit['queue'], audit['mem'])
-        monitoring_client.publish_job_resources_used_walltime(audit['job_id'], audit['job_name'], audit['job_owner'],
-                                                              ctx.workflow_id, audit['queue'], audit['walltime'])
+        monitoring_client.publish_job_resources_used_cput(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['cput'])
+        monitoring_client.publish_job_resources_used_cpupercent(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['cpupercent'])
+        monitoring_client.publish_job_resources_used_ncpus(
+            blueprint_id, deployment_id, blueprint_id, deployment_id, audit['job_id'], audit['job_name'],
+            audit['job_owner'], ctx.workflow_id, audit['queue'], audit['ncpus'])
+        monitoring_client.publish_job_resources_used_vmem(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, ctx.workflow_id, audit['queue'], audit['vmem'])
+        monitoring_client.publish_job_resources_used_mem(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['mem'])
+        monitoring_client.publish_job_resources_used_walltime(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            ctx.workflow_id, audit['queue'], audit['walltime'])
 
     except Exception as err:
         logger.error(
@@ -809,7 +820,7 @@ def publish(publish_list, data_mover_options, **kwargs):
 
             # Report metrics to Monitoring component
             if monitoring_client.report_to_monitoring:
-                report_metrics_to_monitoring(audit, logger=ctx.logger)
+                report_metrics_to_monitoring(audit, ctx.blueprint.id, ctx.deployment.id, logger=ctx.logger)
 
             for publish_item in publish_list:
                 if not published:
