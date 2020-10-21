@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 
 accounting_client.py: provides API client for Accounting component
-'''
+"""
 import json
 from datetime import datetime
 from enum import Enum
@@ -43,6 +43,14 @@ from model.resource_amount import ResourceAmount
 from model.discount import Discount
 from model.resource_consumption_record import ResourceConsumptionRecord
 from model.resource_consumption import ResourceConsumption
+
+def str_to_bool(s):
+    if s.lower() == 'true':
+        return True
+    elif s.lower() == 'false':
+        return False
+    else:
+        raise ValueError  # evil ValueError that doesn't tell you what the wrong value was
 
 
 class AccountingEncoder(json.JSONEncoder):
@@ -75,6 +83,7 @@ class AccountingEncoder(json.JSONEncoder):
 
 class AccountingClient:
     endpoint = "http://0.0.0.0:5000/api/"
+    report_to_accounting = False
 
     def __init__(self, endpoint="http://0.0.0.0:5000/api/"):
         # Configure Accounting endpoint from configuration file
@@ -88,6 +97,10 @@ class AccountingClient:
             accounting_endpoint = config.get('Accounting', 'endpoint')
             if accounting_endpoint is not None:
                 self.endpoint = accounting_endpoint
+
+            report_to_accounting = config.get('Accounting', 'report_to_accounting')
+            if report_to_accounting is not None:
+                self.report_to_accounting = str_to_bool(report_to_accounting)
         except ConfigParser.NoSectionError:
             pass
 
@@ -187,7 +200,6 @@ class AccountingClient:
     def get_reporter_by_name(self, name):
         reporters_endpoint = self.endpoint + 'reporters/name/' + name
         return self.get_reporter(reporters_endpoint)
-
 
     def get_reporter_by_type(self, type):
         reporters_endpoint = self.endpoint + 'reporters/type/' + type

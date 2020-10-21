@@ -32,7 +32,7 @@ from croupier_plugin.ssh import SshClient
 from infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
 import re
-import datetime
+import datetime, time
 
 
 class Pbspro(InfrastructureInterface):
@@ -168,10 +168,10 @@ class Pbspro(InfrastructureInterface):
         if script:
             # Read script and add audit header
             pattern = re.compile('([a-zA-Z-9_]*).script')
-            script_name = pattern.findall(job_settings['data'])[0]+'.script'
+            script_name = pattern.findall(job_settings['data'])[0] + '.script'
 
             audit_instruction = "echo ProcessorsPerNode=$(( 1 + $(cat /proc/cpuinfo | grep processor | " \
-                                "tail -n1 | cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit"\
+                                "tail -n1 | cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit" \
                 .format(job_id=job_id, workdir=workdir)
 
             # Remove previous audit line
@@ -180,7 +180,7 @@ class Pbspro(InfrastructureInterface):
             result = execute_ssh_command(command, workdir, ssh_client, logger)
 
             # Add audit line
-            command = "cd {workdir}; sed -i -e '$a{audit_instruction}' {script_name}"\
+            command = "cd {workdir}; sed -i -e '$a{audit_instruction}' {script_name}" \
                 .format(workdir=workdir, script_name=script_name, audit_instruction=audit_instruction)
             result = execute_ssh_command(command, workdir, ssh_client, logger)
         else:
@@ -287,15 +287,25 @@ class Pbspro(InfrastructureInterface):
                     # Process timestamps from this format 'Tue Sep 22 13:29:49 2020'
                     # to this one "2020-04-15 01:26:59.000403"
                     start_time = datetime.datetime.strptime(job.get("stime"), '%a %b %d %H:%M:%S %Y')
-                    comp_time = datetime.datetime.strptime(job.get("mtime"), '%a %b %d %H:%M:%S %Y')
+                    completion_time = datetime.datetime.strptime(job.get("mtime"), '%a %b %d %H:%M:%S %Y')
+                    queued_time = datetime.datetime.strptime(job.get("qtime"), '%a %b %d %H:%M:%S %Y')
                     audit["start_timestamp"] = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    audit["stop_timestamp"] = comp_time.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    audit["cput"] = job.get("resources_used.cput")
+                    audit["stop_timestamp"] = completion_time.strftime("%Y-%m-%d %H:%M:%S.%f")
+                    audit["cput"] = convert_to_seconds(job.get("resources_used.cput"))
                     audit["cpupercent"] = job.get("resources_used.cpupercent")
                     audit["ncpus"] = job.get("resources_used.ncpus")
-                    audit["vmem"] = job.get("resources_used.vmem")
-                    audit["walltime"] = job.get("resources_used.walltime")
-                    audit["mem"] = job.get("resources_used.mem")
+                    audit["vmem"] = remove_trailing_unit(job.get("resources_used.vmem"), 'kb')
+                    audit["walltime"] = convert_to_seconds(job.get("resources_used.walltime"))
+                    audit["mem"] = remove_trailing_unit(job.get("resources_used.mem"), 'kb')
+                    audit["queued_time"] = time.mktime(queued_time.timetuple())
+                    audit["completion_time"] = time.mktime(completion_time.timetuple())
+                    audit["start_time"] = time.mktime(start_time.timetuple())
+                    audit["job_id"] = job.get("Job_Id")
+                    audit['job_name'] = job.get("Job_Name")
+                    audit["job_owner"] = job.get("Job_Owner")
+                    audit["queue"] = job.get("queue")
+                    audit["exit_status"] = job.get("Exit_status")
+
                     pattern = re.compile('-l ([a-zA-Z0-9=:]*)')
                     audit["workflow_parameters"] = ','.join(pattern.findall(job.get("Submit_arguments")))
                     exit_status = int(job.get('exit_status', 0))
@@ -429,3 +439,24 @@ def execute_ssh_command(command, workdir, ssh_client, logger):
         logger.error("failed to execute command '" + command + "', exit code " + str(exit_code))
         return False
     return True
+
+
+def getHours(cput):
+    return int(cput[:cput.index(':')])
+
+
+def getMinutes(cput):
+    return int(cput[cput.index(':') + 1:cput.rindex(':')])
+
+
+def getSeconds(cput):
+    return int(cput[cput.rindex(':') + 1:])
+
+
+def convert_to_seconds(cput):
+    hours = getHours(cput)*3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
+    return hours
+
+
+def remove_trailing_unit(value, unit):
+    return value[:value.index(unit)]

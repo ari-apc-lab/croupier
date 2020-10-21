@@ -33,6 +33,8 @@ from datetime import datetime
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
+
+from croupier_plugin.monitoring.monitoring import (PrometheusPublisher)
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
@@ -48,6 +50,7 @@ from croupier_plugin.accounting_client.model.resource import (ResourceType)
 
 croupier_reporter_id = None
 accounting_client = AccountingClient()
+monitoring_client = PrometheusPublisher()
 
 
 @operation
@@ -158,7 +161,8 @@ def configure_execution(
         ctx.instance.runtime_properties['workdir'] = workdir
 
         # Register Croupier instance in Accounting if not done before
-        registerOrchestratorInstanceInAccounting()
+        if accounting_client.report_to_accounting:
+            registerOrchestratorInstanceInAccounting()
 
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
@@ -677,17 +681,46 @@ def registerOrchestratorInstanceInAccounting():
                     format(err=err))
 
 
+def report_metrics_to_monitoring(audit, logger):
+    try:
+        monitoring_client.publish_job_queued_time(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                  ctx.workflow_id, audit['queue'], audit['queued_time'])
+        monitoring_client.publish_job_execution_start_time(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                           ctx.workflow_id, audit['queue'], audit['start_time'])
+        monitoring_client.publish_job_execution_completion_time(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                                ctx.workflow_id, audit['queue'], audit['completion_time'])
+        monitoring_client.publish_job_execution_exit_status(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                            ctx.workflow_id, audit['queue'], audit['exit_status'])
+        monitoring_client.publish_job_execution_queue(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                      ctx.workflow_id, audit['queue'], audit['queue'])
+        monitoring_client.publish_job_resources_used_cput(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                          ctx.workflow_id, audit['queue'], audit['cput'])
+        monitoring_client.publish_job_resources_used_cpupercent(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                                ctx.workflow_id, audit['queue'], audit['cpupercent'])
+        monitoring_client.publish_job_resources_used_ncpus(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                           ctx.workflow_id, audit['queue'], audit['ncpus'])
+        monitoring_client.publish_job_resources_used_vmem(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                          ctx.workflow_id, audit['queue'], audit['vmem'])
+        monitoring_client.publish_job_resources_used_mem(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                         ctx.workflow_id, audit['queue'], audit['mem'])
+        monitoring_client.publish_job_resources_used_walltime(audit['job_id'], audit['job_name'], audit['job_owner'],
+                                                              ctx.workflow_id, audit['queue'], audit['walltime'])
+
+    except Exception as err:
+        logger.error(
+            'Statistics for job {job_id} could not be reported to Monitoring, raising an error: {err}'.
+                format(job_id=audit["job_id"], err=err))
+
+
 def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
     try:
+        workflow_id = ctx.workflow_id
         if croupier_reporter_id is None:
             raise Exception('Croupier instance not registered in Accounting')
         start_transaction = audit['start_timestamp']
         stop_transaction = audit['stop_timestamp']
-        workflow_id = ctx.workflow_id
         workflow_parameters = audit['workflow_parameters']
-
         processors_per_node = read_processors_per_node(job_id, workdir, ssh_client, logger)
-
         username = ctx.instance.runtime_properties['credentials']['user']
         try:
             user = accounting_client.get_user_by_name(username)
@@ -697,7 +730,7 @@ def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
                 user = User(username)
                 user = accounting_client.add_user(user)
             except Exception as err:
-                ctx.logger.warning(
+                logger.warning(
                     'User {username} could not be registered into Accounting, raising an error: {err}'.
                         format(username=username, err=err))
 
@@ -713,16 +746,16 @@ def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
         cpu_resource = cpu_resources[0]
 
         consumptions = []
-        cput = parseHours(audit["cput"]) * processors_per_node # FIXME multiply this value by the number of processors per node
+        cput = parseHours(audit["cput"]) * processors_per_node
         cpu_consumption = ResourceConsumption(cput, MeasureUnit.Hours, cpu_resource.id)
         consumptions.append(cpu_consumption)
 
         record = ResourceConsumptionRecord(start_transaction, stop_transaction, workflow_id,
                                            job_id, workflow_parameters, consumptions, user.id, croupier_reporter_id)
         new_record = accounting_client.add_consumption_record(record)
-        ctx.logger.info("Resource consumption record registered into Accounting with id {}".format(new_record.id))
+        logger.info("Resource consumption record registered into Accounting with id {}".format(new_record.id))
     except Exception as err:
-        ctx.logger.warning(
+        logger.warning(
             'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
                 format(workflow_id=workflow_id, err=err))
 
@@ -771,7 +804,12 @@ def publish(publish_list, data_mover_options, **kwargs):
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
             # Report metrics to Accounting component
-            report_metrics_to_accounting(audit, job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
+            if accounting_client.report_to_accounting:
+                report_metrics_to_accounting(audit, job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
+
+            # Report metrics to Monitoring component
+            if monitoring_client.report_to_monitoring:
+                report_metrics_to_monitoring(audit, logger=ctx.logger)
 
             for publish_item in publish_list:
                 if not published:
