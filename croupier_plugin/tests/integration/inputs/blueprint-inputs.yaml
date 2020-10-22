@@ -50,6 +50,8 @@ scratch_voulume_mount_point: /scratch
 ################### Data Mover ##################
 data_mover_options:
   workspace: <ws_name> #HPC workspace where to move data from Cloud
+  hpc_target: HAWK #Options HAWK|VULCAN defines the HPC cluster
+  cloud_target: ATOSFR #Options ATOSFR|WRLS defines the Cloud cluster
   upload: True  #Defines whether to move data from HPC to Cloud (after job execution)
   download: True #Defines whether to move data from Cloud to HPC (before job execution)
   cloud_user: euxdat_user
