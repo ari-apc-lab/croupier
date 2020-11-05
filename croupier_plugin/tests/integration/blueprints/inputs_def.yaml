@@ -55,6 +55,12 @@ inputs:
     default: /mnt
   scratch_voulume_mount_point:
     default: /scratch
+  job_config_content:
+    description: Content of job_config file
+    default: ''
+  job_config_pathname:
+    description: Pathname of job_config file
+    default: ''
 
   ################### Data Mover ##################
   data_mover_options:
