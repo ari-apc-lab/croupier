@@ -19,24 +19,12 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Javier Carnero
+# @author: Yosu Gorronogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: javier.carnero@atos.net
+#          e-mail: jesus.gorronogoitia@atos.net
 #
-# bootstrap_sbatch_example.sh
-
-FILE="bernoulli.script"
-
-cat > $FILE <<-EOM
-function bernoulli()
-{
-    if (( \$1 < 3 ))
-    then
-        echo 1
-    else
-        echo \$(( \$(bernoulli \$(( \$1 - 1 ))) + \$(bernoulli \$(( \$1 - 2 ))) ))
-    fi
-}
-bernoulli 25
-
-EOM
+#Create path if it does not exist
+mkdir -p $(dirname "$2")
+#Copy file content
+echo -e $1 > $2
+sed "s/^[ \t]*//" -i $2 #Removing leading spaces for each line in the file

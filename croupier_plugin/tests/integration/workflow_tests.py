@@ -227,7 +227,10 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot.yaml'),
         copy_plugin_yaml=True,
         resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
+            (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
+            (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')
+        ],
         inputs='load_agroclimate_zones_inputs')
     def test_agroclimate_zones_pilot(self, cfy_local):
         """ Single BATCH Job Blueprint """

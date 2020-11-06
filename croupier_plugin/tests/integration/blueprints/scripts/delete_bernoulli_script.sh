@@ -19,9 +19,9 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Javier Carnero
+# @author: Yosu Gorroñogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: javier.carnero@atos.net
+#          e-mail: jesus.gorronogoitia@atos.net
 #
 # revert_sbatch_example.sh
 

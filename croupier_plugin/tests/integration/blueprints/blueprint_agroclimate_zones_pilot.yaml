@@ -52,11 +52,19 @@ node_templates:
         properties:
             job_options:
                 commands:
-                - "cd $HOME/sc3_agroclimatic/frostdates/cloudify_integration; module load python/3; mpirun -np 4 ./python_code/frostdates > my_output_file 2>&1; cp /export/*.geojson /lustre/cray/ws9/6/ws/<USER>-testws/" #THIS MUST BE THE SAME <USER> AS IN THE LINE 34 OF HPC Infrastructre BLUEPRINT-INPUTS.YAML
+                - "cd $HOME/sc3_agroclimatic/frostdates/cloudify_integration;
+                   module load python/3;
+                   mpirun -np 4 ./python_code/frostdates > my_output_file 2>&1;"
                 select: 1
                 node_type: rome
                 mpiprocs: 4
-                max_time: '00:10:00'
+                max_time: '00:05:00'
+            deployment:
+                bootstrap: "scripts/config_bootstrap.sh"
+                revert: "scripts/config_revert.sh"
+                inputs:
+                    - { get_input: job_config_content }
+                    - { get_input: job_config_pathname }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
