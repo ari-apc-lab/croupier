@@ -84,7 +84,7 @@ node_types:
                 default: {}
             accounting_options:
                 description: Accounting options
-                default: { }
+                default: {}
             simulate:
                 description: Set to true to simulate job without sending it
                 type: boolean
