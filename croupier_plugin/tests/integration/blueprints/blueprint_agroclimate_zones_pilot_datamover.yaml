@@ -43,6 +43,8 @@ node_templates:
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
+            monitoring_options: { get_input: monitoring_options }
+            accounting_options: { get_input: accounting_options }
             skip_cleanup: true
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"

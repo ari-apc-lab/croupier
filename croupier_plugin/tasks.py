@@ -110,6 +110,8 @@ def configure_execution(
         credentials,
         base_dir,
         workdir_prefix,
+        monitoring_options,
+        accounting_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Creates the working directory for the execution """

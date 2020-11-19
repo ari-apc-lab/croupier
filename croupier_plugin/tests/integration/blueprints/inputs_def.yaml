@@ -20,6 +20,9 @@
 # @author: Javier Carnero
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
 #
 # inputs_def.yaml
 
@@ -66,6 +69,16 @@ inputs:
   data_mover_options:
     description: Data Mover options
     default: {}
+
+  ################### Monitoring ##################
+  monitoring_options:
+      description: Monitoring options
+      default: {}
+
+  ################### Accounting ##################
+    accounting_options:
+      description: Accounting options
+      default: {}
 
   ################# Cloud Infrastructre #################
   cloud_interface_config:
@@ -138,9 +151,7 @@ inputs:
 
   ####################### Optional ######################
   test_file:
-    default: 'Test file
-
-      '
+    default: 'Test file'
 
   test_bool:
     default: false

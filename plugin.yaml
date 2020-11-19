@@ -79,6 +79,12 @@ node_types:
                 description: Seconds to check job status.
                 default: 60
                 type: integer
+            monitoring_options:
+                description: Monitoring options
+                default: {}
+            accounting_options:
+                description: Accounting options
+                default: { }
             simulate:
                 description: Set to true to simulate job without sending it
                 type: boolean
@@ -103,6 +109,10 @@ node_types:
                             default: { get_property: [SELF, base_dir] }
                         workdir_prefix:
                             default: { get_property: [SELF, workdir_prefix] }
+                        monitoring_options:
+                            default: { get_property: [SELF, monitoring_options] }
+                        accounting_options:
+                            default: { get_property: [ SELF, accounting_options ] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 delete:
