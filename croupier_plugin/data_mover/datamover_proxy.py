@@ -26,11 +26,16 @@ class DataMoverProxy:
             self.grid_usercert = data_mover_options['grid_usercert']
         if 'grid_certpass' in data_mover_options:
             self.grid_cert_passwd = data_mover_options['grid_certpass']
-        if 'cloud_folder' in data_mover_options:
-            self.cloud_folder = data_mover_options['cloud_folder']
-        if 'hpc_folder' in data_mover_options:
-            self.hpc_folder = data_mover_options['hpc_folder']
-
+        if 'download' in data_mover_options:
+            self.download = True
+            if 'source' in data_mover_options['download']:
+                self.download_source = data_mover_options['download']["source"]
+                self.download_target = data_mover_options['download']["target"]
+        if 'upload' in data_mover_options:
+            self.upload = True
+            if 'source' in data_mover_options['upload']:
+                self.upload_source = data_mover_options['upload']["source"]
+                self.upload_target = data_mover_options['upload']["target"]
         self.set_servers(data_mover_options)
         self.logger = logger
 
@@ -53,11 +58,11 @@ class DataMoverProxy:
                 raise Exception("GridFTPServer for HAWK could not be set. Check datamover options (ws_name")
 
         if ('cloud_target' in data_mover_options and data_mover_options['cloud_target']) == 'ATOSFR':
-            if self.cloud_user is not None and self.cloud_folder:
+            if self.cloud_user is not None:
                 self.my_servers["ATOSFR"] = GridFTPServer(
                     "ATOSFR",
                     "euxdat_user",  # <-- this is the same for all the Euxdat partners, DON'T CHANGE
-                    "home/euxdat_user/user-data",
+                    "home/euxdat_user",
                     2811,
                     "gridftp-s1.euxdat.eu",
                     "",
@@ -65,19 +70,19 @@ class DataMoverProxy:
                     "")  # FIELDs neededfor creating workspace in Hawk ; empty becasue we don't need to create a WS in ATOSFR
 
         if ('cloud_target' in data_mover_options and data_mover_options['cloud_target']) == 'WRLS':
-            if self.cloud_user is not None and self.cloud_folder:
+            if self.cloud_user is not None:
                 self.my_servers["WRLS"] = GridFTPServer(
                     "WRLS",
-                    self.cloud_user,
-                    self.cloud_folder,
+                    "euxdat_user",
+                    "home/euxdat_user",
                     2811,
                     "gridftp-s1.euxdat.eu",  # needs to be updated
                     "",
-                    # FIELDs neededfor creating workspace in Hawk ; empty becasue we don't need to create a WS in WRLS
-                    "")  # FIELDs neededfor creating workspace in Hawk ; empty becasue we don't need to create a WS in WRLS
+                    # FIELDs needed for creating workspace in Hawk ; empty becasue we don't need to create a WS in WRLS
+                    "")  # FIELDs needed for creating workspace in Hawk ; empty becasue we don't need to create a WS in WRLS
             else:
                 raise Exception(
-                    "GridFTPServer for WRLS could not be set. Check datamover options (wrls_user, wrls_folder".format())
+                    "GridFTPServer for WRLS could not be set. Check datamover options wrls_user, wrls_folder")
 
     def move_data(self, source, destination, source_input, dest_output):
         try:
@@ -87,6 +92,5 @@ class DataMoverProxy:
             self.mydatamover.run_transference(
                 source_server, dest_server, source, destination, source_input, dest_output, self.logger)
         except Exception as exp:
-            print(traceback.format_exc())
-            ctx.logger.error(
+            raise Exception(
                 'Something happened when trying to invoke DataMover: ' + exp.message)

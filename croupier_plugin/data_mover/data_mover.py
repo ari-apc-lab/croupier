@@ -3,6 +3,9 @@
 # Author: Jose Miguel Montanana, montanana@hlrs.de
 # version 1.23, 24-Apr-2020.
 
+# Author: Jesus Gorronogoitia, jesus.gorronogoitia@atos.net
+# version 1.24, 19-Nov-2020.
+
 # This script has to be executed with the vendor account it is assumed that the vendor has GridFtp credentials,
 # and it is installed the grid-proxy in the machine where this script is executed.
 
@@ -34,6 +37,10 @@ home = expanduser("~")
 # please add the next 2 lines:
 # 80.158.5.38	 gridftp-s1.euxdat.eu
 # 193.196.155.183 gridftp-fr1.hww.de
+
+
+def isDirectory(dirname):
+    return dirname.endswith('/')
 
 
 class Workspaces:
@@ -177,13 +184,10 @@ class DataMover:
         i = 0
         print (" len(my_server) " + str(len(my_server)))
         if new_ws:
-            while i < len(my_server) and my_server[i].get_name() != "HLRS":
-                print(str(i) + " : " + my_server[i].get_name())
-                i = i + 1
-            if i == len(my_server):
-                raise Exception("Error: resquested new_ws but there is not defined a HLRS server")
+            if 'HAWK' in my_server:
+                hpc_server = my_server["HAWK"]
             if new_ws:
-                new_wspath = hlrs_workspace.create_ws(my_server[i].get_user_id(), my_server[i].get_SSH_HOST(),
+                new_wspath = hlrs_workspace.create_ws(hpc_server.get_user_id(), hpc_server.get_SSH_HOST(),
                                                       user_ssh_credentials, ws_name, ws_lifetime)
 
         if userkey and usercert:  # if both certificates are not empty
@@ -252,7 +256,8 @@ class DataMover:
             dst_path = dest_server.get_srv_path() + dest_output
 
         if destination != "localhost":
-            self.make_destination_folder(dest_server, destination, dest_output)
+            if isDirectory(dest_output):
+                self.make_destination_folder(dest_server, destination, dest_output)
         if source == "localhost":
             command = "globus-url-copy" + \
                       " file://" + source_input + \

@@ -28,6 +28,8 @@ tasks.py: Holds the plugin tasks
 '''
 import socket
 import traceback
+from time import sleep
+
 import requests
 from datetime import datetime
 from cloudify import ctx
@@ -492,12 +494,15 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         if len(data_mover_options) > 0 and \
                 'download' in data_mover_options and data_mover_options['download']:
             if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
-                dmp = DataMoverProxy(data_mover_options, ctx.logger)
-                source = data_mover_options['cloud_target']
-                destination = data_mover_options['hpc_target']
-                source_input = data_mover_options['cloud_folder']
-                dest_output = data_mover_options['hpc_folder']
-                dmp.move_data(source, destination, source_input, dest_output)
+                try:
+                    dmp = DataMoverProxy(data_mover_options, ctx.logger)
+                    source = data_mover_options['cloud_target']
+                    destination = data_mover_options['hpc_target']
+                    source_input = data_mover_options['download']['source']
+                    dest_output = data_mover_options['download']['target']
+                    dmp.move_data(source, destination, source_input, dest_output)
+                except Exception as exp:
+                    ctx.logger.error("Error using data mover: {}".format(exp.message))
 
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -719,6 +724,10 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, logger):
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
             ctx.workflow_id, audit['queue'], audit['walltime'])
 
+        # Wait 15 seconds and delete metrics (to avoid continuous sampling)
+        sleep(15)
+        monitoring_client.delete_metrics(audit['job_id'])
+
     except Exception as err:
         logger.error(
             'Statistics for job {job_id} could not be reported to Monitoring, raising an error: {err}'.
@@ -743,7 +752,7 @@ def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
                 user = User(username)
                 user = accounting_client.add_user(user)
             except Exception as err:
-                logger.warning(
+                raise Exception(
                     'User {username} could not be registered into Accounting, raising an error: {err}'.
                         format(username=username, err=err))
 
@@ -809,12 +818,15 @@ def publish(publish_list, data_mover_options, **kwargs):
             if len(data_mover_options) > 0 and \
                     'upload' in data_mover_options and data_mover_options['upload']:
                 if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
-                    dmp = DataMoverProxy(data_mover_options, ctx.logger)
-                    source = data_mover_options['hpc_target']
-                    destination = data_mover_options['cloud_target']
-                    source_input = data_mover_options['hpc_folder']
-                    dest_output = data_mover_options['cloud_folder']
-                    dmp.move_data(source, destination, source_input, dest_output)
+                    try:
+                        dmp = DataMoverProxy(data_mover_options, ctx.logger)
+                        source = data_mover_options['hpc_target']
+                        destination = data_mover_options['cloud_target']
+                        source_input = data_mover_options['upload']['source']
+                        dest_output = data_mover_options['upload']['target']
+                        dmp.move_data(source, destination, source_input, dest_output)
+                    except Exception as exp:
+                        ctx.logger.error ("Error using data mover: {}".format(exp.message))
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
