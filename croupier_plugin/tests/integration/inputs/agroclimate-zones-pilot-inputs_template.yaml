@@ -1,0 +1,85 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+# blueprint-inputs.yaml
+
+
+################### HPC Infrastructre ##################
+hpc_base_dir: $HOME
+hpc_interface_config:
+  country_tz: Europe/Stuttgart
+  infrastructure_interface: PBSPRO
+hpc_interface_credentials:
+  host: hawk.hww.hlrs.de
+  user: <hpc_user_name> #Taken from KeyCloak attribute for user cloudify
+  password: '<hpc_user_password>' #Taken from KeyCloak attribute for user cloudify
+  private_key: |
+    <hpc_user_private_key> #Taken from KeyCloak attribute for user cloudify
+  private_key_password: '<hpc_user_private_password>' #Taken from KeyCloak attribute for user cloudify
+partition_name: default
+job_config_content: | #Agroclimatic frostdates attributes taken from frontend dialog
+  import os\n
+  DAY_IN_ROW = <DAY_IN_ROW>\n
+  START_HOUR_DAY = <START_HOUR_DAY>\n
+  END_HOUR_DAY = <END_HOUR_DAY>\n
+  FROST_DEGREE = <FROST_DEGREE>\n
+  START_YEAR = <START_YEAR>\n
+  END_YEAR = <END_YEAR>\n
+  PROBABILITY = <PROBABILITY>\n
+  path=os.path.abspath(__file__ + \"/../../\")\n
+  EXPORT_FOLDER =path + \"/export\"\n
+  DATA_FOLDER = path + \"/data\"\n
+  START_LON = <START_LON>\n
+  START_LAT = <START_LAT>\n
+  END_LON = <END_LON>\n
+  END_LAT = <END_LAT>\n
+  process_id = \"test_frostdatelatlon\"
+job_config_pathname: ~/sc3_agroclimatic/frostdates/cloudify_integration/python_code/frostdates_params.py
+
+################### Monitoring ##################
+monitoring_options:
+  reporting_user: <frontend_user>
+
+################### Accounting ##################
+accounting_options:
+  reporting_user: <frontend_user>
+
+################### Data Mover ##################
+data_mover_options:
+  workspace: ws_agroclimatic #wsdata #HPC workspace where to move data from Cloud
+  create_ws: False #Defines whether or not to create a workspace in the HPC where to host moved data
+  ws_lifetime: 30 #defines the number of days between the creation of the workspace until its automatic deletion. The maximum value is 30 days for Hawk.
+  upload:
+    source: ./output_concatenated_files.geojson
+    target: agroclimatic_zones_scenario_outputs/<frontend_user>/frostdates/<frontend_user>-<datetime>.geojson
+  hpc_target: HAWK #Options HAWK|VULCAN defines the HPC cluster
+  cloud_target: ATOSFR #Options ATOSFR|WRLS defines the Cloud cluster
+  cloud_user: euxdat_user
+  grid_userkey: | #Taken from KeyCloak attribute for user cloudify
+    <gridftp userkey>
+  grid_usercert: | #Taken from KeyCloak attribute for user cloudify
+    <gridftp usercert>
+  grid_certpass: <gridftp userpass> #Taken from KeyCloak attribute for user cloudify
