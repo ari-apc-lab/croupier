@@ -31,7 +31,6 @@ import traceback
 from time import sleep
 
 import requests
-from datetime import datetime
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
@@ -167,6 +166,10 @@ def configure_execution(
         # Register Croupier instance in Accounting if not done before
         if accounting_client.report_to_accounting:
             registerOrchestratorInstanceInAccounting()
+
+        # Registering accounting and monitoring options
+        ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
+        ctx.instance.runtime_properties['accounting_options'] = accounting_options
 
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
@@ -690,37 +693,39 @@ def registerOrchestratorInstanceInAccounting():
                     format(err=err))
 
 
-def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, logger):
+def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, logger):
     try:
+        if username is None:
+            username = audit['job_owner']
         monitoring_client.publish_job_queued_time(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['queued_time'])
         monitoring_client.publish_job_execution_start_time(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['start_time'])
         monitoring_client.publish_job_execution_completion_time(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['completion_time'])
         monitoring_client.publish_job_execution_exit_status(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['exit_status'])
         monitoring_client.publish_job_resources_used_cput(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['cput'])
         monitoring_client.publish_job_resources_used_cpupercent(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['cpupercent'])
         monitoring_client.publish_job_resources_used_ncpus(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['ncpus'])
         monitoring_client.publish_job_resources_used_vmem(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['vmem'])
         monitoring_client.publish_job_resources_used_mem(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['mem'])
         monitoring_client.publish_job_resources_used_walltime(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], audit['job_owner'],
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['walltime'])
 
         # Wait 15 seconds and delete metrics (to avoid continuous sampling)
@@ -733,7 +738,7 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, logger):
                 format(job_id=audit["job_id"], err=err))
 
 
-def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
+def report_metrics_to_accounting(audit, job_id, username, workdir, ssh_client, logger):
     try:
         workflow_id = ctx.workflow_id
         if croupier_reporter_id is None:
@@ -742,7 +747,8 @@ def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
         stop_transaction = audit['stop_timestamp']
         workflow_parameters = audit['workflow_parameters']
         processors_per_node = read_processors_per_node(job_id, workdir, ssh_client, logger)
-        username = ctx.instance.runtime_properties['credentials']['user']
+        if username is None:
+            username = ctx.instance.runtime_properties['credentials']['user']
         try:
             user = accounting_client.get_user_by_name(username)
         except Exception as err:
@@ -767,7 +773,7 @@ def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
         cpu_resource = cpu_resources[0]
 
         consumptions = []
-        cput = parseHours(audit["cput"]) * processors_per_node
+        cput = audit["cput"]/3600.0 * processors_per_node
         cpu_consumption = ResourceConsumption(cput, MeasureUnit.Hours, cpu_resource.id)
         consumptions.append(cpu_consumption)
 
@@ -776,7 +782,7 @@ def report_metrics_to_accounting(audit, job_id, workdir, ssh_client, logger):
         new_record = accounting_client.add_consumption_record(record)
         logger.info("Resource consumption record registered into Accounting with id {}".format(new_record.id))
     except Exception as err:
-        logger.warning(
+        logger.error(
             'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
                 format(workflow_id=workflow_id, err=err))
 
@@ -830,13 +836,21 @@ def publish(publish_list, data_mover_options, **kwargs):
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
+            hpc_interface = ctx.instance.relationships[0].target.instance
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
-                report_metrics_to_accounting(audit, job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
+                if hpc_interface is not None and "accounting_options" in hpc_interface.runtime_properties:
+                    accounting_options = hpc_interface.runtime_properties["accounting_options"]
+                    username = accounting_options["reporting_user"]
+                report_metrics_to_accounting(
+                    audit, job_id=name, username=username, workdir=workdir, ssh_client=client, logger=ctx.logger)
 
             # Report metrics to Monitoring component
             if monitoring_client.report_to_monitoring:
-                report_metrics_to_monitoring(audit, ctx.blueprint.id, ctx.deployment.id, logger=ctx.logger)
+                if hpc_interface is not None and "monitoring_options" in hpc_interface.runtime_properties:
+                    monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
+                    username = monitoring_options["reporting_user"]
+                report_metrics_to_monitoring(audit, ctx.blueprint.id, ctx.deployment.id, username, logger=ctx.logger)
 
             for publish_item in publish_list:
                 if not published:
