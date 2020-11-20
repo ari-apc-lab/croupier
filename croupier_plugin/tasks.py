@@ -729,7 +729,7 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, l
             ctx.workflow_id, audit['queue'], audit['walltime'])
 
         # Wait 15 seconds and delete metrics (to avoid continuous sampling)
-        sleep(15)
+        sleep(monitoring_client.delete_after_period)
         monitoring_client.delete_metrics(audit['job_id'])
 
     except Exception as err:

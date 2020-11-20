@@ -16,6 +16,7 @@ def str_to_bool(s):
 class PrometheusPublisher:
     prometheus_server = None
     report_to_monitoring = False
+    delete_after_period = 60
 
     def __init__(self):
         # Configure Accounting endpoint from configuration file
@@ -32,6 +33,10 @@ class PrometheusPublisher:
             report_to_monitoring = config.get('Monitoring', 'report_to_monitoring')
             if report_to_monitoring is not None:
                 self.report_to_monitoring = str_to_bool(report_to_monitoring)
+
+            delete_after_period = config.get('Monitoring', 'delete_after_period')
+            if delete_after_period is not None:
+                self.delete_after_period = int(delete_after_period)
         except ConfigParser.NoSectionError:
             pass
 
