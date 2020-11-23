@@ -711,7 +711,7 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, l
             ctx.workflow_id, audit['queue'], audit['exit_status'], logger)
         monitoring_client.publish_job_resources_used_cput(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['cput'], logger)
+            ctx.workflow_id, audit['queue'], audit["cput"], logger)
         monitoring_client.publish_job_resources_used_cpupercent(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], audit['cpupercent'], logger)
@@ -738,7 +738,12 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, l
                 format(job_id=audit["job_id"], err=err))
 
 
-def report_metrics_to_accounting(audit, job_id, username, workdir, ssh_client, logger):
+def convert_cput(cput, job_id, workdir, ssh_client, logger):
+    processors_per_node = read_processors_per_node(job_id, workdir, ssh_client, logger)
+    return cput / 3600.0 * processors_per_node
+
+
+def report_metrics_to_accounting(audit, job_id, username, logger):
     try:
         workflow_id = ctx.workflow_id
         if croupier_reporter_id is None:
@@ -746,7 +751,7 @@ def report_metrics_to_accounting(audit, job_id, username, workdir, ssh_client, l
         start_transaction = audit['start_timestamp']
         stop_transaction = audit['stop_timestamp']
         workflow_parameters = audit['workflow_parameters']
-        processors_per_node = read_processors_per_node(job_id, workdir, ssh_client, logger)
+
         if username is None:
             username = ctx.instance.runtime_properties['credentials']['user']
         try:
@@ -773,8 +778,7 @@ def report_metrics_to_accounting(audit, job_id, username, workdir, ssh_client, l
         cpu_resource = cpu_resources[0]
 
         consumptions = []
-        cput = audit["cput"]/3600.0 * processors_per_node
-        cpu_consumption = ResourceConsumption(cput, MeasureUnit.Hours, cpu_resource.id)
+        cpu_consumption = ResourceConsumption(audit["cput"], MeasureUnit.Hours, cpu_resource.id)
         consumptions.append(cpu_consumption)
 
         record = ResourceConsumptionRecord(start_transaction, stop_transaction, workflow_id,
@@ -837,16 +841,19 @@ def publish(publish_list, data_mover_options, **kwargs):
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
             hpc_interface = ctx.instance.relationships[0].target.instance
+            audit["cput"] = \
+                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client,  logger=ctx.logger)
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
+                username = None
                 if hpc_interface is not None and "accounting_options" in hpc_interface.runtime_properties:
                     accounting_options = hpc_interface.runtime_properties["accounting_options"]
                     username = accounting_options["reporting_user"]
-                report_metrics_to_accounting(
-                    audit, job_id=name, username=username, workdir=workdir, ssh_client=client, logger=ctx.logger)
+                report_metrics_to_accounting(audit, job_id=name, username=username, logger=ctx.logger)
 
             # Report metrics to Monitoring component
             if monitoring_client.report_to_monitoring:
+                username = None
                 if hpc_interface is not None and "monitoring_options" in hpc_interface.runtime_properties:
                     monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
                     username = monitoring_options["reporting_user"]
