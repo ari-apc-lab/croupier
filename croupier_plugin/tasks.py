@@ -170,6 +170,7 @@ def configure_execution(
         # Registering accounting and monitoring options
         ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
         ctx.instance.runtime_properties['accounting_options'] = accounting_options
+        ctx.instance.runtime_properties['infrastructure_host'] = credentials['host']
 
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
@@ -693,40 +694,40 @@ def registerOrchestratorInstanceInAccounting():
                     format(err=err))
 
 
-def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, logger):
+def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, server, logger):
     try:
         if username is None:
             username = audit['job_owner']
         monitoring_client.publish_job_queued_time(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['queued_time'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['queued_time'], logger)
         monitoring_client.publish_job_execution_start_time(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['start_time'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['start_time'], logger)
         monitoring_client.publish_job_execution_completion_time(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['completion_time'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['completion_time'], logger)
         monitoring_client.publish_job_execution_exit_status(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['exit_status'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['exit_status'], logger)
         monitoring_client.publish_job_resources_used_cput(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit["cput"], logger)
+            ctx.workflow_id, audit['queue'], server, audit["cput"], logger)
         monitoring_client.publish_job_resources_used_cpupercent(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['cpupercent'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['cpupercent'], logger)
         monitoring_client.publish_job_resources_used_ncpus(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['ncpus'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['ncpus'], logger)
         monitoring_client.publish_job_resources_used_vmem(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['vmem'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['vmem'], logger)
         monitoring_client.publish_job_resources_used_mem(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['mem'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['mem'], logger)
         monitoring_client.publish_job_resources_used_walltime(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], audit['walltime'], logger)
+            ctx.workflow_id, audit['queue'], server, audit['walltime'], logger)
 
         # Wait 60 seconds and delete metrics (to avoid continuous sampling)
         sleep(monitoring_client.delete_after_period)
@@ -854,10 +855,15 @@ def publish(publish_list, data_mover_options, **kwargs):
             # Report metrics to Monitoring component
             if monitoring_client.report_to_monitoring:
                 username = None
+                infrastructure_host = None
                 if hpc_interface is not None and "monitoring_options" in hpc_interface.runtime_properties:
                     monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
                     username = monitoring_options["reporting_user"]
-                report_metrics_to_monitoring(audit, ctx.blueprint.id, ctx.deployment.id, username, logger=ctx.logger)
+                if hpc_interface is not None and "infrastructure_host" in hpc_interface.runtime_properties:
+                    infrastructure_host = hpc_interface.runtime_properties["infrastructure_host"]
+
+                report_metrics_to_monitoring(
+                    audit, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host, logger=ctx.logger)
 
             for publish_item in publish_list:
                 if not published:

@@ -19,7 +19,7 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Yosu Gorroñogoitia
+# @author: Yosu Gorronogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.gorronogoitia@atos.net
 #
