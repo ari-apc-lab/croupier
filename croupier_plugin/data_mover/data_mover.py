@@ -170,7 +170,11 @@ class DataMover:
         self.start_time = 0
         self.end_time = 0
         self.new_wspath = ""
-        
+
+        # DEBUG
+        from celery.contrib import rdb
+        rdb.set_trace()
+
         home = expanduser("~")
         # this path is not needed if we receive the ssh credentials as parameter
         user_ssh_credentials = home + "/.ssh/id_rsa_euxdat"
