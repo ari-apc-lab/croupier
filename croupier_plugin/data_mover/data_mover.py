@@ -237,10 +237,6 @@ class DataMover:
 
     # source and destination define the machines, values can be "localhost" or a name in the data-structure my_server
     def run_transference(self, source_server, dest_server, source, destination, source_input, dest_output, logger):
-        # DEBUG
-        from celery.contrib import rdb
-        rdb.set_trace()
-
         self.size_bytes = 0
         self.start_time = time.time()
         # FIND THE PARAMETERS OF THE SOURCE

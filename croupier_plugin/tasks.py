@@ -677,6 +677,10 @@ def registerOrchestratorInstanceInAccounting():
     global croupier_reporter_id
     hostname = socket.gethostname()
     reporter_name = 'croupier@' + hostname
+    # DEBUG
+    from celery.contrib import rdb
+    rdb.set_trace()
+    
     try:
         reporter = accounting_client.get_reporter_by_name(reporter_name)
         croupier_reporter_id = reporter.id
