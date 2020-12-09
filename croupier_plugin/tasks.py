@@ -49,7 +49,6 @@ from croupier_plugin.accounting_client.model.resource import (ResourceType)
 
 # from celery.contrib import rdb
 
-croupier_reporter_id = None
 accounting_client = AccountingClient()
 monitoring_client = PrometheusPublisher()
 
@@ -165,7 +164,7 @@ def configure_execution(
 
         # Register Croupier instance in Accounting if not done before
         if accounting_client.report_to_accounting:
-            registerOrchestratorInstanceInAccounting()
+            registerOrchestratorInstanceInAccounting(ctx)
 
         # Registering accounting and monitoring options
         ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
@@ -673,25 +672,21 @@ def parseHours(cput):
     return hours
 
 
-def registerOrchestratorInstanceInAccounting():
-    global croupier_reporter_id
+def registerOrchestratorInstanceInAccounting(ctx):
     hostname = socket.gethostname()
     reporter_name = 'croupier@' + hostname
-    # DEBUG
-    from celery.contrib import rdb
-    rdb.set_trace()
-    
+
     try:
         reporter = accounting_client.get_reporter_by_name(reporter_name)
-        croupier_reporter_id = reporter.id
-        ctx.logger.info('Registered Croupier reporter in Accounting with id {}'.format(croupier_reporter_id))
+        ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
+        ctx.logger.info('Registered Croupier reporter in Accounting with id {}'.format(reporter.id))
     except Exception as err:
         # Croupier not registered in Accounting
         try:
             ip = requests.get('https://api.ipify.org').text
             reporter = Reporter(reporter_name, ip, ReporterType.Orchestrator)
             reporter = accounting_client.add_reporter(reporter)
-            croupier_reporter_id = reporter.id
+            ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
         except Exception as err:
             ctx.logger.warning(
                 'Croupier orchestrator instance could not be registered into Accounting, raising an error: {err}'.
@@ -748,11 +743,9 @@ def convert_cput(cput, job_id, workdir, ssh_client, logger):
     return cput / 3600.0 * processors_per_node
 
 
-def report_metrics_to_accounting(audit, job_id, username, logger):
+def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, logger):
     try:
         workflow_id = ctx.workflow_id
-        if croupier_reporter_id is None:
-            raise Exception('Croupier instance not registered in Accounting')
         start_transaction = audit['start_timestamp']
         stop_transaction = audit['stop_timestamp']
         workflow_parameters = audit['workflow_parameters']
@@ -854,7 +847,15 @@ def publish(publish_list, data_mover_options, **kwargs):
                 if hpc_interface is not None and "accounting_options" in hpc_interface.runtime_properties:
                     accounting_options = hpc_interface.runtime_properties["accounting_options"]
                     username = accounting_options["reporting_user"]
-                report_metrics_to_accounting(audit, job_id=name, username=username, logger=ctx.logger)
+                if "croupier_reporter_id" in hpc_interface.runtime_properties:
+                    croupier_reporter_id = hpc_interface.runtime_properties['croupier_reporter_id']
+                    report_metrics_to_accounting(audit, job_id=name, username=username,
+                                                 croupier_reporter_id=croupier_reporter_id, logger=ctx.logger)
+                else:
+                    ctx.logger.error(
+                        'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
+                        'Croupier instance not registered in Accounting'.
+                            format(workflow_id=ctx.workflow_id))
 
             # Report metrics to Monitoring component
             if monitoring_client.report_to_monitoring:
