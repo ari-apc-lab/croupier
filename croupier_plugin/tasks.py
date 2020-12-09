@@ -829,6 +829,9 @@ def publish(publish_list, data_mover_options, **kwargs):
                     'upload' in data_mover_options and data_mover_options['upload']:
                 if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
                     try:
+                        #DEBUG
+                        from celery.contrib import rdb
+                        rdb.set_trace()
                         dmp = DataMoverProxy(data_mover_options, ctx.logger)
                         source = data_mover_options['hpc_target']
                         destination = data_mover_options['cloud_target']
@@ -836,7 +839,7 @@ def publish(publish_list, data_mover_options, **kwargs):
                         dest_output = data_mover_options['upload']['target']
                         dmp.move_data(source, destination, source_input, dest_output)
                     except Exception as exp:
-                        ctx.logger.error ("Error using data mover: {}".format(exp.message))
+                        ctx.logger.error("Error using data mover: {}".format(exp.message))
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
