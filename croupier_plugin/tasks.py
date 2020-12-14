@@ -727,6 +727,9 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, s
         monitoring_client.publish_job_resources_used_walltime(
             blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
             ctx.workflow_id, audit['queue'], server, audit['walltime'], logger)
+        monitoring_client.publish_job_resources_requested_mpiprocs(
+            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+            ctx.workflow_id, audit['queue'], server, audit['mpiprocs'], logger)
 
         # Wait 60 seconds and delete metrics (to avoid continuous sampling)
         sleep(monitoring_client.delete_after_period)

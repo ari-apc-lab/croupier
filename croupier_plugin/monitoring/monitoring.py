@@ -112,6 +112,11 @@ class PrometheusPublisher:
         self.publish_job_metric(blueprint_id, deployment_id, job_id, job_name, user_id, workflow_id, queue, server,
                                 "hpc_job_resources_used_walltime", resources_used_walltime, logger)
 
+    def publish_job_resources_requested_mpiprocs(self, blueprint_id, deployment_id, job_id, job_name, user_id,
+                                            workflow_id, queue, server, resources_used_mpiprocs, logger):
+        self.publish_job_metric(blueprint_id, deployment_id, job_id, job_name, user_id, workflow_id, queue, server,
+                                "hpc_job_resources_requested_mpiprocs", resources_used_mpiprocs, logger)
+
     def publish_data_transfer_metrics(self, job_name, instance_name, app, transferred_bytes, transfer_time_seconds,
                                       user, wspace, source, destination):
         bandwidth = float(transferred_bytes) / float(transfer_time_seconds)

@@ -305,6 +305,7 @@ class Pbspro(InfrastructureInterface):
                     audit["job_owner"] = job.get("Job_Owner")
                     audit["queue"] = job.get("queue")
                     audit["exit_status"] = job.get("Exit_status")
+                    audit["mpiprocs"] = job.get("Resource_List.mpiprocs")
 
                     pattern = re.compile('-l ([a-zA-Z0-9=:]*)')
                     audit["workflow_parameters"] = ','.join(pattern.findall(job.get("Submit_arguments")))
