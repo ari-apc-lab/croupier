@@ -31,12 +31,17 @@
 5. `. ~/.bashrc`
 6. Create conda virtual environment named "grapevine" from requirements file: `conda env create --file environment.yml`
 
+### Create conda virtual environment on CESGA with tensorflow **GPU**
+TODO
+
 ### Run test script on CESGA to verify correct installation using interactive node
 1. `compute -c 2 --mem 5 --x11` (2 is the number of cores; If you increase this, you will ask for more cores, but you may not obtain the cores immediately)
 2. Provide CESGA password in order to connect to interactive node 
 2. `/mnt/netapp2/Store_uni/home/otras/gat/<3-letter-username>/bin/miniconda3/bin/conda activate grapevine`
 3. `export PATH=/mnt/netapp2/Store_uni/home/otras/gat/<3-letter-username>/bin/miniconda3/envs/grapevine/bin:$PATH`
 4. `python easy.py` or `python medium.py`
+5. Exit from the interactive node: `exit`
 
-### Create conda virtual environment on CESGA with tensorflow **GPU**
+### Run test script on CESGA to verify correct installation using back-end node
 TODO
+
