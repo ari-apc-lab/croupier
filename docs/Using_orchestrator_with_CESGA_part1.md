@@ -30,7 +30,7 @@
 *[/home/otras/gat/<3-letter-username>/miniconda3] >>>* **$STORE**
 
 5. `. ~/.bashrc`
-6. `cd /Next_trials_ITAINNOVA/Next trials/`
+6. `cd Next_trials_ITAINNOVA/Next trials/`
 7. Create conda virtual environment named "grapevine" from requirements file: `conda env create --file environment.yml`
 
 ### Run test script on CESGA to verify correct installation using interactive **CPU** node 
@@ -38,7 +38,7 @@
 2. Provide CESGA password in order to connect to interactive node 
 3. `/mnt/netapp2/Store_uni/home/otras/gat/<3-letter-username>/bin/miniconda3/bin/conda activate grapevine`
 4. `export PATH=/mnt/netapp2/Store_uni/home/otras/gat/<3-letter-username>/bin/miniconda3/envs/grapevine/bin:$PATH`
-5. `cd /Next_trials_ITAINNOVA/Next trials/Codigo/`
+5. `cd Next_trials_ITAINNOVA/Next trials/Codigo/`
 6. `python easy.py`
 7. Exit from the interactive node: `exit`
 
@@ -56,7 +56,7 @@
 2. `/mnt/netapp2/Store_uni/home/otras/gat/<3-letter-username>/bin/miniconda3/bin/conda activate grapevine`
 3. `export PATH=/mnt/netapp2/Store_uni/home/otras/gat/<3-letter-username>/bin/miniconda3/envs/grapevine/bin:$PATH`
 4. `module load cuda/10.0.130`
-5. `cd /Next_trials_ITAINNOVA/Next trials/Codigo/`
+5. `cd Next_trials_ITAINNOVA/Next trials/Codigo/`
 6. `python medium.py`
 7. Exit from the interactive node: `exit`
 
