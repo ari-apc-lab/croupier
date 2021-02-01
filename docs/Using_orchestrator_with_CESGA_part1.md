@@ -57,7 +57,7 @@
 3. `export PATH=/mnt/netapp2/Store_uni/home/otras/gat/<3-letter-username>/bin/miniconda3/envs/grapevine/bin:$PATH`
 4. `module load cuda/10.0.130`
 5. `cd Next_trials_ITAINNOVA/Next trials/Codigo/`
-6. `python medium.py`
+6. `python medium.py`or `python hard.py`
 7. Exit from the interactive node: `exit`
 
 ### Run test script on CESGA to verify correct installation using back-end node
