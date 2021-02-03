@@ -11,7 +11,7 @@
 4. `chmod 600 .ssh/authorized_keys`
 
 ### Create conda virtual environment on CESGA with tensorflow **GPU**
-1. `SSH into ft2.cesga.es`
+1. SSH into ft2.cesga.es
 2. `module load miniconda3`
 3. `conda config --set auto_activate_base false`
 4. `conda create -n tf_test tensorflow=2.2.0=gpu_py37h1a511ff_0`
