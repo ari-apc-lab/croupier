@@ -18,11 +18,26 @@
 5. `pip install optuna keras scikit-learn pandas`
 
 ### Run test script on CESGA to verify correct installation using interactive **GPU** node 
-1. `compute --gpu`
+1. Start interactive session to GPU node: `compute --gpu`
 2. `conda activate tf_test`
 3. `cd Next_trials_ITAINNOVA/Next trials/Codigo/`
 4. `python medium.py`or `python hard.py`
 5. Exit from the interactive node: `exit`
 
-### Run test script on CESGA to verify correct installation using back-end node
-TODO
+### Run test script on CESGA to verify correct installation using back-end node (requires code refactoring for reading/writing to path in HPC)
+1. Create `.sh` file and add the following as content:
+```#!/bin/bash
+#SBATCH -t 0:20:00
+#SBATCH -p gpu-shared
+#SBATCH --gres gpu:1
+#SBATCH --qos=urgent
+#SBATCH --job-name my_python_code
+
+module load miniconda3
+conda activate tf_test
+
+srun python /home/otras/gat/<3-letter-usernane-in-CESGA>/Next_trials/Codigo/hard.py
+```
+2. Submit batch job: `sbatch file_backend_execution.sh`
+3. Check job execution status: `squeue`
+4. Inspect output: `cat slurm-<job id>.out`
