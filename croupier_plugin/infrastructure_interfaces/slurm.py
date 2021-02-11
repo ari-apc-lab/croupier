@@ -173,7 +173,10 @@ class Slurm(InfrastructureInterface):
         else:
             logger.warning("Failed to get states")
 
-        return states
+        audits = {}
+        #TODO get job execution audits for monitoring metrics
+
+        return states, audits
 
     def _parse_states(self, raw_states, logger):
         """ Parse two colums sacct entries into a dict """

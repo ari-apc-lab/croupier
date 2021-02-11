@@ -458,9 +458,9 @@ class InfrastructureInterface(object):
             script=True)
 
         # TODO Add extra audit support to response
-        if not self.audit_inserted:
-            response = self._add_audit(
-                name, job_settings=response, script=False, ssh_client=ssh_client, workdir=workdir, logger=logger)
+        # if not self.audit_inserted:
+        #     response = self._add_audit(
+        #         name, job_settings=response, script=False, ssh_client=ssh_client, workdir=workdir, logger=logger)
 
         if 'error' in response and response['error']:
             logger.error(response['error'])
@@ -542,10 +542,10 @@ class InfrastructureInterface(object):
             name,
             job_settings)
 
-        # Add extra audit support
-        if not self.audit_inserted:
-            response = self._add_audit(
-                name, job_settings=response, script=True, ssh_client=ssh_client, workdir=workdir, logger=logger)
+        # TODO Add extra audit support
+        # if not self.audit_inserted:
+        #     response = self._add_audit(
+        #         name, job_settings=response, script=True, ssh_client=ssh_client, workdir=workdir, logger=logger)
 
         if 'error' in response and response['error']:
             return response
