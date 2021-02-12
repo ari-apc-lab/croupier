@@ -527,14 +527,19 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         }
         ctx.logger.info('Submitting the job ...')
 
-        is_submitted = wm.submit_job(
-            client,
-            name,
-            job_options,
-            is_singularity,
-            ctx.logger,
-            workdir=workdir,
-            context=context_vars)
+        try:
+            is_submitted = wm.submit_job(
+                client,
+                name,
+                job_options,
+                is_singularity,
+                ctx.logger,
+                workdir=workdir,
+                context=context_vars)
+        except Exception as ex:
+            ctx.logger.error('Job could not be submitted because error ' + ex.message)
+            raise ex
+
         ctx.logger.info('Job submitted')
         client.close_connection()
     else:
