@@ -34,7 +34,7 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
 
 node_templates:
-    hpc_interface:
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config: { get_input: hpc_interface_config }
@@ -64,7 +64,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
 
 outputs:
     single_job_name:
