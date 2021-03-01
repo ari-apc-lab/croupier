@@ -702,39 +702,50 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, s
     try:
         if username is None:
             username = audit['job_owner']
-        monitoring_client.publish_job_queued_time(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['queued_time'], logger)
-        monitoring_client.publish_job_execution_start_time(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['start_time'], logger)
-        monitoring_client.publish_job_execution_completion_time(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['completion_time'], logger)
-        monitoring_client.publish_job_execution_exit_status(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['exit_status'], logger)
-        monitoring_client.publish_job_resources_used_cput(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit["cput"], logger)
-        monitoring_client.publish_job_resources_used_cpupercent(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['cpupercent'], logger)
-        monitoring_client.publish_job_resources_used_ncpus(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['ncpus'], logger)
-        monitoring_client.publish_job_resources_used_vmem(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['vmem'], logger)
-        monitoring_client.publish_job_resources_used_mem(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['mem'], logger)
-        monitoring_client.publish_job_resources_used_walltime(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['walltime'], logger)
-        monitoring_client.publish_job_resources_requested_mpiprocs(
-            blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-            ctx.workflow_id, audit['queue'], server, audit['mpiprocs'], logger)
+        if 'queued_time' in audit:
+            monitoring_client.publish_job_queued_time(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['queued_time'], logger)
+        if 'start_time' in audit:
+            monitoring_client.publish_job_execution_start_time(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['start_time'], logger)
+        if 'completion_time' in audit:
+            monitoring_client.publish_job_execution_completion_time(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['completion_time'], logger)
+        if 'exit_status' in audit:
+            monitoring_client.publish_job_execution_exit_status(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['exit_status'], logger)
+        if 'cput' in audit:
+            monitoring_client.publish_job_resources_used_cput(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit["cput"], logger)
+        if 'cpupercent' in audit:
+            monitoring_client.publish_job_resources_used_cpupercent(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['cpupercent'], logger)
+        if 'ncpus' in audit:
+            monitoring_client.publish_job_resources_used_ncpus(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['ncpus'], logger)
+        if 'vmem' in audit:
+            monitoring_client.publish_job_resources_used_vmem(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['vmem'], logger)
+        if 'mem' in audit:
+            monitoring_client.publish_job_resources_used_mem(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['mem'], logger)
+        if 'walltime' in audit:
+            monitoring_client.publish_job_resources_used_walltime(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['walltime'], logger)
+        if 'mpiprocs' in audit:
+            monitoring_client.publish_job_resources_requested_mpiprocs(
+                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
+                ctx.workflow_id, audit['queue'], server, audit['mpiprocs'], logger)
 
         # Wait 60 seconds and delete metrics (to avoid continuous sampling)
         sleep(monitoring_client.delete_after_period)
@@ -748,7 +759,10 @@ def report_metrics_to_monitoring(audit, blueprint_id, deployment_id, username, s
 
 def convert_cput(cput, job_id, workdir, ssh_client, logger):
     processors_per_node = read_processors_per_node(job_id, workdir, ssh_client, logger)
-    return cput / 3600.0 * processors_per_node
+    if processors_per_node > 0:
+        return cput / 3600.0 * processors_per_node
+    else:
+        return cput
 
 
 def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, logger):
@@ -807,7 +821,7 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
     if exit_code != 0:
         logger.error('read_job_output: {command} failed with code: {code}:\n{output}'.format(
             command=command, code=str(exit_code), output=output))
-        return False
+        return 0
     else:
         return int(output[output.find('=')+1:].rstrip("\n"))
 
@@ -871,7 +885,10 @@ def publish(publish_list, data_mover_options, **kwargs):
                 infrastructure_host = None
                 if hpc_interface is not None and "monitoring_options" in hpc_interface.runtime_properties:
                     monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
-                    username = monitoring_options["reporting_user"]
+                    if "reporting_user" in monitoring_options:
+                        username = monitoring_options["reporting_user"]
+                    else:
+                        username = audit['job_owner']
                 if hpc_interface is not None and "infrastructure_host" in hpc_interface.runtime_properties:
                     infrastructure_host = hpc_interface.runtime_properties["infrastructure_host"]
 

@@ -29,6 +29,71 @@ from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
     InfrastructureInterface,
     get_prevailing_state)
+import datetime,time
+import re
+
+
+def _parse_audit_metrics(metrics_string, logger):
+    audits = {}
+    metrics = metrics_string.split('|')
+    start_time = datetime.datetime.strptime(metrics[6], '%Y-%m-%dT%H:%M:%S')
+    completion_time = datetime.datetime.strptime(metrics[7], '%Y-%m-%dT%H:%M:%S')
+    queued_time = datetime.datetime.strptime(metrics[5], '%Y-%m-%dT%H:%M:%S')
+
+    audits["job_id"] = metrics[0]
+    audits["job_name"] = metrics[1]
+    audits["job_owner"] = metrics[2]
+    audits["queue"] = metrics[3]
+    audits["exit_status"] = metrics[4].split(':')[0]
+    audits["queued_time"] = time.mktime(queued_time.timetuple())
+    audits["start_time"] = time.mktime(start_time.timetuple())
+    audits["completion_time"] = time.mktime(completion_time.timetuple())
+    audits["walltime"] = metrics[8]
+    audits["cput"] = int(metrics[9])
+    audits["ncpus"] = metrics[10]
+
+    return audits
+
+
+def _parse_states(raw_states, logger):
+    """ Parse two colums sacct entries into a dict """
+    jobs = raw_states.splitlines()
+    parsed = {}
+    if jobs and (len(jobs) > 1 or jobs[0] != ''):
+        for job in jobs:
+            first, second = job.strip().split('|')
+            if first in parsed:
+                parsed[first] = get_prevailing_state(parsed[first], second)
+            else:
+                parsed[first] = second
+
+    return parsed
+
+
+def get_job_metrics (job_name, ssh_client, workdir, logger):
+    # Get job execution audits for monitoring metrics
+    audits = {}
+    audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
+    audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X" \
+        .format(job_name=job_name, metrics=audit_metrics)
+
+    output, exit_code = ssh_client.execute_shell_command(
+        audit_command,
+        workdir=workdir,
+        wait_result=True)
+    if exit_code == 0:
+        audits = _parse_audit_metrics(output, logger)
+    else:
+        logger.error("Failed to get job metrics")
+    return audits
+
+
+def execute_ssh_command(command, workdir, ssh_client, logger):
+    _, exit_code = ssh_client.execute_shell_command(command, workdir=workdir, wait_result=True)
+    if exit_code != 0:
+        logger.error("failed to execute command '" + command + "', exit code " + str(exit_code))
+        return False
+    return True
 
 
 class Slurm(InfrastructureInterface):
@@ -152,6 +217,34 @@ class Slurm(InfrastructureInterface):
         else:
             return default
 
+    # def _add_audit(self, job_id, job_settings, script=False, ssh_client=None, workdir=None, logger=None):
+    #     if script:
+    #         # Read script and add audit header
+    #         pattern = re.compile('([a-zA-Z-9_]*).script')
+    #         script_name = pattern.findall(job_settings['data'])[0] + '.script'
+    #
+    #         audit_instruction = "echo ProcessorsPerNode=$(( 1 + $(cat /proc/cpuinfo | grep processor | " \
+    #                             "tail -n1 | cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit" \
+    #             .format(job_id=job_id, workdir=workdir)
+    #
+    #         # Remove previous audit line
+    #         command = "cd {workdir}; sed -i '/ProcessorsPerNode/d' {script_name}" \
+    #             .format(workdir=workdir, script_name=script_name, audit_instruction=audit_instruction)
+    #         result = execute_ssh_command(command, workdir, ssh_client, logger)
+    #
+    #         # Add audit line
+    #         command = "cd {workdir}; sed -i -e '$a{audit_instruction}' {script_name}" \
+    #             .format(workdir=workdir, script_name=script_name, audit_instruction=audit_instruction)
+    #         result = execute_ssh_command(command, workdir, ssh_client, logger)
+    #     else:
+    #         # Add audit entry
+    #         job_settings['data'] += \
+    #             "\necho ProcessorsPerNode =$((1 + $(cat /proc/cpuinfo | grep processor | tail -n1 | " \
+    #             "cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit\n\n".format(job_id=job_id, workdir=workdir)
+    #     self.audit_inserted = True
+    #     return job_settings
+
+
 # Monitor
     def get_states(self, workdir, credentials, job_names, logger):
         # TODO set start time of consulting
@@ -165,29 +258,19 @@ class Slurm(InfrastructureInterface):
             workdir=workdir,
             wait_result=True)
 
-        client.close_connection()
-
         states = {}
         if exit_code == 0:
-            states = self._parse_states(output, logger)
+            states = _parse_states(output, logger)
         else:
-            logger.warning("Failed to get states")
+            logger.error("Failed to get job states")
 
+        # Get job execution audits for monitoring metrics
         audits = {}
-        #TODO get job execution audits for monitoring metrics
+        for job_name in job_names:
+            if states[job_name] != 'PENDING':
+                audits[job_name] = get_job_metrics(job_name, client, workdir, logger)
+
+        client.close_connection()
 
         return states, audits
 
-    def _parse_states(self, raw_states, logger):
-        """ Parse two colums sacct entries into a dict """
-        jobs = raw_states.splitlines()
-        parsed = {}
-        if jobs and (len(jobs) > 1 or jobs[0] != ''):
-            for job in jobs:
-                first, second = job.strip().split('|')
-                if first in parsed:
-                    parsed[first] = get_prevailing_state(parsed[first], second)
-                else:
-                    parsed[first] = second
-
-        return parsed

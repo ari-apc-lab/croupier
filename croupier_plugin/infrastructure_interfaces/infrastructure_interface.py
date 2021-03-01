@@ -131,7 +131,7 @@ class InfrastructureInterface(object):
 
     def __init__(self, infrastructure_interface):
         self.infrastructure_interface = infrastructure_interface
-        self.audit_inserted = False
+        # self.audit_inserted = False
 
     @staticmethod
     def factory(infrastructure_interface):
@@ -182,7 +182,7 @@ class InfrastructureInterface(object):
             return False
 
         # Build script if there is no one, or Singularity
-        self.audit_inserted = False
+        # self.audit_inserted = False
         if 'script' not in job_settings or is_singularity:
             # generate script content
             if is_singularity:

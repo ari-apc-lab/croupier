@@ -17,9 +17,9 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Javier Carnero
+# @author: Jesús Gorroñogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: javier.carnero@atos.net
+#          e-mail: jesus.gorronogoitia@atos.net
 #
 # blueprint_single.yaml
 
@@ -52,15 +52,16 @@ node_templates:
         properties:
             job_options:
                 commands:
-                - "touch test_$1.output"
-                arguments:
-                - script
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
+                - "module load miniconda3;
+                   conda activate tf_test2;
+                   which python;
+                   echo ===========================================================================;
+                   date;
+                   srun python /home/otras/gat/jgc/Next_trials/Codigo/easy.py;
+                   date;
+                   echo ===========================================================================;"
                 max_time: '00:05:00'
                 partition: { get_input: partition_name }
-                queue: cola-corta
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -68,5 +69,5 @@ node_templates:
 
 outputs:
     single_job_name:
-        description: single job name in the HPC
-        value: { get_attribute: [single_job, job_name] }
+        description: easy job calculation
+        value: { get_attribute: [easy_job, job_name] }
