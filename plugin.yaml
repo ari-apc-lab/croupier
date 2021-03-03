@@ -32,7 +32,7 @@ plugins:
         # "plugins" directory.
         source: https://github.com/ari-apc-lab/croupier/archive/permedcoe.zip
         install_arguments: -r plugin-requirements.txt
-        package_name: croupier-plugin
+        package_name: croupier
         package_version: "3.0.0"
 
 workflows:
