@@ -24,12 +24,11 @@ license information in the project root.
 slurm.py: Holds the slurm functions
 '''
 
-
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
     InfrastructureInterface,
     get_prevailing_state)
-import datetime,time
+import datetime, time
 import re
 
 
@@ -48,11 +47,28 @@ def _parse_audit_metrics(metrics_string, logger):
     audits["queued_time"] = time.mktime(queued_time.timetuple())
     audits["start_time"] = time.mktime(start_time.timetuple())
     audits["completion_time"] = time.mktime(completion_time.timetuple())
-    audits["walltime"] = metrics[8]
+    audits["walltime"] = convert_to_seconds(metrics[8])
     audits["cput"] = int(metrics[9])
     audits["ncpus"] = metrics[10]
 
     return audits
+
+
+def getHours(cput):
+    return int(cput[:cput.index(':')])
+
+
+def getMinutes(cput):
+    return int(cput[cput.index(':') + 1:cput.rindex(':')])
+
+
+def getSeconds(cput):
+    return int(cput[cput.rindex(':') + 1:])
+
+
+def convert_to_seconds(cput):
+    hours = getHours(cput) * 3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
+    return hours
 
 
 def _parse_states(raw_states, logger):
@@ -70,7 +86,7 @@ def _parse_states(raw_states, logger):
     return parsed
 
 
-def get_job_metrics (job_name, ssh_client, workdir, logger):
+def get_job_metrics(job_name, ssh_client, workdir, logger):
     # Get job execution audits for monitoring metrics
     audits = {}
     audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
@@ -126,19 +142,19 @@ class Slurm(InfrastructureInterface):
         # Slurm settings
         if _check_job_settings_key('nodes'):
             _settings += _prefix + ' -N ' + \
-                str(job_settings['nodes']) + _suffix
+                         str(job_settings['nodes']) + _suffix
 
         if _check_job_settings_key('tasks'):
             _settings += _prefix + ' -n ' + \
-                str(job_settings['tasks']) + _suffix
+                         str(job_settings['tasks']) + _suffix
 
         if _check_job_settings_key('tasks_per_node'):
             _settings += _prefix + ' --ntasks-per-node=' + \
-                str(job_settings['tasks_per_node']) + _suffix
+                         str(job_settings['tasks_per_node']) + _suffix
 
         if _check_job_settings_key('max_time'):
             _settings += _prefix + ' -t ' + \
-                str(job_settings['max_time']) + _suffix
+                         str(job_settings['max_time']) + _suffix
 
         if _check_job_settings_key('partition') or \
                 _check_job_settings_key('queue'):
@@ -147,45 +163,45 @@ class Slurm(InfrastructureInterface):
             else:
                 partition = job_settings['queue']
             _settings += _prefix + ' -p ' + \
-                str(partition) + _suffix
+                         str(partition) + _suffix
 
         if _check_job_settings_key('memory'):
             _settings += _prefix + ' --mem=' + \
-                str(job_settings['memory']) + _suffix
+                         str(job_settings['memory']) + _suffix
 
         if _check_job_settings_key('reservation'):
             _settings += _prefix + ' --reservation=' + \
-                str(job_settings['reservation']) + _suffix
+                         str(job_settings['reservation']) + _suffix
 
         if _check_job_settings_key('qos'):
             _settings += _prefix + ' --qos=' + \
-                str(job_settings['qos']) + _suffix
+                         str(job_settings['qos']) + _suffix
 
         if _check_job_settings_key('mail_user'):
             _settings += _prefix + ' --mail-user=' + \
-                str(job_settings['mail_user']) + _suffix
+                         str(job_settings['mail_user']) + _suffix
 
         if _check_job_settings_key('mail_type'):
             _settings += _prefix + ' --mail-type=' + \
-                str(job_settings['mail_type']) + _suffix
+                         str(job_settings['mail_type']) + _suffix
 
         if _check_job_settings_key('account'):
             _settings += _prefix + ' -A ' + \
-                str(job_settings['account']) + _suffix
+                         str(job_settings['account']) + _suffix
 
         if _check_job_settings_key('stderr_file'):
             _settings += _prefix + ' -e ' + \
-                str(job_settings['stderr_file']) + _suffix
+                         str(job_settings['stderr_file']) + _suffix
         else:
             _settings += _prefix + ' -e ' + \
-                str(job_id + '.err') + _suffix
+                         str(job_id + '.err') + _suffix
 
         if _check_job_settings_key('stdout_file'):
             _settings += _prefix + ' -o ' + \
-                str(job_settings['stdout_file']) + _suffix
+                         str(job_settings['stdout_file']) + _suffix
         else:
             _settings += _prefix + ' -o ' + \
-                str(job_id + '.out') + _suffix
+                         str(job_id + '.out') + _suffix
 
         # add scale, executable and arguments
         if not script:
@@ -196,12 +212,12 @@ class Slurm(InfrastructureInterface):
                 if 'scale_max_in_parallel' in job_settings and \
                         int(job_settings['scale_max_in_parallel']) > 0:
                     _settings += '%' + \
-                        str(job_settings['scale_max_in_parallel'])
+                                 str(job_settings['scale_max_in_parallel'])
 
             _settings += ' ' + job_settings['script']
             if 'arguments' in job_settings:
                 for arg in job_settings['arguments']:
-                    _settings += ' '+arg
+                    _settings += ' ' + arg
             _settings += '; '
 
         return {'data': _settings}
@@ -244,8 +260,7 @@ class Slurm(InfrastructureInterface):
     #     self.audit_inserted = True
     #     return job_settings
 
-
-# Monitor
+    # Monitor
     def get_states(self, workdir, credentials, job_names, logger):
         # TODO set start time of consulting
         # (sacct only check current day)
@@ -273,4 +288,3 @@ class Slurm(InfrastructureInterface):
         client.close_connection()
 
         return states, audits
-
