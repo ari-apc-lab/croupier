@@ -34,19 +34,28 @@ import re
 
 def _parse_audit_metrics(metrics_string, logger):
     audits = {}
+    start_time = None
+    completion_time = None
+    queued_time = None
     metrics = metrics_string.split('|')
-    start_time = datetime.datetime.strptime(metrics[6], '%Y-%m-%dT%H:%M:%S')
-    completion_time = datetime.datetime.strptime(metrics[7], '%Y-%m-%dT%H:%M:%S')
-    queued_time = datetime.datetime.strptime(metrics[5], '%Y-%m-%dT%H:%M:%S')
+    if metrics[6] is not None and metrics[6] != 'Unknown':
+        start_time = datetime.datetime.strptime(metrics[6], '%Y-%m-%dT%H:%M:%S')
+    if metrics[7] is not None and metrics[7] != 'Unknown':
+        completion_time = datetime.datetime.strptime(metrics[7], '%Y-%m-%dT%H:%M:%S')
+    if metrics[5] is not None and metrics[5] != 'Unknown':
+        queued_time = datetime.datetime.strptime(metrics[5], '%Y-%m-%dT%H:%M:%S')
 
     audits["job_id"] = metrics[0]
     audits["job_name"] = metrics[1]
     audits["job_owner"] = metrics[2]
     audits["queue"] = metrics[3]
     audits["exit_status"] = metrics[4].split(':')[0]
-    audits["queued_time"] = time.mktime(queued_time.timetuple())
-    audits["start_time"] = time.mktime(start_time.timetuple())
-    audits["completion_time"] = time.mktime(completion_time.timetuple())
+    if queued_time is not None:
+        audits["queued_time"] = time.mktime(queued_time.timetuple())
+    if start_time is not None:
+        audits["start_time"] = time.mktime(start_time.timetuple())
+    if completion_time is not None:
+        audits["completion_time"] = time.mktime(completion_time.timetuple())
     audits["walltime"] = convert_to_seconds(metrics[8])
     audits["cput"] = int(metrics[9])
     audits["ncpus"] = metrics[10]

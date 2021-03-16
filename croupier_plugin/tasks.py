@@ -819,7 +819,7 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
         workdir=workdir,
         wait_result=True)
     if exit_code != 0:
-        logger.error('read_job_output: {command} failed with code: {code}:\n{output}'.format(
+        logger.warning('read_job_output: {command} failed with code: {code}:\n{output}'.format(
             command=command, code=str(exit_code), output=output))
         return 0
     else:
