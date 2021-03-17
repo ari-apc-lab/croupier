@@ -189,6 +189,8 @@ class InfrastructureInterface(object):
                 script_content = self._build_container_script(
                     name,
                     job_settings,
+                    workdir,
+                    ssh_client,
                     logger)
             else:
                 script_content = self._build_script(name, job_settings, workdir, ssh_client, logger)
@@ -623,6 +625,8 @@ class InfrastructureInterface(object):
     def _build_container_script(self,
                                 name,
                                 job_settings,
+                                workdir,
+                                ssh_client,
                                 logger):
         """
         Creates a script to run Singularity
@@ -637,6 +641,8 @@ class InfrastructureInterface(object):
         return self._build_script(
             name,
             job_settings,
+            workdir,
+            ssh_client,
             logger,
             container=True
         )

@@ -21,14 +21,12 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# blueprint_four.yaml
+# blueprint_agroapps_test_GFS_00.yaml
 
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-    # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    # relative import of plugin.yaml that resides in the blueprint directory
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
 

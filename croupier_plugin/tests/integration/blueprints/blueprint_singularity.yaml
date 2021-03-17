@@ -20,20 +20,21 @@
 # @author: Javier Carnero
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
 #
 # blueprint_singularity.yaml
 
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-    # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
-    - inputs_def.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
 
 node_templates:
-    hpc_interface:
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config: { get_input: hpc_interface_config }
@@ -43,10 +44,10 @@ node_templates:
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
             skip_cleanup: true
-            simulate: True # COMMENT to test against a real HPC
-            workdir_prefix: "single_singularity"
+            #simulate: True # COMMENT to test against a real HPC
+            workdir_prefix: "easy_singularity"
 
-    single_job:
+    easy_job:
         type: croupier.nodes.SingularityJob
         properties:
             job_options:
@@ -66,11 +67,11 @@ node_templates:
                 volumes:
                     - { get_input: scratch_voulume_mount_point }
                     - { get_input: singularity_mount_point }
-                commands: ["touch singularity.test"]
+                commands: ["/usr/local/bin/easy.sh"]
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: "00:01:00"
+                max_time: "00:05:00"
             deployment:
                 bootstrap: "scripts/singularity_bootstrap_example.sh"
                 revert: "scripts/singularity_revert_example.sh"
@@ -82,9 +83,9 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
 
 outputs:
-    single_job_name:
-        description: single job name in the HPC
-        value: { get_attribute: [single_job, job_name] }
+    easy_job_name:
+        description: easy job name in the HPC
+        value: { get_attribute: [easy_job, job_name] }
