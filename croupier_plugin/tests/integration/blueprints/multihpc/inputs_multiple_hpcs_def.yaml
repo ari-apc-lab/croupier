@@ -53,29 +53,10 @@ inputs:
   cesga_hpc_interface_credentials:
     description: HPC credentials
     default: {}
-  mpi_load_command:
-    default: ''
-  singularity_load_command:
-    default: ''
-  singularity_image_uri:
-    default: ''
-  singularity_image_filename:
-    default: ''
+
+
   partition_name:
     default: default
-  singularity_image_storage:
-    description: Path to store the downloaded singularity image
-    default: $HOME
-  singularity_mount_point:
-    default: /mnt
-  scratch_voulume_mount_point:
-    default: /scratch
-  job_config_content:
-    description: Content of job_config file
-    default: ''
-  job_config_pathname:
-    description: Pathname of job_config file
-    default: ''
 
   ################### Data Mover ##################
   data_mover_options:
@@ -92,94 +73,12 @@ inputs:
     description: Accounting options
     default: {}
 
-  ################# Cloud Infrastructre #################
-  cloud_interface_config:
-    description: cloud interface (Only supported SHELL)
-    default:
-      infrastructure_interface: SHELL
-  cloud_interface_credentials:
-    description: Cloud credentials
-    default: {}
-  openstack_config:
-    default: {}
-  cloud_image:
-    default: ''
-  cloud_flavor:
-    default: ''
-  cloud_network:
-    default: ''
-  cloud_external_network:
-    default: ''
-
-  ################# Second Cloud Infrastructre #################
-  # Won't be rendered, their value is a match with other inputs
-  secondary_cloud_interface_config:
-    description: cloud interface (Only supported SHELL)
-    default:
-      infrastructure_interface: SHELL
-  secondary_cloud_interface_credentials:
-    default: {}
-  eosc_config:
-    default: {}
-  secondary_cloud_image_name:
-    default: ''
-  secondary_cloud_image_id:
-    default: ''
-  secondary_cloud_image_user:
-    default: ''
-  secondary_cloud_image_pass:
-    default: ''
-  secondary_cloud_image_public:
-    default: ''
-  secondary_cloud_image_private:
-    default: ''
-  secondary_cloud_flavor_id:
-    default: ''
-  secondary_cloud_flavor_name:
-    default: ''
-  secondary_cloud_flavor_config:
-    default: {}
-  secondary_cloud_flavor_memory:
-    default: ''
-  secondary_cloud_network_id:
-    default: ''
-  secondary_cloud_network_config:
-    default:
-      outbound: True
-
-  ################### Data Publish ##################
-  input_url:
-    default: ''
-
-  ckan_outputs_dataset:
-    default:
-      config: {}
-      dataset: {}
-      type: ckan
 
   #################### Instance info ####################
   instance_id:
     default: test-jcarnero
 
-  ####################### Optional ######################
-  test_file:
-    default: 'Test file'
-
-  test_bool:
-    default: false
-
-  test_int:
-    default: 0
-
-  test_float:
-    default: 0.0
-
-  test_complex_input:
-    default:
-      first_tag:
-        first_first_tag: test1.1
-        first_second_tag: {foo: bar}
-      second_tag: test2.1
+  ####################### Other ######################
 
   job_prefix:
     default: atos

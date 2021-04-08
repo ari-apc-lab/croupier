@@ -29,7 +29,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/inputs_multiple_hpcs_def.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/multihpc/inputs_multiple_hpcs_def.yaml
 
 node_templates:
     cesga_hpc:
@@ -39,23 +39,21 @@ node_templates:
             credentials: { get_input: cesga_hpc_interface_credentials }
             external_monitor_entrypoint: { get_input: monitor_entrypoint }
             job_prefix: { get_input: job_prefix }
-            base_dir: { get_input: hpc_base_dir }
+            base_dir: { get_input: cesga_hpc_base_dir }
             monitor_period: 15
             skip_cleanup: true
-            #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"
 
     sodalite_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config: { get_input: sodalite_hpc_interface_config }
-            credentials: { get_input: sodalite_interface_credentials }
+            credentials: { get_input: sodalite_hpc_interface_credentials }
             external_monitor_entrypoint: { get_input: monitor_entrypoint }
             job_prefix: { get_input: job_prefix }
-            base_dir: { get_input: hpc_base_dir }
+            base_dir: { get_input: sodalite_hpc_base_dir }
             monitor_period: 15
             skip_cleanup: true
-            #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"
 
     cesga_job:
@@ -71,7 +69,6 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '00:01:00'
                 partition: { get_input: partition_name }
-                queue: batch
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -89,7 +86,6 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: { get_input: partition_name }
                 queue: batch
             skip_cleanup: True
         relationships:
