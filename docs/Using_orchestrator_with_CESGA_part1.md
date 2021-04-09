@@ -16,7 +16,7 @@
 3. `conda config --set auto_activate_base false`
 4. `conda create -n tf_test tensorflow=2.2.0=gpu_py37h1a511ff_0`
 5. `conda activate tf_test`
-6. `cwhich python` This should return: `~/.conda/envs/tf_test/bin/python`
+6. `which python` This should return: `~/.conda/envs/tf_test/bin/python`
 7. `pip install optuna keras scikit-learn pandas`
 
 ### Run test script on CESGA to verify correct installation using interactive **GPU** node 
