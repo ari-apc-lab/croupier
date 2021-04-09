@@ -33,7 +33,23 @@ from infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
 import re
 import datetime
+import time
 
+def getHours(cput):
+    return int(cput[:cput.index(':')])
+
+
+def getMinutes(cput):
+    return int(cput[cput.index(':') + 1:cput.rindex(':')])
+
+
+def getSeconds(cput):
+    return int(cput[cput.rindex(':') + 1:])
+
+
+def convert_to_seconds(cput):
+    hours = getHours(cput) * 3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
+    return hours
 
 class Torque(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
@@ -287,17 +303,24 @@ class Torque(InfrastructureInterface):
                     # Process timestamps from this format 'Tue Sep 22 13:29:49 2020'
                     # to this one "2020-04-15 01:26:59.000403"
                     start_time = datetime.datetime.strptime(job.get("start_time"), '%a %b %d %H:%M:%S %Y')
-                    comp_time = datetime.datetime.strptime(job.get("comp_time"), '%a %b %d %H:%M:%S %Y')
-                    audit["start_timestamp"] = start_time.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    audit["stop_timestamp"] = comp_time.strftime("%Y-%m-%d %H:%M:%S.%f")
-                    audit["cput"] = job.get("resources_used.cput")
-                    audit["vmem"] = job.get("resources_used.vmem")
-                    audit["walltime"] = job.get("resources_used.walltime")
-                    audit["mem"] = job.get("resources_used.mem")
+                    completion_time = datetime.datetime.strptime(job.get("comp_time"), '%a %b %d %H:%M:%S %Y')
+                    queued_time = datetime.datetime.strptime(job.get("qtime"), '%a %b %d %H:%M:%S %Y')
+                    audit["start_time"] = time.mktime(start_time.timetuple())
+                    audit["completion_time"] = time.mktime(completion_time.timetuple())
+                    audit["queued_time"] = time.mktime(queued_time.timetuple())
+                    audit["cput"] = convert_to_seconds(job.get("resources_used.cput"))
+                    audit["vmem"] = re.findall(r'\d+', job.get("resources_used.vmem")).pop()
+                    audit["walltime"] = convert_to_seconds(job.get("resources_used.walltime"))
+                    audit["mem"] = re.findall(r'\d+', job.get("resources_used.mem")).pop()
                     audit["energy_used"] = job.get("resources_used.energy_used")
                     pattern = re.compile('-l ([a-zA-Z0-9=:]*)')
                     audit["workflow_parameters"] = ','.join(pattern.findall(job.get("submit_args")))
                     exit_status = int(job.get('exit_status', 0))
+                    audit["exit_status"] = exit_status
+                    audit["job_id"] = job.get('Job_Id')
+                    audit["job_name"] = job.get('Job_Name')
+                    audit["job_owner"] = job.get('Job_Owner')
+                    audit["queue"] = job.get('queue')
                     state = Torque._job_exit_status.get(
                         exit_status, "FAILED")  # unknown failure by default
                 else:

@@ -66,7 +66,7 @@ def joinThreads():
     global forkedThreads
     for thread in forkedThreads:
         thread.join
-    del forkedThreads
+    forkedThreads = []
 
 
 @operation

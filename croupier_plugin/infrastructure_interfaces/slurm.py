@@ -24,12 +24,13 @@ license information in the project root.
 slurm.py: Holds the slurm functions
 '''
 
-from croupier_plugin.ssh import SshClient
+import datetime
+import time
+
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
     InfrastructureInterface,
     get_prevailing_state)
-import datetime, time
-import re
+from croupier_plugin.ssh import SshClient
 
 
 def _parse_audit_metrics(metrics_string, logger):
