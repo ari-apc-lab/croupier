@@ -29,6 +29,7 @@
 ### Run test script on CESGA to verify correct installation using back-end node (requires code refactoring for reading/writing to path in HPC)
 1. Create `.sh` file and add the following as content:
 ```#!/bin/bash
+#!/bin/sh
 #SBATCH -t 0:20:00
 #SBATCH -p gpu-shared
 #SBATCH --gres gpu:1
