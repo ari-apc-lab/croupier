@@ -28,22 +28,25 @@ Todo:
     * control SSH exceptions and return failures
 '''
 from __future__ import print_function
+from future import standard_library
 
-
+standard_library.install_aliases()
+from builtins import bytes
+from builtins import str
+from builtins import object
 import io
 import logging
 import select
 import socket
-import thread
+import _thread
 
 from croupier_plugin.utilities import shlex_quote
 from paramiko import RSAKey, client, ssh_exception
 
 try:
-    import SocketServer
+    import socketserver
 except ImportError:
     import socketserver as SocketServer
-
 
 # # @TODO `posixpath` can be used for common pathname manipulations on
 # #       remote HPC systems
@@ -75,8 +78,8 @@ class SshClient(object):
         private_key = None
         if 'private_key' in credentials and credentials['private_key']:
             key_data = credentials['private_key']
-            if not isinstance(key_data, unicode):
-                key_data = unicode(key_data, "utf-8")
+            if not isinstance(key_data, str):
+                key_data = str(key_data, "utf-8")
             key_file = io.StringIO()
             key_file.write(key_data)
             key_file.seek(0)
@@ -116,7 +119,7 @@ class SshClient(object):
                 if retries > 0 and \
                         str(err) == "Error reading SSH protocol banner":
                     retries -= 1
-                    logging.getLogger("paramiko").\
+                    logging.getLogger("paramiko"). \
                         warning("Retrying SSH connection: " + str(err))
                     continue
                 else:
@@ -151,7 +154,7 @@ class SshClient(object):
 
         call = ""
         if env is not None:
-            for key, value in env.iteritems():
+            for key, value in env.items():
                 call += "export " + key + "=" + value + " && "
 
         if workdir:
@@ -282,7 +285,7 @@ class SshForward(object):
         self._server = ForwardServer(("", 0), SubHander)
         self._port = self._server.server_address[1]
 
-        thread.start_new_thread(self._server.serve_forever, ())
+        _thread.start_new_thread(self._server.serve_forever, ())
 
     def port(self):
         return self._port
@@ -294,12 +297,12 @@ class SshForward(object):
 # Following code taken from paramiko forward demo in github
 # https://github.com/paramiko/paramiko/blob/master/demos/forward.py
 
-class ForwardServer(SocketServer.ThreadingTCPServer):
+class ForwardServer(socketserver.ThreadingTCPServer):
     daemon_threads = True
     allow_reuse_address = True
 
 
-class Handler(SocketServer.BaseRequestHandler):
+class Handler(socketserver.BaseRequestHandler):
 
     def handle(self):
         try:
@@ -336,7 +339,7 @@ class Handler(SocketServer.BaseRequestHandler):
                     data = self.request.recv(1024)
                 except socket.error as err:
                     data = bytes('')
-                    logging.getLogger("paramiko").\
+                    logging.getLogger("paramiko"). \
                         warning("Waiting for data: " + str(err))
                 if len(data) == 0:
                     break

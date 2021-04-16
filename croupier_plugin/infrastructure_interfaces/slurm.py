@@ -23,7 +23,7 @@ license information in the project root.
 
 slurm.py: Holds the slurm functions
 '''
-
+from builtins import str
 import datetime
 import time
 

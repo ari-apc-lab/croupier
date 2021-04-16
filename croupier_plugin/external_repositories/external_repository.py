@@ -24,7 +24,7 @@ license information in the project root.
 external_repository.py: Holds the external repository common behaviour
 '''
 
-
+from builtins import object
 from croupier_plugin.ssh import SshClient
 
 

@@ -24,6 +24,9 @@ license information in the project root.
 workflows.py - Holds the plugin workflows
 '''
 
+from builtins import next
+from builtins import str
+from builtins import object
 import sys
 import time
 
@@ -315,7 +318,7 @@ def build_graph(nodes):
             root_nodes.append(new_node)
 
     # then set relationships
-    for _, child in nodes_map.iteritems():
+    for _, child in nodes_map.items():
         for relationship in child.cfy_node.relationships:
             parent = nodes_map[relationship.target_node.id]
             parent.add_child(child)
@@ -370,11 +373,11 @@ class Monitor(object):
             states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
 
             # set job audit
-            for inst_name, audit in audits.iteritems():
+            for inst_name, audit in audits.items():
                 self.job_instances_map[inst_name].audit = audit
 
             # finally set job status
-            for inst_name, state in states.iteritems():
+            for inst_name, state in states.items():
                 self.job_instances_map[inst_name].set_status(state)
 
             self.continued_errors = 0
@@ -392,7 +395,7 @@ class Monitor(object):
 
     def get_executions_iterator(self):
         """ Executing nodes iterator """
-        return self._execution_pool.iteritems()
+        return self._execution_pool.items()
 
     def add_node(self, node):
         """ Adds a node to the execution pool """

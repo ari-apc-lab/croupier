@@ -24,7 +24,7 @@ license information in the project root.
 slurm_tests.py: Holds the Slurm unit tests
 '''
 
-
+from builtins import range
 import logging
 import unittest
 

@@ -1,7 +1,11 @@
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import logging
 import os
-import ConfigParser
+import configparser
 import time
 import sys
 
@@ -25,7 +29,7 @@ RUN = "run_jobs"
 
 def _get_client():
     # Configure Cloudify endpoint from configuration file
-    config = ConfigParser.RawConfigParser()
+    config = configparser.RawConfigParser()
     config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/cfi.cfg'
     print('Reading Cloudify configuration from file {file}'.format(file=config_file))
     config.read(config_file)
@@ -45,7 +49,7 @@ def _get_client():
             protocol=cloudify_protocol,
             trust_all=True
         )
-    except ConfigParser.NoSectionError:
+    except configparser.NoSectionError:
         pass
 
     return client
@@ -63,7 +67,7 @@ def is_execution_wrong(status):
     return has_execution_ended(status) and status != Execution.TERMINATED
 
 
-class Cfy:
+class Cfy(object):
     client = None
 
     def __init__(self):

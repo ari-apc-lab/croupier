@@ -23,6 +23,10 @@ license information in the project root.
 
 infrastructure_interface.py
 '''
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 import io
 import os
 import string

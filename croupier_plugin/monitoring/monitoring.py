@@ -1,6 +1,10 @@
 from __future__ import print_function
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import os
-import ConfigParser
+import configparser
 
 import requests
 
@@ -14,14 +18,14 @@ def str_to_bool(s):
         raise ValueError  # evil ValueError that doesn't tell you what the wrong value was
 
 
-class PrometheusPublisher:
+class PrometheusPublisher(object):
     prometheus_server = None
     report_to_monitoring = False
     delete_after_period = 60
 
     def __init__(self):
         # Configure Accounting endpoint from configuration file
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/../Croupier.cfg'
         print('Reading Accounting configuration from file {file}'.format(
             file=config_file))
@@ -40,7 +44,7 @@ class PrometheusPublisher:
             delete_after_period = config.get('Monitoring', 'delete_after_period')
             if delete_after_period is not None:
                 self.delete_after_period = int(delete_after_period)
-        except ConfigParser.NoSectionError:
+        except configparser.NoSectionError:
             pass
 
     def publish_metric(self, job_id, data, logger):

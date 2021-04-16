@@ -24,7 +24,9 @@ license information in the project root.
 torque_tests.py: Holds the Torque unit tests
 '''
 
-
+from builtins import map
+from builtins import range
+from builtins import object
 import unittest
 
 import logging

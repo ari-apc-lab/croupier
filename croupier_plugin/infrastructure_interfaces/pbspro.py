@@ -29,6 +29,10 @@ torque.py
 '''
 from __future__ import absolute_import
 
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import map
 from croupier_plugin.ssh import SshClient
 from .infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
@@ -276,7 +280,7 @@ class Pbspro(InfrastructureInterface):
 
     @staticmethod
     def _parse_qstat_detailed(qstat_output):
-        from StringIO import StringIO
+        from io import StringIO
         jobs = {}
         audits = {}
         for job in Pbspro._tokenize_qstat_detailed(StringIO(qstat_output)):
@@ -424,14 +428,14 @@ class Pbspro(InfrastructureInterface):
         """ Parse two colums `qstat` entries into a dict """
 
         def parse_qstat_record(record):
-            name, state_code = map(str.strip, record.split('|'))
+            name, state_code = list(map(str.strip, record.split('|')))
             return name, Pbspro._job_states[state_code]
 
         jobs = qstat_output.splitlines()
         parsed = {}
         # @TODO: think of catch-and-log parsing exceptions
         if jobs and (len(jobs) > 1 or jobs[0] != ''):
-            parsed = dict(map(parse_qstat_record, jobs))
+            parsed = dict(list(map(parse_qstat_record, jobs)))
 
         return parsed
 
