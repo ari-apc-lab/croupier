@@ -253,35 +253,25 @@ class TestPlugin(unittest.TestCase):
         else:
             logging.warning('[WARNING] Login could not be tested')
 
-    # Bernoulli test in Sodalite HPC
-    # def load_sodalite_hpc_inputs(self, *args, **kwargs):
-    #     return self.load_inputs('blueprint-sodalite-inputs.yaml')
+    def load_bernoulli_inputs(self, *args, **kwargs):
+        return _load_inputs(os.path.join('croupier_plugin',
+                                         'tests',
+                                         'integration',
+                                         'blueprints',
+                                         'bernoulli',
+                                         'cesga-blueprint-inputs.yaml'))
 
     @workflow_test(
-        os.path.join('blueprints', 'blueprint_bernoulli.yaml'),
+        os.path.join('blueprints', 'bernoulli', 'blueprint_bernoulli.yaml'),
         copy_plugin_yaml=True,
         resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'create_bernoulli_script.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'delete_bernoulli_script.sh'), 'scripts')
+            (os.path.join('blueprints', 'bernoulli', 'scripts', 'create_bernoulli_script.sh'), 'scripts'),
+            (os.path.join('blueprints', 'bernoulli', 'scripts', 'delete_bernoulli_script.sh'), 'scripts')
         ],
-        inputs='load_sodalite_hpc_inputs')
-    def test_bernoulli_sodalite(self, cfy_local):
-        """ Single BATCH Job Blueprint """
-        cfy_local.execute('install', task_retries=0)
-        cfy_local.execute('run_jobs', task_retries=0)
-        cfy_local.execute('uninstall', task_retries=0)
-
-        # extract single node instance
-        instance = cfy_local.storage.get_node_instances()[0]
-
-        # due to a cfy bug sometimes login keyword is not ready in the tests
-        if 'login' in instance.runtime_properties:
-            # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
-        else:
-            logging.warning('[WARNING] Login could not be tested')
+        inputs='load_bernoulli_inputs')
+    def test_bernoulli(self, cfy_local):
+        """ Bernoulli Job Blueprint """
+        self.run_test(cfy_local)
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single_script.yaml'),
@@ -418,11 +408,11 @@ class TestPlugin(unittest.TestCase):
     # Four job workflow
     def load_four_inputs(self, *args, **kwargs):
         return _load_inputs(os.path.join('croupier_plugin',
-                                        'tests',
-                                        'integration',
-                                        'blueprints',
-                                        'four',
-                                        'four_inputs.yaml'))
+                                         'tests',
+                                         'integration',
+                                         'blueprints',
+                                         'four',
+                                         'four_inputs.yaml'))
 
     @workflow_test(os.path.join('blueprints', 'four', 'blueprint_four.yaml'),
                    copy_plugin_yaml=True,
@@ -443,11 +433,11 @@ class TestPlugin(unittest.TestCase):
     # Multi-HPC workflow
     def load_multihpc_inputs(self, *args, **kwargs):
         return _load_inputs(os.path.join('croupier_plugin',
-                                        'tests',
-                                        'integration',
-                                        'blueprints',
-                                        'multihpc',
-                                        'cesga-sodalite-blueprint-inputs.yaml'))
+                                         'tests',
+                                         'integration',
+                                         'blueprints',
+                                         'multihpc',
+                                         'cesga-sodalite-blueprint-inputs.yaml'))
 
     @workflow_test(os.path.join('blueprints', 'multihpc', 'blueprint_single_two_hpcs.yaml'),
                    copy_plugin_yaml=True,
