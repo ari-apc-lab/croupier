@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import traceback
 
-from data_mover import (DataMover, GridFTPServer)
+from .data_mover import (DataMover, GridFTPServer)
 from cloudify import ctx
 
 

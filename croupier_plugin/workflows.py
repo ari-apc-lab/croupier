@@ -310,7 +310,7 @@ def build_graph(nodes):
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
-            node.relationships.next()
+            next(node.relationships)
         except StopIteration:
             root_nodes.append(new_node)
 

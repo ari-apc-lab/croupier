@@ -27,6 +27,7 @@ Todo:
     * read stderr and return it
     * control SSH exceptions and return failures
 '''
+from __future__ import print_function
 
 
 import io

@@ -18,6 +18,7 @@
 # TODO: Before use it need to test the input parameters are correct received from the Cloudify blueprint/yaml file.
 # TODO: modify to support 2 different GridFTP servers, current version only uses the hezelhen GridFtp.
 
+from __future__ import print_function
 import os
 import wget
 import os.path
@@ -177,7 +178,7 @@ class DataMover:
         f = open(user_ssh_credentials, "w+")
         f.write(usersshkey)
         f.close()
-        os.chmod(user_ssh_credentials, 0600)
+        os.chmod(user_ssh_credentials, 0o600)
 
         hlrs_workspace = Workspaces()
 

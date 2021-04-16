@@ -23,6 +23,7 @@ license information in the project root.
 
 workflow_tests.py
 '''
+from __future__ import print_function
 
 import logging
 import os
@@ -39,13 +40,13 @@ def _load_inputs(inputs_file, *args, **kwargs):
         raise IOError(
             errno.ENOENT, os.strerror(errno.ENOENT), inputs_file)
     inputs = {}
-    print("Using inputs file:", inputs_file)
+    print(("Using inputs file:", inputs_file))
     with open(os.path.join(inputs_file),
               'r') as stream:
         try:
             inputs = yaml.full_load(stream)
         except yaml.YAMLError as exc:
-            print exc
+            print(exc)
 
     return inputs
 
@@ -64,7 +65,7 @@ class TestPlugin(unittest.TestCase):
                                        'local-blueprint-inputs.yaml')):
             inputs_file = 'local-blueprint-inputs.yaml'
         inputs = {}
-        print("Using inputs file:", inputs_file)
+        print(("Using inputs file:", inputs_file))
         with open(os.path.join('croupier_plugin',
                                'tests',
                                'integration',
@@ -74,7 +75,7 @@ class TestPlugin(unittest.TestCase):
             try:
                 inputs = yaml.full_load(stream)
             except yaml.YAMLError as exc:
-                print exc
+                print(exc)
 
         return inputs
 
@@ -89,7 +90,7 @@ class TestPlugin(unittest.TestCase):
             raise IOError(
                 errno.ENOENT, os.strerror(errno.ENOENT), inputs_file)
         inputs = {}
-        print("Using inputs file:", inputs_file)
+        print(("Using inputs file:", inputs_file))
         with open(os.path.join('croupier_plugin',
                                'tests',
                                'integration',
@@ -99,7 +100,7 @@ class TestPlugin(unittest.TestCase):
             try:
                 inputs = yaml.full_load(stream)
             except yaml.YAMLError as exc:
-                print exc
+                print(exc)
 
         return inputs
 

@@ -27,9 +27,10 @@ license information in the project root.
 
 torque.py
 '''
+from __future__ import absolute_import
 
 from croupier_plugin.ssh import SshClient
-from infrastructure_interface import InfrastructureInterface
+from .infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
 import re
 import datetime, time

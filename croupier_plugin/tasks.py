@@ -26,6 +26,7 @@ license information in the project root.
 
 tasks.py: Holds the plugin tasks
 '''
+from __future__ import print_function
 import socket
 import traceback
 from time import sleep

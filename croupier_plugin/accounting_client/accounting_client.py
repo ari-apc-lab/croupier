@@ -23,6 +23,8 @@ license information in the project root.
 
 accounting_client.py: provides API client for Accounting component
 """
+from __future__ import print_function
+from __future__ import absolute_import
 import json
 from datetime import datetime
 from enum import Enum
@@ -32,17 +34,17 @@ import os
 import requests
 from requests import HTTPError
 
-from model.base import AccountingBase
-from model.user import User
-from model.reporter import Reporter
-from model.provider import Provider
-from model.infrastructure import Infrastructure
-from model.resource import Resource
-from model.resource_fee import ResourceFee
-from model.resource_amount import ResourceAmount
-from model.discount import Discount
-from model.resource_consumption_record import ResourceConsumptionRecord
-from model.resource_consumption import ResourceConsumption
+from .model.base import AccountingBase
+from .model.user import User
+from .model.reporter import Reporter
+from .model.provider import Provider
+from .model.infrastructure import Infrastructure
+from .model.resource import Resource
+from .model.resource_fee import ResourceFee
+from .model.resource_amount import ResourceAmount
+from .model.discount import Discount
+from .model.resource_consumption_record import ResourceConsumptionRecord
+from .model.resource_consumption import ResourceConsumption
 
 def str_to_bool(s):
     if s.lower() == 'true':
