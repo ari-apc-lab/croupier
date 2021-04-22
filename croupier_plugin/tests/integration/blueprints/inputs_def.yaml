@@ -51,6 +51,8 @@ inputs:
     default: ''
   partition_name:
     default: default
+  reservation_id:
+    default: ''
   singularity_image_storage:
     description: Path to store the downloaded singularity image
     default: $HOME
