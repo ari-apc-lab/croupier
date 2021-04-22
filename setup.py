@@ -54,10 +54,11 @@ setup(
     zip_safe=False,
     install_requires=[
         # Necessary dependency for developing plugins, do not remove!
-        "cloudify-common>=5.0.5",
+        "cloudify-common>=5.1.0",
         "paramiko==2.7.2",
-        "pyyaml",
-        "wget"
+        "pyyaml==5.3.1",
+        "wget",
+        "future==0.18.2"
     ],
     license='LICENSE'
 )
