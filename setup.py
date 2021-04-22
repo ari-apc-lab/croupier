@@ -54,7 +54,7 @@ setup(
     zip_safe=False,
     install_requires=[
         # Necessary dependency for developing plugins, do not remove!
-        "cloudify-common>=5.1.0",
+        "cloudify-common==5.1.4",
         "paramiko==2.7.2",
         "pyyaml==5.3.1",
         "wget",
