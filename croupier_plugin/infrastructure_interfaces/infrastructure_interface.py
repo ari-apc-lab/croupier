@@ -131,7 +131,7 @@ class InfrastructureInterface(object):
 
     def __init__(self, infrastructure_interface):
         self.infrastructure_interface = infrastructure_interface
-        self.audit_inserted = False
+        # self.audit_inserted = False
 
     @staticmethod
     def factory(infrastructure_interface):
@@ -182,13 +182,15 @@ class InfrastructureInterface(object):
             return False
 
         # Build script if there is no one, or Singularity
-        self.audit_inserted = False
+        # self.audit_inserted = False
         if 'script' not in job_settings or is_singularity:
             # generate script content
             if is_singularity:
                 script_content = self._build_container_script(
                     name,
                     job_settings,
+                    workdir,
+                    ssh_client,
                     logger)
             else:
                 script_content = self._build_script(name, job_settings, workdir, ssh_client, logger)
@@ -458,9 +460,9 @@ class InfrastructureInterface(object):
             script=True)
 
         # TODO Add extra audit support to response
-        if not self.audit_inserted:
-            response = self._add_audit(
-                name, job_settings=response, script=False, ssh_client=ssh_client, workdir=workdir, logger=logger)
+        # if not self.audit_inserted:
+        #     response = self._add_audit(
+        #         name, job_settings=response, script=False, ssh_client=ssh_client, workdir=workdir, logger=logger)
 
         if 'error' in response and response['error']:
             logger.error(response['error'])
@@ -542,10 +544,10 @@ class InfrastructureInterface(object):
             name,
             job_settings)
 
-        # Add extra audit support
-        if not self.audit_inserted:
-            response = self._add_audit(
-                name, job_settings=response, script=True, ssh_client=ssh_client, workdir=workdir, logger=logger)
+        # TODO Add extra audit support
+        # if not self.audit_inserted:
+        #     response = self._add_audit(
+        #         name, job_settings=response, script=True, ssh_client=ssh_client, workdir=workdir, logger=logger)
 
         if 'error' in response and response['error']:
             return response
@@ -623,6 +625,8 @@ class InfrastructureInterface(object):
     def _build_container_script(self,
                                 name,
                                 job_settings,
+                                workdir,
+                                ssh_client,
                                 logger):
         """
         Creates a script to run Singularity
@@ -637,6 +641,8 @@ class InfrastructureInterface(object):
         return self._build_script(
             name,
             job_settings,
+            workdir,
+            ssh_client,
             logger,
             container=True
         )

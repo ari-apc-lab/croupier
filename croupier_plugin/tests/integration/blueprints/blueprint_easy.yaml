@@ -17,7 +17,7 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Yosu Gorroñogoitia
+# @author: Jesús Gorroñogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.gorronogoitia@atos.net
 #
@@ -30,11 +30,11 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/euxdat/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/euxdat/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
 
 node_templates:
-    hpc_interface:
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config: { get_input: hpc_interface_config }
@@ -43,40 +43,31 @@ node_templates:
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
-            monitoring_options: { get_input: monitoring_options }
-            accounting_options: { get_input: accounting_options }
             skip_cleanup: true
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"
 
-    benchmark_job:
+    easy_job:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "cd $HOME/sc3_agroclimatic/frostdates/cloudify_integration;
-                   module load python/3;
-                   mpirun -np 4 ./python_code/frostdates > my_output_file 2>&1;
-                   python joining_files.py;
-                   cp ./export/output_concatenated_files.geojson /lustre/cray/ws9/6/ws/xeujegor-ws_agroclimatic"
-                   # THIS MUST BE THE SAME <USER> AS IN THE LINE 34 OF HPC Infrastructure BLUEPRINT-INPUTS.YAML
-                select: 1
-                node_type: rome
-                mpiprocs: 4
+                - "module load miniconda3;
+                   conda activate tf_test2;
+                   which python;
+                   echo ===========================================================================;
+                   date;
+                   srun python /home/otras/gat/jgc/Next_trials/Codigo/easy.py;
+                   date;
+                   echo ===========================================================================;"
                 max_time: '00:05:00'
+                partition: { get_input: partition_name }
             skip_cleanup: True
-            deployment:
-                bootstrap: "scripts/config_bootstrap.sh"
-                revert: "scripts/config_revert.sh"
-                inputs:
-                    - { get_input: job_config_content }
-                    - { get_input: job_config_pathname }
-            data_mover_options: { get_input: data_mover_options }
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
 
 outputs:
     single_job_name:
-        description: single job name in the HPC
-        value: { get_attribute: [benchmark_job, job_name] }
+        description: easy job calculation
+        value: { get_attribute: [easy_job, job_name] }

@@ -26,27 +26,24 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-    # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
-    - inputs_def.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/four/four_inputs_def.yaml
 
 node_templates:
-    hpc_interface:
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config: { get_input: hpc_interface_config }
             credentials: { get_input: hpc_interface_credentials }
             external_monitor_entrypoint: { get_input: monitor_entrypoint }
             job_prefix: { get_input: job_prefix }
-            base_dir: { get_input: "hpc_base_dir" }
+            base_dir: { get_input: hpc_base_dir }
             monitor_period: 15
             skip_cleanup: true
-            simulate: True # COMMENT to test against a real HPC
             workdir_prefix: "four"
 
-    first_job:
+    job1:
         type: croupier.nodes.Job
         properties:
             job_options:
@@ -59,9 +56,9 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
 
-    second_parallel_job:
+    job2:
         type: croupier.nodes.Job
         properties:
             job_options:
@@ -74,11 +71,11 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
             - type: job_depends_on
-              target: first_job
+              target: job1
 
-    third_parallel_job:
+    job3:
         type: croupier.nodes.Job
         properties:
             job_options:
@@ -98,11 +95,11 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
             - type: job_depends_on
-              target: first_job
+              target: job1
 
-    fourth_job:
+    job4:
         type: croupier.nodes.Job
         properties:
             job_options:
@@ -122,22 +119,22 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
             - type: job_depends_on
-              target: second_parallel_job
+              target: job2
             - type: job_depends_on
-              target: third_parallel_job
+              target: job3
 
 outputs:
-    first_job_name:
+    job1_name:
         description: first job name
-        value: { get_attribute: [first_job, job_name] }
-    second_job_name:
+        value: { get_attribute: [job1, job_name] }
+    job2_name:
         description: second job name
-        value: { get_attribute: [second_parallel_job, job_name] }
-    third_job_name:
+        value: { get_attribute: [job2, job_name] }
+    job3_name:
         description: third job name
-        value: { get_attribute: [third_parallel_job, job_name] }
-    fourth_job_name:
+        value: { get_attribute: [job3, job_name] }
+    job4_name:
         description: fourth job name
-        value: { get_attribute: [fourth_job, job_name] }
+        value: { get_attribute: [job4, job_name] }

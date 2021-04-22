@@ -1,7 +1,11 @@
-git+https://github.com/cloudify-cosmo/cloudify-common@master#egg=cloudify-common==5.1.0.dev1
+cloudify-common==5.1.0
+pyyaml==5.3.1
 nose
 mock
 pycrypto
-pyyaml
 wget
 requests
+networkx==1.9.1
+urllib3==1.26.2
+cffi==1.14.5
+cryptography==3.3.1

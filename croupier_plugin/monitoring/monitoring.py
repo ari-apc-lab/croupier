@@ -28,6 +28,8 @@ class PrometheusPublisher:
         try:
             prometheus_server = config.get('Monitoring', 'prometheus_server')
             if prometheus_server is not None:
+                if prometheus_server.endswith('/'):
+                    prometheus_server = prometheus_server[:-1]
                 self.prometheus_server = prometheus_server
 
             report_to_monitoring = config.get('Monitoring', 'report_to_monitoring')
@@ -44,9 +46,14 @@ class PrometheusPublisher:
         response = requests.post(
             self.prometheus_server + '/metrics/job/{j}'.format(j=job_id),
             data='{k}\n'.format(k=data))
-        logger.info(
-            "Statistics for job_id {job_id} with data {data} sent to Prometheus with response status "
-            "{response.status_code} ".format(job_id=job_id, data=data, response=response))
+        if response.status_code != 200:
+            logger.error(
+                "Statistics for job_id {job_id} with data {data} could not be sent to Prometheus, getting a response "
+                "status {response.status_code} ".format(job_id=job_id, data=data, response=response))
+        else:
+            logger.info(
+                "Statistics for job_id {job_id} with data {data} sent to Prometheus with response status "
+                "{response.status_code} ".format(job_id=job_id, data=data, response=response))
 
     def delete_metrics(self, job_id):
         response = requests.delete(
