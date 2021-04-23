@@ -142,10 +142,10 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'blueprint_singularity.yaml'),
         copy_plugin_yaml=True,
         resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts',
+            (os.path.join('blueprints', 'easy-singularity', 'inputs_def.yaml'), './'),
+            (os.path.join('blueprints', 'easy-singularity', 'scripts',
                           'singularity_bootstrap_example.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts',
+            (os.path.join('blueprints', 'easy-singularity', 'scripts',
                           'singularity_revert_example.sh'), 'scripts')],
         inputs='load_cesga_hpc_singularity_easy_inputs')
     def test_singularity_easy(self, cfy_local):
