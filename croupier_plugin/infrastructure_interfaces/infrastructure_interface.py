@@ -605,7 +605,13 @@ class InfrastructureInterface(object):
         # @TODO: why not to use ctx.download_resource and
         #        ssh_client.open_sftp().put(...)?
         # escape for echo command
-        script_data = script_content.decode() \
+        # Converting script_content to str or array of str
+        try:
+            script_content = script_content.decode()
+        except (UnicodeDecodeError, AttributeError):
+            pass
+
+        script_data = script_content \
             .replace("\\", "\\\\") \
             .replace("$", "\\$") \
             .replace("`", "\\`") \
