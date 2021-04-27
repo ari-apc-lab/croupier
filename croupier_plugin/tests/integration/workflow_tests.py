@@ -204,7 +204,8 @@ class TestPlugin(unittest.TestCase):
         copy_plugin_yaml=True,
         resources_to_copy=[
             (os.path.join('blueprints', 'bernoulli', 'scripts', 'create_bernoulli_script.sh'), 'scripts'),
-            (os.path.join('blueprints', 'bernoulli', 'scripts', 'delete_bernoulli_script.sh'), 'scripts')
+            (os.path.join('blueprints', 'bernoulli', 'scripts', 'delete_bernoulli_script.sh'), 'scripts'),
+            (os.path.join('blueprints', 'bernoulli', 'inputs_def.yaml'), './')
         ],
         inputs='load_bernoulli_inputs')
     def test_bernoulli(self, cfy_local):

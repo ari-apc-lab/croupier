@@ -60,5 +60,5 @@ setup(
         "wget",
         "future==0.18.2"
     ],
-    license='LICENSE'
+    license='Apache APLv2.0'
 )
