@@ -5,8 +5,12 @@ echo 'This script installs Cloudify and Croupier, overriding any preexisting ins
 echo 'Dependencies:'
 echo '1- Docker running'
 echo '2- Python 3.6 installed in path /usr/bin/python3.6, pip3.6 available'
+echo '3- wget installed'
 read -p 'press any key to continue...'
 
+#Install Cloudify CLI
+wget https://repository.cloudifysource.org/cloudify/5.2.0/ga-release/cloudify-cli-5.2.0-ga.el7.x86_64.rpm
+sudo rpm -Uhv --nodeps cloudify-cli-5.2.0-ga.el7.x86_64.rpm
 
 #Run Cloudify
 docker stop cfy_manager_local || true && docker rm cfy_manager_local || true
