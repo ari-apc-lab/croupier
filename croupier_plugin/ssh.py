@@ -63,9 +63,11 @@ class SshClient(object):
 
     def __init__(self, credentials):
         # Build a tunnel if necessary
-        self._tunnel = None
+        self._user = credentials['user']
+        self._passwd = credentials['password'] if 'password' in credentials else None
         self._host = credentials['host']
         self._port = int(credentials['port']) if 'port' in credentials else 22
+        self._tunnel = None
         if 'tunnel' in credentials and credentials['tunnel']:
             self._tunnel = SshForward(credentials)
             self._host = "localhost"
@@ -75,7 +77,7 @@ class SshClient(object):
         self._client.set_missing_host_key_policy(client.AutoAddPolicy())
 
         # Build the private key if provided
-        private_key = None
+        self._private_key = None
         if 'private_key' in credentials and credentials['private_key']:
             key_data = credentials['private_key']
             if not isinstance(key_data, str):
@@ -83,14 +85,9 @@ class SshClient(object):
             key_file = io.StringIO()
             key_file.write(key_data)
             key_file.seek(0)
-            if 'private_key_password' in credentials and \
-                    credentials['private_key_password'] != "":
-                private_key_password = credentials['private_key_password']
-            else:
-                private_key_password = None
-            private_key = RSAKey.from_private_key(
-                key_file,
-                password=private_key_password)
+            self._private_key_password = credentials['pkey_pw'] if 'pkey_pw' in credentials and credentials['pkey_pw'] \
+                else None
+            self._private_key = RSAKey.from_private_key(key_file, password=self._private_key_password)
 
         # This switch allows to execute commands in a login shell.
         # By default commands are executed on the remote host.
@@ -99,32 +96,9 @@ class SshClient(object):
         #   https://stackoverflow.com/questions/32139904/ssh-via-paramiko-load-bashrc
         # @NOTE: think of SSHClient.invoke_shell()
         #        instead of SSHClient.exec_command()
-        self._login_shell = False
-        if 'login_shell' in credentials:
-            self._login_shell = credentials['login_shell']
+        self._login_shell = credentials['login_shell'] if 'login_shell' in credentials else False
 
-        retries = 5
-        passwd = credentials['password'] if 'password' in credentials else None
-        while True:
-            try:
-                self._client.connect(
-                    self._host,
-                    port=self._port,
-                    username=credentials['user'],
-                    pkey=private_key,
-                    password=passwd,
-                    look_for_keys=False
-                )
-            except ssh_exception.SSHException as err:
-                if retries > 0 and \
-                        str(err) == "Error reading SSH protocol banner":
-                    retries -= 1
-                    logging.getLogger("paramiko"). \
-                        warning("Retrying SSH connection: " + str(err))
-                    continue
-                else:
-                    raise err
-            break
+        self.open_connection()
 
     def get_transport(self):
         """Gets the transport object of the client (paramiko)"""
@@ -133,6 +107,27 @@ class SshClient(object):
     def is_open(self):
         """Check if connection is open"""
         return self._client is not None
+
+    def open_connection(self):
+        retries = 5
+        while True:
+            try:
+                self._client.connect(
+                    self._host,
+                    port=self._port,
+                    username=self._user,
+                    pkey=self._private_key,
+                    password=self._passwd,
+                    look_for_keys=False
+                )
+            except ssh_exception.SSHException as err:
+                if retries > 0 and str(err) == "Error reading SSH protocol banner":
+                    retries -= 1
+                    logging.getLogger("paramiko").warning("Retrying SSH connection: " + str(err))
+                    continue
+                else:
+                    raise err
+            break
 
     def close_connection(self):
         """Closes opened connection"""

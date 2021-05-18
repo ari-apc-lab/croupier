@@ -27,7 +27,13 @@ license information in the project root.
 tasks.py: Holds the plugin tasks
 '''
 from __future__ import print_function
+
+import os
+import sys
+
+import bottle
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import str
 import socket
@@ -381,7 +387,7 @@ def preconfigure_job(
 def bootstrap_job(
         deployment,
         skip_cleanup,
-        **kwarsgs):  # pylint: disable=W0613
+        **kwargs):  # pylint: disable=W0613
     """Bootstrap a job with a script that receives SSH credentials as input"""
     if not deployment:
         return
@@ -686,6 +692,218 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             'Something happened when trying to stop: ' + exp.message)
 
 
+@operation
+def publish(publish_list, data_mover_options, **kwargs):
+    """ Publish the job outputs """
+    try:
+        simulate = ctx.instance.runtime_properties['simulate']
+    except KeyError as exp:
+        # The job wasn't configured properly, no need to publish
+        ctx.logger.warning(
+            'Job outputs where not published as' +
+            ' the job was not configured properly.')
+        return
+
+    try:
+        name = kwargs['name']
+        audit = kwargs['audit']
+        published = True
+        if not simulate:
+            # Do data upload (from HPC to Cloud) if requested
+            if len(data_mover_options) > 0 and \
+                    'upload' in data_mover_options and data_mover_options['upload']:
+                if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
+                    try:
+                        dmp = DataMoverProxy(data_mover_options, ctx.logger)
+                        source = data_mover_options['hpc_target']
+                        destination = data_mover_options['cloud_target']
+                        source_input = data_mover_options['upload']['source']
+                        dest_output = data_mover_options['upload']['target']
+                        dmp.move_data(source, destination, source_input, dest_output)
+                    except Exception as exp:
+                        ctx.logger.error("Error using data mover: {}".format(exp.message))
+
+            workdir = ctx.instance.runtime_properties['workdir']
+            client = SshClient(ctx.instance.runtime_properties['credentials'])
+
+            hpc_interface = ctx.instance.relationships[0].target.instance
+            audit["cput"] = \
+                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
+            # Report metrics to Accounting component
+            if accounting_client.report_to_accounting:
+                username = None
+                if hpc_interface is not None and "accounting_options" in hpc_interface.runtime_properties:
+                    accounting_options = hpc_interface.runtime_properties["accounting_options"]
+                    username = accounting_options["reporting_user"]
+                if "croupier_reporter_id" in hpc_interface.runtime_properties:
+                    croupier_reporter_id = hpc_interface.runtime_properties['croupier_reporter_id']
+                    report_metrics_to_accounting(audit, job_id=name, username=username,
+                                                 croupier_reporter_id=croupier_reporter_id, logger=ctx.logger)
+                else:
+                    ctx.logger.error(
+                        'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
+                        'Croupier instance not registered in Accounting'.
+                            format(workflow_id=ctx.workflow_id))
+
+            # Report metrics to Monitoring component
+            if monitoring_client.report_to_monitoring:
+                username = None
+                infrastructure_host = None
+                if hpc_interface is not None and "monitoring_options" in hpc_interface.runtime_properties:
+                    monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
+                    if "reporting_user" in monitoring_options:
+                        username = monitoring_options["reporting_user"]
+                    else:
+                        username = audit['job_owner']
+                if hpc_interface is not None and "infrastructure_host" in hpc_interface.runtime_properties:
+                    infrastructure_host = hpc_interface.runtime_properties["infrastructure_host"]
+                # Report metrics to monitoring in a non-blocking call
+                thread = threading.Thread(
+                    target=report_metrics_to_monitoring,
+                    args=(
+                        audit, ctx.workflow_id, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host,
+                        ctx.logger
+                    )
+                )
+                addThread(thread)
+                thread.start()
+
+                # report_metrics_to_monitoring(
+                #     audit, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host, logger=ctx.logger)
+
+            for publish_item in publish_list:
+                if not published:
+                    break
+                exrep = ExternalRepository.factory(publish_item)
+                if not exrep:
+                    client.close_connection()
+                    raise NonRecoverableError(
+                        "External repository '" +
+                        publish_item['dataset']['type'] +
+                        "' not supported.")
+                published = exrep.publish(client, ctx.logger, workdir)
+
+            client.close_connection()
+        else:
+            ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
+
+        if published:
+            ctx.logger.info(
+                'Job ' + name + ' (' + ctx.instance.id + ') published.')
+        else:
+            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id +
+                             ') not published.')
+            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id +
+                                      ') not published.')
+    except Exception as exp:
+        print(traceback.format_exc())
+        ctx.logger.error(
+            'Cannot publish: ' + exp.message)
+
+
+@operation
+def ecmwf_vertical_interpolation(query_inputs, keycloak):
+    ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
+    server_port = ctx.node.properties['port']
+    server_host = requests.get('https://api.ipify.org').text
+    ctx.logger.info('IP is: ' + server_host)
+
+    arguments = {"notify": "http://" + server_host + ":" + str(server_port) + "/ready",
+                 "user_name": keycloak["user"],
+                 "password": keycloak["pw"],
+                 "params": query_inputs["params"],
+                 "area": query_inputs["area"],
+                 "max_step": query_inputs["max_step"] if "max_step" in query_inputs else "1",
+                 "ensemble": query_inputs["ensemble"] if "ensemble" in query_inputs else "",
+                 "input": query_inputs["input"] if "input" in query_inputs else "",
+                 "members": query_inputs["members"] if "members" in query_inputs else "",
+                 "keep_input": query_inputs["keep_input"] if "keep_input" in query_inputs else "",
+                 "collection": query_inputs["collection"] if "collection" in query_inputs else "",
+                 "algorithm": query_inputs["algorithm"] if "algorithm" in query_inputs and query_inputs[
+                     "algorithm"] in ALGORITHMS else ""}
+
+    if "date" in query_inputs:
+        arguments["date"] = query_inputs["date"]
+        arguments["time"] = query_inputs["time"]
+
+    client = SshClient(ctx.instance.runtime_properties['ecmwf_ssh_credentials'])
+
+    command = "cd cloudify && source /opt/anaconda3/etc/profile.d/conda.sh && conda activate && " \
+              "nohup python3 interpolator.py"
+
+    for arg in arguments:
+        command += " --" + arg + " " + str(arguments[arg]) if arguments[arg] is not "" else ""
+
+    # out_file = str(time())
+    # command += " > " + out_file + " 2>&1"
+
+    ctx.logger.info("Sending command: " + command)
+    client.execute_shell_command(command)
+    client.close_connection()
+
+    # Waits for confirmation that retrieval of data is finished and ready to upload to CKAN
+    ctx.logger.info('Waiting for response from ECMWF')
+
+    @bottle.post('/ready')
+    def ready():
+        try:
+            ctx.logger.info('Response received from ECMWF')
+            data = bottle.request.json
+            if "error_msg" in data and "stdout" in data:
+                ctx.logger.error(
+                    "There was an error reported by ECMWF:\nError_msg:" + data["error_msg"] + "\nOutput:" + data[
+                        "stdout"])
+            elif "file" in data and "stdout" in data:
+                ctx.instance.runtime_properties['data_urls'] = [data["file"]]
+                ctx.logger.info("Process completed, stdout:\n" + data["stdout"])
+                ctx.logger.info("CKAN URL: " + ctx.instance.runtime_properties['ckan_url'])
+
+            else:
+                ctx.logger.error(data)
+                ctx.logger.error("Non valid response from ECMWF received")
+        finally:
+            sys.stderr.close()
+        return 200
+
+    try:
+        ctx.logger.info("Listening in: " + server_host + ":" + str(server_port))
+        bottle.run(host='0.0.0.0', port=server_port)
+    except ValueError:
+        pass
+
+
+@operation
+def download_data():
+    ctx.logger.info('Downloading data...')
+    simulate = ctx.source.runtime_properties['simulate']
+
+    if not simulate and 'data_dest' in ctx.target.runtime_properties and 'data_urls' in ctx.target.runtime_properties:
+        inputs = ctx.target.runtime_properties['data_urls']
+        credentials = ctx.source.runtime_properties['credentials']
+        workdir = ctx.target.runtime_properties['data_dest']
+        name = "data_download_" + ctx.target.id + ".sh"
+        interface_type = ctx.source.runtime_properties['infrastructure_interface']
+        script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/data_download.sh"
+        skip_cleanup = False
+        if deploy_job(
+                script,
+                inputs,
+                credentials,
+                interface_type,
+                workdir,
+                name,
+                ctx.logger,
+                skip_cleanup):
+            ctx.logger.info('..data downloaded')
+        else:
+            ctx.logger.error('Data could not be downloaded')
+            raise NonRecoverableError("Data failed to download")
+    elif 'data_urls' in ctx.target.runtime_properties:
+        ctx.logger.warning('...data download simulated')
+    else:
+        ctx.logger.info('...nothing to download')
+
+
 def getHours(cput):
     return int(cput[:cput.index(':')])
 
@@ -849,112 +1067,4 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
             command=command, code=str(exit_code), output=output))
         return 0
     else:
-        return int(output[output.find('=')+1:].rstrip("\n"))
-
-
-@operation
-def publish(publish_list, data_mover_options, **kwargs):
-    """ Publish the job outputs """
-    try:
-        simulate = ctx.instance.runtime_properties['simulate']
-    except KeyError as exp:
-        # The job wasn't configured properly, no need to publish
-        ctx.logger.warning(
-            'Job outputs where not published as' +
-            ' the job was not configured properly.')
-        return
-
-    try:
-        name = kwargs['name']
-        audit = kwargs['audit']
-        published = True
-        if not simulate:
-            # Do data upload (from HPC to Cloud) if requested
-            if len(data_mover_options) > 0 and \
-                    'upload' in data_mover_options and data_mover_options['upload']:
-                if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
-                    try:
-                        dmp = DataMoverProxy(data_mover_options, ctx.logger)
-                        source = data_mover_options['hpc_target']
-                        destination = data_mover_options['cloud_target']
-                        source_input = data_mover_options['upload']['source']
-                        dest_output = data_mover_options['upload']['target']
-                        dmp.move_data(source, destination, source_input, dest_output)
-                    except Exception as exp:
-                        ctx.logger.error("Error using data mover: {}".format(exp.message))
-
-            workdir = ctx.instance.runtime_properties['workdir']
-            client = SshClient(ctx.instance.runtime_properties['credentials'])
-
-            hpc_interface = ctx.instance.relationships[0].target.instance
-            audit["cput"] = \
-                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client,  logger=ctx.logger)
-            # Report metrics to Accounting component
-            if accounting_client.report_to_accounting:
-                username = None
-                if hpc_interface is not None and "accounting_options" in hpc_interface.runtime_properties:
-                    accounting_options = hpc_interface.runtime_properties["accounting_options"]
-                    username = accounting_options["reporting_user"]
-                if "croupier_reporter_id" in hpc_interface.runtime_properties:
-                    croupier_reporter_id = hpc_interface.runtime_properties['croupier_reporter_id']
-                    report_metrics_to_accounting(audit, job_id=name, username=username,
-                                                 croupier_reporter_id=croupier_reporter_id, logger=ctx.logger)
-                else:
-                    ctx.logger.error(
-                        'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
-                        'Croupier instance not registered in Accounting'.
-                            format(workflow_id=ctx.workflow_id))
-
-            # Report metrics to Monitoring component
-            if monitoring_client.report_to_monitoring:
-                username = None
-                infrastructure_host = None
-                if hpc_interface is not None and "monitoring_options" in hpc_interface.runtime_properties:
-                    monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
-                    if "reporting_user" in monitoring_options:
-                        username = monitoring_options["reporting_user"]
-                    else:
-                        username = audit['job_owner']
-                if hpc_interface is not None and "infrastructure_host" in hpc_interface.runtime_properties:
-                    infrastructure_host = hpc_interface.runtime_properties["infrastructure_host"]
-                # Report metrics to monitoring in a non-blocking call
-                thread = threading.Thread(
-                    target=report_metrics_to_monitoring,
-                    args=(
-                        audit, ctx.workflow_id, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host, ctx.logger
-                    )
-                )
-                addThread(thread)
-                thread.start()
-
-                # report_metrics_to_monitoring(
-                #     audit, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host, logger=ctx.logger)
-
-            for publish_item in publish_list:
-                if not published:
-                    break
-                exrep = ExternalRepository.factory(publish_item)
-                if not exrep:
-                    client.close_connection()
-                    raise NonRecoverableError(
-                        "External repository '" +
-                        publish_item['dataset']['type'] +
-                        "' not supported.")
-                published = exrep.publish(client, ctx.logger, workdir)
-
-            client.close_connection()
-        else:
-            ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
-
-        if published:
-            ctx.logger.info(
-                'Job ' + name + ' (' + ctx.instance.id + ') published.')
-        else:
-            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id +
-                             ') not published.')
-            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id +
-                                      ') not published.')
-    except Exception as exp:
-        print(traceback.format_exc())
-        ctx.logger.error(
-            'Cannot publish: ' + exp.message)
+        return int(output[output.find('=') + 1:].rstrip("\n"))

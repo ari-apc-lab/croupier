@@ -37,7 +37,10 @@ plugins:
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
-
+    get_data:
+        mapping: croupier.croupier_plugin.workflows.get_data
+    run_jobs_force_get_data:
+        mapping: croupier.croupier_plugin.workflows.run_jobs_force_get_data
 node_types:
     croupier.nodes.InfrastructureInterface:
         derived_from: cloudify.nodes.Compute
@@ -134,23 +137,11 @@ node_types:
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [SELF, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
+                            default: { get_property: [SELF, external_monitor_port] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:
@@ -161,23 +152,11 @@ node_types:
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [SELF, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
+                            default: { get_property: [SELF, external_monitor_port] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -248,6 +227,41 @@ node_types:
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job
 
+    croupier.nodes.Data:
+        derived_from: cloudify.nodes.WebServer
+        properties:
+            data_urls:
+                description: list of URLs of the files to download to the HPC (ckan for example)
+                default: []
+            data_dest:
+                description: Path where the data needs to be downloaded in the HPC
+                type: string
+                default: $HOME
+
+    croupier.nodes.ECMWFVerticalInterpolation:
+        derived_from: croupier.nodes.Data
+        properties:
+            ecmwf_ssh_credentials:
+                description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
+                default: {}
+            keycloak_credentials:
+                description: login credentials for hidalgo keycloak. Fields- user, pw
+                default: {}
+            query:
+                description: ECMWF Query fields. Fields- params, date, time, area, max_steps, [ensemble], [memebers], [input], [keep_input], [algorithm]
+                default: {}
+            port:
+                type: string
+                default: 9984
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start:
+                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
+                    max_retries: 0
+                    inputs:
+                        query:
+                            default: { get_property: [ SELF, query ] }
+
 relationships:
     interface_contained_in:
         derived_from: cloudify.relationships.contained_in
@@ -274,37 +288,26 @@ relationships:
                         credentials:
                             default: { get_property: [TARGET, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [TARGET, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_port],
-                                }
+                            default: { get_property: [TARGET, external_monitor_port] }
                         external_monitor_type:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_type],
-                                }
+                            default: { get_property: [TARGET, external_monitor_type] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            TARGET,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [TARGET, external_monitor_orchestrator_port] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
                         monitor_period:
                             default: { get_property: [TARGET, monitor_period] }
                         simulate:
                             default: { get_property: [TARGET, simulate] }
+
     job_depends_on:
         derived_from: cloudify.relationships.depends_on
+
+    job_needs_data:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.download_data

@@ -303,33 +303,6 @@ class JobGraphNode(object):
         self.status = 'CANCELED'
 
 
-def build_graph(nodes):
-    """ Creates a new graph of nodes and instances with the job wrapper """
-
-    job_instances_map = {}
-
-    # first create node structure
-    nodes_map = {}
-    root_nodes = []
-    for node in nodes:
-        new_node = JobGraphNode(node, job_instances_map)
-        nodes_map[node.id] = new_node
-        # check if it is root node
-        try:
-            next(node.relationships)
-        except StopIteration:
-            root_nodes.append(new_node)
-
-    # then set relationships
-    for _, child in nodes_map.items():
-        for relationship in child.cfy_node.relationships:
-            parent = nodes_map[relationship.target_node.id]
-            parent.add_child(child)
-            child.add_parent(parent)
-
-    return root_nodes, job_instances_map
-
-
 class Monitor(object):
     """Monitor the instances"""
 
@@ -413,6 +386,33 @@ class Monitor(object):
         return self._execution_pool
 
 
+def build_graph(nodes):
+    """ Creates a new graph of nodes and instances with the job wrapper """
+
+    job_instances_map = {}
+
+    # first create node structure
+    nodes_map = {}
+    root_nodes = []
+    for node in nodes:
+        new_node = JobGraphNode(node, job_instances_map)
+        nodes_map[node.id] = new_node
+        # check if it is root node
+        try:
+            next(node.relationships)
+        except StopIteration:
+            root_nodes.append(new_node)
+
+    # then set relationships
+    for _, child in nodes_map.items():
+        for relationship in child.cfy_node.relationships:
+            parent = nodes_map[relationship.target_node.id]
+            parent.add_child(child)
+            child.add_parent(parent)
+
+    return root_nodes, job_instances_map
+
+
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
@@ -462,6 +462,13 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
     ctx.logger.info(
         "------------------Workflow Finished-----------------------")
     return
+
+@workflow
+def get_data(**kwargs):  # pylint: disable=W0613
+
+
+@workflow
+def run_jobs_force_get_data(**kwargs): # pylint: disable=W0613
 
 
 def cancel_all(executions):
