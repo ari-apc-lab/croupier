@@ -313,3 +313,6 @@ relationships:
             cloudify.interfaces.relationship_lifecycle:
                 postconfigure:
                     implementation: croupier.croupier_plugin.tasks.download_data
+                    inputs:
+                        data_dest:
+                            default: { get_property: [TARGET, data_dest] }

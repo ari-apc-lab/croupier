@@ -873,14 +873,14 @@ def ecmwf_vertical_interpolation(query, **kwargs):
 
 
 @operation
-def download_data(**kwargs):
+def download_data(data_dest, **kwargs):
     ctx.logger.info('Downloading data...')
     simulate = ctx.source.instance.runtime_properties['simulate']
 
-    if 'data_dest' in ctx.target.instance.runtime_properties and 'data_urls' in ctx.target.instance.runtime_properties:
+    if not simulate and 'data_urls' in ctx.target.instance.runtime_properties and ctx.target.instance.runtime_properties['data_urls']:
         inputs = ctx.target.instance.runtime_properties['data_urls']
         credentials = ctx.source.instance.runtime_properties['credentials']
-        workdir = ctx.target.instance.runtime_properties['data_dest']
+        workdir = data_dest
         name = "data_download_" + ctx.target.id + ".sh"
         interface_type = ctx.source.instance.runtime_properties['infrastructure_interface']
         script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/data_download.sh"
@@ -899,6 +899,8 @@ def download_data(**kwargs):
         else:
             ctx.logger.error('Data could not be downloaded')
             raise NonRecoverableError("Data failed to download")
+    elif 'data_urls' in ctx.target.instance.runtime_properties and ctx.target.instance.runtime_properties['data_urls']:
+        ctx.logger.info("... data download simulated")
     else:
         ctx.logger.warning('...nothing to download')
 
