@@ -156,7 +156,8 @@ inputs:
     default: {}
   query:
     default: {}
-
+  data_dest:
+    default: $HOME
   ####################### Optional ######################
   test_file:
     default: 'Test file'

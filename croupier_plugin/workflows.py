@@ -37,6 +37,7 @@ from croupier_plugin.job_requester import JobRequester
 
 LOOP_PERIOD = 1
 
+
 class TaskGraphInstance(abc.ABC):
 
     def __init__(self, parent, instance):
@@ -46,9 +47,8 @@ class TaskGraphInstance(abc.ABC):
         self.completed = False
         self.failed = False
         self.audit = None
-        self.runtime_properties = instance.runtime_properties
+        self.runtime_properties = instance._node_instance.runtime_properties
         ctx.logger.info("runtime_properties:" + str(self.runtime_properties))
-        self.simulate = self.runtime_properties["simulate"]
 
     @abc.abstractmethod
     def launch(self):
@@ -89,6 +89,7 @@ class JobGraphInstance(TaskGraphInstance):
         self.completed = False
         self.host = self.runtime_properties["credentials"]["host"]
         self.workdir = self.runtime_properties['workdir']
+        self.simulate = self.runtime_properties["simulate"]
 
         # Decide how to monitor the job
         if self.runtime_properties["external_monitor_entrypoint"]:
@@ -106,16 +107,15 @@ class JobGraphInstance(TaskGraphInstance):
 
         # build job name
         instance_components = instance.id.split('_')
-        self.name = self.runtime_properties["job_prefix"] +\
-            instance_components[-1]
-
+        self.name = self.runtime_properties["job_prefix"] + \
+                    instance_components[-1]
 
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
 
         self.instance.send_event('Queuing job..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue',
-                                                  kwargs={"name": self.name})
+                                                 kwargs={"name": self.name})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
@@ -131,7 +131,7 @@ class JobGraphInstance(TaskGraphInstance):
 
         self.instance.send_event('Publishing job outputs..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.publish',
-                                                  kwargs={"name": self.name, "audit": self.audit})
+                                                 kwargs={"name": self.name, "audit": self.audit})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
@@ -151,8 +151,8 @@ class JobGraphInstance(TaskGraphInstance):
 
         self.instance.send_event('Cleaning job..')
         result = self.instance.execute_operation('croupier.interfaces.'
-                                                  'lifecycle.cleanup',
-                                                  kwargs={"name": self.name})
+                                                 'lifecycle.cleanup',
+                                                 kwargs={"name": self.name})
         # result.task.wait_for_terminated()
         self.instance.send_event('.. job cleaned')
 
@@ -166,8 +166,8 @@ class JobGraphInstance(TaskGraphInstance):
 
         self.instance.send_event('Cancelling job..')
         result = self.instance.execute_operation('croupier.interfaces.'
-                                                  'lifecycle.cancel',
-                                                  kwargs={"name": self.name})
+                                                 'lifecycle.cancel',
+                                                 kwargs={"name": self.name})
         self.instance.send_event('.. job canceled')
         result.get()
         # result.task.wait_for_terminated()
@@ -181,7 +181,7 @@ class DataGraphInstance(TaskGraphInstance):
 
         super().__init__(parent, instance)
         self.name = instance.id
-        self.completed = self.runtime_properties['completed']
+        self.completed = False
         self.source_urls = self.runtime_properties['data_urls']
         self.dest = self.runtime_properties['data_dest']
 
@@ -198,12 +198,6 @@ class DataGraphInstance(TaskGraphInstance):
             init_state = 'PENDING'
         self.set_status(init_state)
         return result
-
-    def set_status(self, status):
-        super().set_status(status)
-        if self.completed:
-            self.instance.runtime_properties.update({"completed":True})
-            self.runtime_properties["completed"] = True
 
 
 class GraphNode(object):
@@ -228,10 +222,10 @@ class GraphNode(object):
         for instance in node.instances:
 
             if self.is_job:
-                graph_instance = JobGraphInstance(self,instance)
+                graph_instance = JobGraphInstance(self, instance)
                 job_instances_map[graph_instance.name] = graph_instance
             elif self.is_data:
-                graph_instance = DataGraphInstance(self,instance)
+                graph_instance = DataGraphInstance(self, instance)
             else:
                 graph_instance = OtherGraphInstance(self, instance)
 
@@ -472,7 +466,7 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         exec_nodes_finished = []
         new_exec_nodes = []
         for node_name, exec_node in monitor.get_executions_iterator():
-            if (not force_data and exec_node.is_data and exec_node.completed) or (exec_node.is_job and skip_jobs):
+            if (not force_data and exec_node.is_data) or (exec_node.is_job and skip_jobs):
                 continue
             if exec_node.check_status():
                 if exec_node.completed:
@@ -506,11 +500,11 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
 
 @workflow
 def gather_data(**kwargs):  # pylint: disable=W0613
-    execute_jobs(force_data=True, skip_jobs=True)
+    execute_jobs(force_data=True, skip_jobs=True, **kwargs)
 
 
 @workflow
-def run_jobs_force_get_data(**kwargs): # pylint: disable=W0613
+def run_jobs_force_get_data(**kwargs):  # pylint: disable=W0613
     execute_jobs(force_data=True, skip_jobs=False)
 
 

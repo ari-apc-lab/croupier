@@ -92,7 +92,9 @@ inputs:
   ecmwf_ssh_credentials:
   keycloak_credentials:
   ecmwf_query:
-
+  data_dest:
+    type: string
+    default: $HOME
   ####################### Optional ######################
   test_file:
     default: 'Test file'

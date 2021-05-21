@@ -52,7 +52,8 @@ node_templates:
         properties:
             job_options:
                 commands:
-                - "touch test_ecmwf"
+                - "tar -xzf *.zip
+                   rm *.zip"
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -70,4 +71,4 @@ node_templates:
 outputs:
     single_job_name:
         description: easy job calculation
-        value: { get_attribute: [easy_job, job_name] }
+        value: { get_attribute: [job, job_name] }

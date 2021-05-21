@@ -38,7 +38,7 @@ standard_library.install_aliases()
 from builtins import str
 import socket
 import traceback
-from time import sleep
+from time import sleep, time
 import threading
 
 import requests
@@ -800,31 +800,33 @@ def publish(publish_list, data_mover_options, **kwargs):
 
 
 @operation
-def ecmwf_vertical_interpolation(query_inputs, keycloak):
+def ecmwf_vertical_interpolation(query, **kwargs):
     ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
     server_port = ctx.node.properties['port']
     server_host = requests.get('https://api.ipify.org').text
+    keycloak_credentials = ctx.node.properties["keycloak_credentials"]
+    ecmwf_ssh_credentials = ctx.node.properties["ecmwf_ssh_credentials"]
     ctx.logger.info('IP is: ' + server_host)
 
     arguments = {"notify": "http://" + server_host + ":" + str(server_port) + "/ready",
-                 "user_name": keycloak["user"],
-                 "password": keycloak["pw"],
-                 "params": query_inputs["params"],
-                 "area": query_inputs["area"],
-                 "max_step": query_inputs["max_step"] if "max_step" in query_inputs else "1",
-                 "ensemble": query_inputs["ensemble"] if "ensemble" in query_inputs else "",
-                 "input": query_inputs["input"] if "input" in query_inputs else "",
-                 "members": query_inputs["members"] if "members" in query_inputs else "",
-                 "keep_input": query_inputs["keep_input"] if "keep_input" in query_inputs else "",
-                 "collection": query_inputs["collection"] if "collection" in query_inputs else "",
-                 "algorithm": query_inputs["algorithm"] if "algorithm" in query_inputs and query_inputs[
+                 "user_name": keycloak_credentials["user"],
+                 "password": keycloak_credentials["pw"],
+                 "params": query["params"],
+                 "area": query["area"],
+                 "max_step": query["max_step"] if "max_step" in query else "1",
+                 "ensemble": query["ensemble"] if "ensemble" in query else "",
+                 "input": query["input"] if "input" in query else "",
+                 "members": query["members"] if "members" in query else "",
+                 "keep_input": query["keep_input"] if "keep_input" in query else "",
+                 "collection": query["collection"] if "collection" in query else "",
+                 "algorithm": query["algorithm"] if "algorithm" in query and query[
                      "algorithm"] in ALGORITHMS else ""}
 
-    if "date" in query_inputs:
-        arguments["date"] = query_inputs["date"]
-        arguments["time"] = query_inputs["time"]
+    if "date" in query:
+        arguments["date"] = query["date"]
+        arguments["time"] = query["time"]
 
-    client = SshClient(ctx.instance.runtime_properties['ecmwf_ssh_credentials'])
+    client = SshClient(ecmwf_ssh_credentials)
 
     command = "cd cloudify && source /opt/anaconda3/etc/profile.d/conda.sh && conda activate && " \
               "nohup python3 interpolator.py"
@@ -832,8 +834,8 @@ def ecmwf_vertical_interpolation(query_inputs, keycloak):
     for arg in arguments:
         command += " --" + arg + " " + str(arguments[arg]) if arguments[arg] is not "" else ""
 
-    # out_file = str(time())
-    # command += " > " + out_file + " 2>&1"
+    out_file = str(time())
+    command += " > " + out_file + " 2>&1"
 
     ctx.logger.info("Sending command: " + command)
     client.execute_shell_command(command)
@@ -851,17 +853,17 @@ def ecmwf_vertical_interpolation(query_inputs, keycloak):
                 ctx.logger.error(
                     "There was an error reported by ECMWF:\nError_msg:" + data["error_msg"] + "\nOutput:" + data[
                         "stdout"])
+                return 200
             elif "file" in data and "stdout" in data:
                 ctx.instance.runtime_properties['data_urls'] = [data["file"]]
                 ctx.logger.info("Process completed, stdout:\n" + data["stdout"])
                 ctx.logger.info("CKAN URL: " + ctx.instance.runtime_properties['ckan_url'])
-
+                return 200
             else:
                 ctx.logger.error(data)
                 ctx.logger.error("Non valid response from ECMWF received")
         finally:
             sys.stderr.close()
-        return 200
 
     try:
         ctx.logger.info("Listening in: " + server_host + ":" + str(server_port))
@@ -871,18 +873,18 @@ def ecmwf_vertical_interpolation(query_inputs, keycloak):
 
 
 @operation
-def download_data():
+def download_data(**kwargs):
     ctx.logger.info('Downloading data...')
-    simulate = ctx.source.runtime_properties['simulate']
+    simulate = ctx.source.instance.runtime_properties['simulate']
 
-    if not simulate and 'data_dest' in ctx.target.runtime_properties and 'data_urls' in ctx.target.runtime_properties:
-        inputs = ctx.target.runtime_properties['data_urls']
-        credentials = ctx.source.runtime_properties['credentials']
-        workdir = ctx.target.runtime_properties['data_dest']
+    if 'data_dest' in ctx.target.instance.runtime_properties and 'data_urls' in ctx.target.instance.runtime_properties:
+        inputs = ctx.target.instance.runtime_properties['data_urls']
+        credentials = ctx.source.instance.runtime_properties['credentials']
+        workdir = ctx.target.instance.runtime_properties['data_dest']
         name = "data_download_" + ctx.target.id + ".sh"
-        interface_type = ctx.source.runtime_properties['infrastructure_interface']
+        interface_type = ctx.source.instance.runtime_properties['infrastructure_interface']
         script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/data_download.sh"
-        script += "data_download_unzip.sh" if ctx.target.runtime_properties['unzip_data'] else "data_download.sh"
+        script += "data_download_unzip.sh" if ctx.target.instance.runtime_properties['unzip_data'] else "data_download.sh"
         skip_cleanup = False
         if deploy_job(
                 script,
@@ -897,10 +899,8 @@ def download_data():
         else:
             ctx.logger.error('Data could not be downloaded')
             raise NonRecoverableError("Data failed to download")
-    elif 'data_urls' in ctx.target.runtime_properties:
-        ctx.logger.warning('...data download simulated')
     else:
-        ctx.logger.info('...nothing to download')
+        ctx.logger.warning('...nothing to download')
 
 
 def getHours(cput):
