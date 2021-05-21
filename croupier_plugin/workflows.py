@@ -23,7 +23,8 @@ license information in the project root.
 
 workflows.py - Holds the plugin workflows
 '''
-
+import abc
+from abc import ABC
 from builtins import next
 from builtins import str
 from builtins import object
@@ -36,144 +37,176 @@ from croupier_plugin.job_requester import JobRequester
 
 LOOP_PERIOD = 1
 
+class TaskGraphInstance(abc.ABC):
 
-class JobGraphInstance(object):
+    def __init__(self, parent, instance):
+        self.instance = instance
+        self._status = 'WAITING'
+        self.node = parent
+        self.completed = False
+        self.failed = False
+        self.audit = None
+        self.runtime_properties = instance.runtime_properties
+        ctx.logger.info("runtime_properties:" + str(self.runtime_properties))
+        self.simulate = self.runtime_properties["simulate"]
+
+    @abc.abstractmethod
+    def launch(self):
+        pass
+
+    def set_status(self, status):
+        """ Update the instance state """
+        if not status == self._status:
+            self._status = status
+            self.instance.send_event('State changed to ' + self._status)
+
+            self.completed = self._status == 'COMPLETED'
+
+            self.failed = (self._status == 'BOOT_FAIL' or
+                           self._status == 'CANCELLED' or
+                           self._status == 'FAILED' or
+                           self._status == 'REVOKED' or
+                           self._status == 'TIMEOUT')
+
+
+class OtherGraphInstance(object):
+    def __init__(self, parent, instance):
+        self._status = 'NONE'
+        self.name = instance.id
+        self.monitor_url = ""
+        self.instance = instance
+        self.parent_node = parent
+        self.completed = True
+
+
+class JobGraphInstance(TaskGraphInstance):
     """ Wrap to add job functionalities to node instances """
 
     def __init__(self, parent, instance):
-        self._status = 'WAITING'
-        self.parent_node = parent
-        self.winstance = instance
+        super().__init__(parent, instance)
 
-        self.completed = not self.parent_node.is_job  # True if is not a job
-        self.failed = False
-        self.audit = None
+        # Get runtime properties
+        self.completed = False
+        self.host = self.runtime_properties["credentials"]["host"]
+        self.workdir = self.runtime_properties['workdir']
 
-        if parent.is_job:
-            self._status = 'WAITING'
+        # Decide how to monitor the job
+        if self.runtime_properties["external_monitor_entrypoint"]:
+            self.monitor_type = self.runtime_properties["external_monitor_type"]
+            self.monitor_config = {
+                'url': ('http://' +
+                        self.runtime_properties["external_monitor_entrypoint"] +
+                        self.runtime_properties["external_monitor_port"])
+            }
+        else:  # internal monitoring
+            self.monitor_type = self.runtime_properties["infrastructure_interface"]
+            self.monitor_config = self.runtime_properties["credentials"]
 
-            # Get runtime properties
-            runtime_properties = instance._node_instance.runtime_properties
-            ctx.logger.info("runtime_properties:" + str(runtime_properties))
-            self.simulate = runtime_properties["simulate"]
-            self.host = runtime_properties["credentials"]["host"]
-            self.workdir = runtime_properties['workdir']
+        self.monitor_period = int(self.runtime_properties["monitor_period"])
 
-            # Decide how to monitor the job
-            if runtime_properties["external_monitor_entrypoint"]:
-                self.monitor_type = runtime_properties["external_monitor_type"]
-                self.monitor_config = {
-                    'url': ('http://' +
-                            runtime_properties["external_monitor_entrypoint"] +
-                            runtime_properties["external_monitor_port"])
-                }
-            else:  # internal monitoring
-                self.monitor_type = runtime_properties["infrastructure_interface"]
-                self.monitor_config = runtime_properties["credentials"]
+        # build job name
+        instance_components = instance.id.split('_')
+        self.name = self.runtime_properties["job_prefix"] +\
+            instance_components[-1]
 
-            self.monitor_period = int(runtime_properties["monitor_period"])
 
-            # build job name
-            instance_components = instance.id.split('_')
-            self.name = runtime_properties["job_prefix"] +\
-                instance_components[-1]
-        else:
-            self._status = 'NONE'
-            self.name = instance.id
-            self.monitor_url = ""
-
-    def queue(self):
+    def launch(self):
         """ Sends the job's instance to the infrastructure queue """
-        if not self.parent_node.is_job:
-            return
 
-        self.winstance.send_event('Queuing job..')
-        result = self.winstance.execute_operation('croupier.interfaces.'
-                                                  'lifecycle.queue',
+        self.instance.send_event('Queuing job..')
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue',
                                                   kwargs={"name": self.name})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
         else:
-            self.winstance.send_event('.. job queued')
+            self.instance.send_event('.. job queued')
             init_state = 'PENDING'
         self.set_status(init_state)
         return result
 
     def publish(self):
         """ Publish the job's instance outputs """
-        if not self.parent_node.is_job:
-            return
 
-        self.winstance.send_event('Publishing job outputs..')
-        result = self.winstance.execute_operation('croupier.interfaces.'
-                                                  'lifecycle.publish',
+        self.instance.send_event('Publishing job outputs..')
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.publish',
                                                   kwargs={"name": self.name, "audit": self.audit})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
-            self.winstance.send_event('..outputs sent for publication')
+            self.instance.send_event('..outputs sent for publication')
 
         return result.task
 
     def set_status(self, status):
         """ Update the instance state """
-        if not status == self._status:
-            self._status = status
-            self.winstance.send_event('State changed to ' + self._status)
+        super().set_status(status)
 
-            self.completed = not self.parent_node.is_job or \
-                self._status == 'COMPLETED'
-
-            if self.completed:
-                self.publish()
-
-            if not self.parent_node.is_job:
-                self.failed = False
-            else:
-                self.failed = self.parent_node.is_job and \
-                    (self._status == 'BOOT_FAIL' or
-                     self._status == 'CANCELLED' or
-                     self._status == 'FAILED' or
-                     self._status == 'REVOKED' or
-                     self._status == 'TIMEOUT')
+        if self.completed:
+            self.publish()
 
     def clean(self):
         """ Cleans job's aux files """
-        if not self.parent_node.is_job:
-            return
 
-        self.winstance.send_event('Cleaning job..')
-        result = self.winstance.execute_operation('croupier.interfaces.'
+        self.instance.send_event('Cleaning job..')
+        result = self.instance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cleanup',
                                                   kwargs={"name": self.name})
         # result.task.wait_for_terminated()
-        self.winstance.send_event('.. job cleaned')
+        self.instance.send_event('.. job cleaned')
 
         # print result.task.dump()
         return result.task
 
     def cancel(self):
         """ Cancels the job instance in the infrastructure """
-        if not self.parent_node.is_job:
-            return
-
         # First perform clean operation
         self.clean()
 
-        self.winstance.send_event('Cancelling job..')
-        result = self.winstance.execute_operation('croupier.interfaces.'
+        self.instance.send_event('Cancelling job..')
+        result = self.instance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cancel',
                                                   kwargs={"name": self.name})
-        self.winstance.send_event('.. job canceled')
+        self.instance.send_event('.. job canceled')
         result.get()
         # result.task.wait_for_terminated()
 
         self._status = 'CANCELLED'
 
 
-class JobGraphNode(object):
+class DataGraphInstance(TaskGraphInstance):
+
+    def __init__(self, parent, instance):
+
+        super().__init__(parent, instance)
+        self.name = instance.id
+        self.completed = self.runtime_properties['completed']
+        self.source_urls = self.runtime_properties['data_urls']
+        self.dest = self.runtime_properties['data_dest']
+
+    def launch(self):
+        """ Launches the data gathering algorithm """
+        self.instance.send_event('Launched gathering data process...')
+        result = self.instance.execute_operation('cloudify.interfaces.lifecycle.start')
+        # result.task.wait_for_terminated()
+        result.get()
+        if result.task.get_state() == tasks.TASK_FAILED:
+            init_state = 'FAILED'
+        else:
+            self.instance.send_event('.. Gathering data')
+            init_state = 'PENDING'
+        self.set_status(init_state)
+        return result
+
+    def set_status(self, status):
+        super().set_status(status)
+        if self.completed:
+            self.instance.runtime_properties.update({"completed":True})
+            self.runtime_properties["completed"] = True
+
+
+class GraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
     def __init__(self, node, job_instances_map):
@@ -181,51 +214,55 @@ class JobGraphNode(object):
         self.type = node.type
         self.cfy_node = node
         self.is_job = 'croupier.nodes.Job' in node.type_hierarchy
+        self.is_data = 'croupier.nodes.Data' in node.type_hierarchy
+        self.is_task = self.is_job or self.is_data
+        self.completed = False
+        self.failed = False
 
-        if self.is_job:
+        if self.is_task:
             self.status = 'WAITING'
         else:
             self.status = 'NONE'
 
         self.instances = []
         for instance in node.instances:
-            graph_instance = JobGraphInstance(self,
-                                              instance)
-            self.instances.append(graph_instance)
-            if graph_instance.parent_node.is_job:
+
+            if self.is_job:
+                graph_instance = JobGraphInstance(self,instance)
                 job_instances_map[graph_instance.name] = graph_instance
+            elif self.is_data:
+                graph_instance = DataGraphInstance(self,instance)
+            else:
+                graph_instance = OtherGraphInstance(self, instance)
+
+            self.instances.append(graph_instance)
 
         self.parents = []
         self.children = []
-        self.parent_depencencies_left = 0
-
-        self.completed = False
-        self.failed = False
+        self.parent_dependencies_left = 0
 
     def add_parent(self, node):
         """ Adds a parent node """
         self.parents.append(node)
-        self.parent_depencencies_left += 1
+        self.parent_dependencies_left += 1
 
     def add_child(self, node):
         """ Adds a child node """
         self.children.append(node)
 
-    def queue_all_instances(self):
-        """ Sends all job instances to the infrastructure queue """
-        if not self.is_job:
-            return []
-
+    def launch_all_instances(self):
+        """ Launches all task instances """
         tasks_result_list = []
-        for job_instance in self.instances:
-            tasks_result_list.append(job_instance.queue())
+        if self.is_task:
+            for task_instance in self.instances:
+                tasks_result_list.append(task_instance.launch())
+            self.status = 'QUEUED'
 
-        self.status = 'QUEUED'
         return tasks_result_list
 
     def is_ready(self):
         """ True if it has no more dependencies to satisfy """
-        return self.parent_depencencies_left == 0
+        return self.parent_dependencies_left == 0
 
     def _remove_children_dependency(self):
         """ Removes a dependency of the Node already satisfied """
@@ -240,18 +277,18 @@ class JobGraphNode(object):
         Returns True if there is no errors (no job has failed)
         """
         if not self.completed and not self.failed:
-            if not self.is_job:
+            if not self.is_task:
                 self._remove_children_dependency()
                 self.status = 'COMPLETED'
                 self.completed = True
             else:
                 completed = True
                 failed = False
-                for job_instance in self.instances:
-                    if job_instance.failed:
+                for instance in self.instances:
+                    if instance.failed:
                         failed = True
                         break
-                    elif not job_instance.completed:
+                    elif not instance.completed:
                         completed = False
 
                 if failed:
@@ -270,18 +307,18 @@ class JobGraphNode(object):
 
     def get_children_ready(self):
         """ Gets all children nodes that are ready to start """
-        readys = []
+        ready = []
         for child in self.children:
             if child.is_ready():
-                readys.append(child)
-        return readys
+                ready.append(child)
+        return ready
 
     def __str__(self):
         to_print = self.name + '\n'
         for instance in self.instances:
             to_print += '- ' + instance.name + '\n'
         for child in self.children:
-            to_print += '    ' + child.name + '\n'
+            to_print += '    ' + str(child) + '\n'
         return to_print
 
     def clean_all_instances(self):
@@ -291,7 +328,7 @@ class JobGraphNode(object):
 
         for job_instance in self.instances:
             job_instance.clean()
-        self.status = 'CANCELED'
+        self.status = 'CANCELLED'
 
     def cancel_all_instances(self):
         """ Cancels all job instances of the infrastructure """
@@ -300,7 +337,7 @@ class JobGraphNode(object):
 
         for job_instance in self.instances:
             job_instance.cancel()
-        self.status = 'CANCELED'
+        self.status = 'CANCELLED'
 
 
 class Monitor(object):
@@ -395,7 +432,7 @@ def build_graph(nodes):
     nodes_map = {}
     root_nodes = []
     for node in nodes:
-        new_node = JobGraphNode(node, job_instances_map)
+        new_node = GraphNode(node, job_instances_map)
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
@@ -413,8 +450,7 @@ def build_graph(nodes):
     return root_nodes, job_instances_map
 
 
-@workflow
-def run_jobs(**kwargs):  # pylint: disable=W0613
+def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
 
     root_nodes, job_instances_map = build_graph(ctx.nodes)
@@ -423,7 +459,9 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
     # Execution of first job instances
     task_result_list = []
     for root in root_nodes:
-        task_result_list += root.queue_all_instances()
+        if (not force_data and root.is_data and root.completed) or (root.is_job and skip_jobs):
+            continue
+        task_result_list += root.launch_all_instances()
         monitor.add_node(root)
     wait_tasks_to_finish(task_result_list)
 
@@ -434,6 +472,8 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
         exec_nodes_finished = []
         new_exec_nodes = []
         for node_name, exec_node in monitor.get_executions_iterator():
+            if (not force_data and exec_node.is_data and exec_node.completed) or (exec_node.is_job and skip_jobs):
+                continue
             if exec_node.check_status():
                 if exec_node.completed:
                     exec_node.clean_all_instances()
@@ -463,12 +503,20 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
         "------------------Workflow Finished-----------------------")
     return
 
+
 @workflow
-def get_data(**kwargs):  # pylint: disable=W0613
+def gather_data(**kwargs):  # pylint: disable=W0613
+    execute_jobs(force_data=True, skip_jobs=True)
 
 
 @workflow
 def run_jobs_force_get_data(**kwargs): # pylint: disable=W0613
+    execute_jobs(force_data=True, skip_jobs=False)
+
+
+@workflow
+def run_jobs(**kwargs):  # pylint: disable=W0613
+    execute_jobs(force_data=False, skip_jobs=False)
 
 
 def cancel_all(executions):

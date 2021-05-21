@@ -57,7 +57,7 @@ class DataMoverProxy(object):
                     "hawk.hww.hlrs.de",
                     self.hpc_user_id + "-" + self.ws_name + "/")  # AGAIN THE SAME USER_ID AS WE JUST PLACE IN THE SECOND PARAMETER!!!
             else:
-                raise Exception("GridFTPServer for HAWK could not be set. Check datamover options (ws_name")
+                raise Exception("GridFTPServer for HAWK could not be set. Check datamover options (ws_name)")
 
         if ('cloud_target' in data_mover_options and data_mover_options['cloud_target']) == 'ATOSFR':
             if self.cloud_user is not None:

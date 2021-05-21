@@ -23,6 +23,9 @@
 # @author: Jesus Gorronogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.gorronogoitia@atos.net
+# @author: Jesus Ramos Rivas
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.ramos.external@atos.net
 #
 # inputs_def.yaml
 
@@ -65,11 +68,6 @@ inputs:
     description: Pathname of job_config file
     default: ''
 
-  ################### Data Mover ##################
-  data_mover_options:
-    description: Data Mover options
-    default: {}
-
   ################### Monitoring ##################
   monitoring_options:
     description: Monitoring options
@@ -79,61 +77,6 @@ inputs:
   accounting_options:
     description: Accounting options
     default: {}
-
-  ################# Cloud Infrastructre #################
-  cloud_interface_config:
-    description: cloud interface (Only supported SHELL)
-    default:
-      infrastructure_interface: SHELL
-  cloud_interface_credentials:
-    description: Cloud credentials
-    default: {}
-  openstack_config:
-    default: {}
-  cloud_image:
-    default: ''
-  cloud_flavor:
-    default: ''
-  cloud_network:
-    default: ''
-  cloud_external_network:
-    default: ''
-
-  ################# Second Cloud Infrastructre #################
-  # Won't be rendered, their value is a match with other inputs
-  secondary_cloud_interface_config:
-    description: cloud interface (Only supported SHELL)
-    default:
-      infrastructure_interface: SHELL
-  secondary_cloud_interface_credentials:
-    default: {}
-  eosc_config:
-    default: {}
-  secondary_cloud_image_name:
-    default: ''
-  secondary_cloud_image_id:
-    default: ''
-  secondary_cloud_image_user:
-    default: ''
-  secondary_cloud_image_pass:
-    default: ''
-  secondary_cloud_image_public:
-    default: ''
-  secondary_cloud_image_private:
-    default: ''
-  secondary_cloud_flavor_id:
-    default: ''
-  secondary_cloud_flavor_name:
-    default: ''
-  secondary_cloud_flavor_config:
-    default: {}
-  secondary_cloud_flavor_memory:
-    default: ''
-  secondary_cloud_network_id:
-    default: ''
-  secondary_cloud_network_config:
-    default:
-      outbound: True
 
   ################### Data Publish ##################
   input_url:
@@ -145,17 +88,10 @@ inputs:
       dataset: {}
       type: ckan
 
-  #################### Instance info ####################
-  instance_id:
-    default: test-jcarnero
-
   #################### ECMWF ####################
   ecmwf_ssh_credentials:
-    default: {}
   keycloak_credentials:
-    default: {}
-  query:
-    default: {}
+  ecmwf_query:
 
   ####################### Optional ######################
   test_file:

@@ -180,7 +180,7 @@ node_types:
                 default: {}
         interfaces:
             cloudify.interfaces.lifecycle:
-                start: # needs to be 'start' to have the wm credentials
+                start: # needs to be 'start' to have the wm credentials and the data
                     implementation: croupier.croupier_plugin.tasks.bootstrap_job
                     inputs:
                         deployment:

@@ -177,9 +177,7 @@ def configure_execution(
 
         ctx.instance.runtime_properties['login'] = exit_code == 0
 
-        prefix = workdir_prefix
-        if workdir_prefix == "":
-            prefix = ctx.blueprint.id
+        prefix = workdir_prefix if workdir_prefix else ctx.blueprint.id
 
         workdir = wm.create_new_workdir(client, base_dir, prefix, ctx.logger)
         client.close_connection()
@@ -884,6 +882,7 @@ def download_data():
         name = "data_download_" + ctx.target.id + ".sh"
         interface_type = ctx.source.runtime_properties['infrastructure_interface']
         script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/data_download.sh"
+        script += "data_download_unzip.sh" if ctx.target.runtime_properties['unzip_data'] else "data_download.sh"
         skip_cleanup = False
         if deploy_job(
                 script,
@@ -894,7 +893,7 @@ def download_data():
                 name,
                 ctx.logger,
                 skip_cleanup):
-            ctx.logger.info('..data downloaded')
+            ctx.logger.info('...data downloaded')
         else:
             ctx.logger.error('Data could not be downloaded')
             raise NonRecoverableError("Data failed to download")

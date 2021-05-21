@@ -127,8 +127,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='set_inputs')
     def test_single(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -143,10 +142,8 @@ class TestPlugin(unittest.TestCase):
         copy_plugin_yaml=True,
         resources_to_copy=[
             (os.path.join('blueprints', 'easy-singularity', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'easy-singularity', 'scripts',
-                          'singularity_bootstrap_example.sh'), 'scripts'),
-            (os.path.join('blueprints', 'easy-singularity', 'scripts',
-                          'singularity_revert_example.sh'), 'scripts')],
+            (os.path.join('blueprints', 'easy-singularity', 'scripts', 'singularity_bootstrap_example.sh'), 'scripts'),
+            (os.path.join('blueprints', 'easy-singularity', 'scripts', 'singularity_revert_example.sh'), 'scripts')],
         inputs='load_cesga_hpc_singularity_easy_inputs')
     def test_singularity_easy(self, cfy_local):
         """ Singularity Job Blueprint """
@@ -156,8 +153,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_agroapps_test_GFS_00.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_cesga_hpc_inputs')
     def test_cesga_agroapps(self, cfy_local):
         """ CESGA Agroapps Job Blueprint """
@@ -170,8 +166,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_easy.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_cesga_hpc_inputs')
     def test_easy_job(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -184,20 +179,15 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_sodalite_hpc_inputs')
     def test_single_sodalite(self, cfy_local):
         """ Single BATCH Job Blueprint """
         self.run_test(cfy_local)
 
     def load_bernoulli_inputs(self, *args, **kwargs):
-        return _load_inputs(os.path.join('croupier_plugin',
-                                         'tests',
-                                         'integration',
-                                         'blueprints',
-                                         'bernoulli',
-                                         'cesga-blueprint-inputs.yaml'))
+        return _load_inputs(os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints',
+                                         'bernoulli', 'cesga-blueprint-inputs.yaml'))
 
     @workflow_test(
         os.path.join('blueprints', 'bernoulli', 'blueprint_bernoulli.yaml'),
@@ -216,10 +206,8 @@ class TestPlugin(unittest.TestCase):
         copy_plugin_yaml=True,
         resources_to_copy=[
             (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts',
-                          'singularity_bootstrap_example.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts',
-                          'singularity_revert_example.sh'), 'scripts')],
+            (os.path.join('blueprints', 'scripts', 'singularity_bootstrap_example.sh'), 'scripts'),
+            (os.path.join('blueprints', 'scripts', 'singularity_revert_example.sh'), 'scripts')],
         inputs='set_inputs')
     def test_singularity(self, cfy_local):
         self.run_test(cfy_local)
@@ -233,38 +221,28 @@ class TestPlugin(unittest.TestCase):
                                          'four',
                                          'four_inputs.yaml'))
 
-    @workflow_test(os.path.join('blueprints', 'four', 'blueprint_four.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'four',
-                                                    'four_inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'four', 'scripts',
-                                                    'create_script.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'four', 'scripts',
-                                                    'delete_script.sh'),
-                                       'scripts')],
-                   inputs='load_four_inputs')
+    @workflow_test(
+        os.path.join('blueprints', 'four', 'blueprint_four.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[(os.path.join('blueprints', 'four', 'four_inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'four', 'scripts', 'create_script.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'four', 'scripts', 'delete_script.sh'), 'scripts')],
+        inputs='load_four_inputs')
     def test_four(self, cfy_local):
         """ Four Jobs Blueprint """
         self.run_test(cfy_local)
 
-    # Multi-HPC workflow
-    def load_multihpc_inputs(self, *args, **kwargs):
-        return _load_inputs(os.path.join('croupier_plugin',
-                                         'tests',
-                                         'integration',
-                                         'blueprints',
-                                         'multihpc',
-                                         'cesga-sodalite-blueprint-inputs.yaml'))
+    # ECMWF workflow
+    def load_ecmwf_inputs(self, *args, **kwargs):
+        return _load_inputs(os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints',
+                                         'ecmwf', 'ecmwf-blueprint-inputs.yaml'))
 
-    @workflow_test(os.path.join('blueprints', 'multihpc', 'blueprint_single_two_hpcs.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'multihpc',
-                                                    'inputs_multiple_hpcs_def.yaml'),
-                                       './')],
-                   inputs='load_multihpc_inputs')
-    def test_multihpc(self, cfy_local):
+    @workflow_test(
+        os.path.join('blueprints', 'ecmwf', 'blueprint_ecmwf.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[(os.path.join('blueprints', 'ecmwf', 'inputs_ecmwf_def.yaml'), './')],
+        inputs='load_ecmwf_inputs')
+    def test_ecmwf(self, cfy_local):
         """ Multi-HPC Blueprint """
         self.run_test(cfy_local)
 

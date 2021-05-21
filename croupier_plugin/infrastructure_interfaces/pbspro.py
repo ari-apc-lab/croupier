@@ -116,7 +116,7 @@ class Pbspro(InfrastructureInterface):
                 _add_setting('-q', shlex_quote(queue))
 
         if _check_job_settings_key('memory'):
-            _add_setting('-l', 'mem={}'.format(job_settings('memory')))
+            _add_setting('-l', 'mem={}'.format(job_settings['memory']))
 
         if _check_job_settings_key('mail_user'):
             _add_setting('-M', job_settings['mail_user'])
