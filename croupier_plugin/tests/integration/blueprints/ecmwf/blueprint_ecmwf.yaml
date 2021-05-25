@@ -52,8 +52,8 @@ node_templates:
         properties:
             job_options:
                 commands:
-                - "tar -xzf *.zip
-                   rm *.zip"
+                    - touch llegue
+                max_time: "00:01:00"
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface

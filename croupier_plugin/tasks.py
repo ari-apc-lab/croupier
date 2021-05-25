@@ -480,11 +480,11 @@ def deploy_job(script,
     # Execute the script and manage the output
     success = False
     client = SshClient(credentials)
-    if wm._create_shell_script(client,
-                               name,
-                               ctx.get_resource(script),
-                               logger,
-                               workdir=workdir):
+    if wm.create_shell_script(client,
+                              name,
+                              ctx.get_resource(script),
+                              logger,
+                              workdir=workdir):
         call = "./" + name
         for dinput in inputs:
             str_input = str(dinput)
@@ -838,7 +838,7 @@ def ecmwf_vertical_interpolation(query, **kwargs):
     command += " > " + out_file + " 2>&1"
 
     ctx.logger.info("Sending command: " + command)
-    client.execute_shell_command(command)
+    # client.execute_shell_command(command)
     client.close_connection()
 
     # Waits for confirmation that retrieval of data is finished and ready to upload to CKAN
@@ -873,18 +873,21 @@ def ecmwf_vertical_interpolation(query, **kwargs):
 
 
 @operation
-def download_data(data_dest, **kwargs):
+def download_data(**kwargs):
     ctx.logger.info('Downloading data...')
     simulate = ctx.source.instance.runtime_properties['simulate']
 
-    if not simulate and 'data_urls' in ctx.target.instance.runtime_properties and ctx.target.instance.runtime_properties['data_urls']:
+    if not simulate and 'data_urls' in ctx.target.instance.runtime_properties \
+            and ctx.target.instance.runtime_properties['data_urls']:
         inputs = ctx.target.instance.runtime_properties['data_urls']
         credentials = ctx.source.instance.runtime_properties['credentials']
-        workdir = data_dest
-        name = "data_download_" + ctx.target.id + ".sh"
+        workdir = ctx.source.instance.runtime_properties['workdir']
+        name = "data_download_" + ctx.target.instance.id + ".sh"
         interface_type = ctx.source.instance.runtime_properties['infrastructure_interface']
-        script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/data_download.sh"
-        script += "data_download_unzip.sh" if ctx.target.instance.runtime_properties['unzip_data'] else "data_download.sh"
+        script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/"
+        ctx.logger.info(ctx.target.node.properties)
+        script += "data_download_unzip.sh" if 'unzip_data' in ctx.target.node.properties \
+                                           and ctx.target.node.properties['unzip_data'] else "data_download.sh"
         skip_cleanup = False
         if deploy_job(
                 script,

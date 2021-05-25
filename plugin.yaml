@@ -233,10 +233,10 @@ node_types:
             data_urls:
                 description: list of URLs of the files to download to the HPC (ckan for example)
                 default: []
-            data_dest:
-                description: Path where the data needs to be downloaded in the HPC
-                type: string
-                default: $HOME
+            unzip_data:
+                description: True if the files need to be unzipped after downloading
+                type: boolean
+                default: False
 
     croupier.nodes.ECMWFVerticalInterpolation:
         derived_from: croupier.nodes.Data
@@ -253,6 +253,9 @@ node_types:
             port:
                 type: string
                 default: 9984
+            unzip_data:
+                type: boolean
+                default: True
         interfaces:
             cloudify.interfaces.lifecycle:
                 start:
@@ -313,6 +316,3 @@ relationships:
             cloudify.interfaces.relationship_lifecycle:
                 postconfigure:
                     implementation: croupier.croupier_plugin.tasks.download_data
-                    inputs:
-                        data_dest:
-                            default: { get_property: [TARGET, data_dest] }

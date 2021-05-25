@@ -1,6 +1,6 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
 for url in "$@"
 do
-  wget $url
+  wget "$url"
 done

@@ -4,5 +4,6 @@ for url in "$@"
 do
   wget "$url"
   filename=$(basename "$url")
-  tar -xzf "$filename"
+  unzip "$filename"
+  rm "$filename"
 done
