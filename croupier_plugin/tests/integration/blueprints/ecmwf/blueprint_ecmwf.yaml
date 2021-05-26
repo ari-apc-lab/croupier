@@ -83,6 +83,9 @@ node_templates:
             ecmwf_ssh_credentials: { get_input: ecmwf_ssh_credentials }
             keycloak_credentials: { get_input: keycloak_credentials }
             query: { get_input: ecmwf_query }
+        relationships:
+            - type: data_target_infrastructure
+              target: hpc
 
 outputs:
     single_job_name:

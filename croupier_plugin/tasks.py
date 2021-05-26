@@ -946,6 +946,16 @@ def preconfigure_data(
     ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
     ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
+
+@operation
+def pass_data_info(**kwargs):
+    files_downloaded = ctx.source.instance.runtime_properties['files_downloaded'] if \
+        'files_downloaded' in ctx.source.instance.runtime_properties else []
+    for file in ctx.target.instance.runtime_properties['files_downloaded']:
+        files_downloaded.append(file)
+    ctx.source.instance.runtime_properties['files_downloaded'] = files_downloaded
+
+
 def getHours(cput):
     return int(cput[:cput.index(':')])
 
