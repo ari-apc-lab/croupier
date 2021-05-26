@@ -55,6 +55,7 @@ def convert_to_seconds(cput):
     hours = getHours(cput) * 3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
     return hours
 
+
 class Torque(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
 
@@ -133,7 +134,7 @@ class Torque(InfrastructureInterface):
             _add_setting('-q', shlex_quote(queue))
 
         if _check_job_settings_key('memory'):
-            _add_setting('-l', 'mem={}'.format(job_settings('memory')))
+            _add_setting('-l', 'mem={}'.format(job_settings['memory']))
 
         if _check_job_settings_key('mail_user'):
             _add_setting('-M', job_settings['mail_user'])
@@ -236,7 +237,7 @@ class Torque(InfrastructureInterface):
         Get job states by job names
 
         This function uses `qstat` command to query Torque.
-        Please don't launch this call very friquently. Polling it
+        Please don't launch this call very frequently. Polling it
         frequently, especially across all users on the cluster,
         will slow down response times and may bring
         scheduling to a crawl.

@@ -406,7 +406,7 @@ class InfrastructureInterface(object):
             "'_get_envar' not implemented.")
 
     # Monitor
-    def get_states(self, ssh_client, job_names, logger):
+    def get_states(self,  workdir, credentials, job_names, logger):
         """
         Get the states of the jobs names
 

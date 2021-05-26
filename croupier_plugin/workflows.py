@@ -68,6 +68,9 @@ class GraphInstance(object):
                            self._status == 'REVOKED' or
                            self._status == 'TIMEOUT')
 
+    def update_properties(self):
+        self.runtime_properties = self.instance._node_instance.runtime_properties
+
 
 class TaskGraphInstance(GraphInstance):
     def __init__(self, parent, instance):
@@ -181,10 +184,12 @@ class DataGraphInstance(TaskGraphInstance):
         self.name = instance.id
         self.completed = False
         self.source_urls = self.runtime_properties['data_urls'] \
-            if 'data_urls' in self.runtime_properties['data_urls'] else []
+            if 'data_urls' in self.runtime_properties else []
+        ctx.logger.info(self.source_urls)
 
     def launch(self):
         """ Launches the data gathering algorithm """
+        self.erase_data_urls()
         self.instance.send_event('Launched gathering data process...')
         result = self.instance.execute_operation('cloudify.interfaces.lifecycle.start')
         result.get()
@@ -196,6 +201,16 @@ class DataGraphInstance(TaskGraphInstance):
         self.set_status(init_state)
         return result
 
+    def update_properties(self):
+        super().update_properties()
+        self.source_urls = self.runtime_properties['data_urls'] \
+            if 'data_urls' in self.runtime_properties else []
+
+    def erase_data_urls(self):
+        if 'data_urls' in self.runtime_properties:
+            self.instance._node_properties['data_urls'] = []
+        self.update_properties()
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete')
 
 class GraphNode(object):
     """ Wrap to add job functionalities to nodes """
@@ -348,9 +363,9 @@ class Monitor(object):
 
         # first get the instances we need to check
         monitor_jobs = {}
-        for _, job_node in self.get_executions_iterator():
-            if job_node.is_job:
-                for job_instance in job_node.instances:
+        for _, task_node in self.get_executions_iterator():
+            if task_node.is_job:
+                for job_instance in task_node.instances:
                     if not job_instance.simulate:
                         if job_instance.host in monitor_jobs:
                             monitor_jobs[job_instance.host]['names'].append(
@@ -365,31 +380,36 @@ class Monitor(object):
                             }
                     else:
                         job_instance.set_status('COMPLETED')
+            elif task_node.is_data:
+                for data_instance in task_node.instances:
+                    data_instance.update_properties()
+                    if data_instance.source_urls:
+                        data_instance.set_status('COMPLETED')
 
         # nothing to do if we don't have nothing to monitor
         if not monitor_jobs:
             return
 
         # then look for the status of the instances through its name
-        try:
-            states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
+        # try:
+        states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
 
-            # set job audit
-            for inst_name, audit in audits.items():
-                self.job_instances_map[inst_name].audit = audit
+        # set job audit
+        for inst_name, audit in audits.items():
+            self.job_instances_map[inst_name].audit = audit
 
-            # finally set job status
-            for inst_name, state in states.items():
-                self.job_instances_map[inst_name].set_status(state)
+        # finally set job status
+        for inst_name, state in states.items():
+            self.job_instances_map[inst_name].set_status(state)
 
-            self.continued_errors = 0
-        except Exception as exp:
-            if self.continued_errors >= Monitor.MAX_ERRORS:
-                self.logger.error(str(exp))
-                raise exp
-            else:
-                self.logger.warning(str(exp))
-                self.continued_errors += 1
+        self.continued_errors = 0
+        # except Exception as exp:
+        #    if self.continued_errors >= Monitor.MAX_ERRORS:
+        #       self.logger.error(str(exp))
+        #       raise exp
+        #    else:
+        #       self.logger.warning(str(exp))
+        #       self.continued_errors += 1
 
         # We wait to slow down the loop
         sys.stdout.flush()  # necessary to output work properly with sleep
@@ -445,31 +465,31 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
-    # Execution of first job instances
-    task_result_list = []
-    for root in root_nodes:
-        monitor.add_node(root)
-        # Only launch if it is data and have to force data or is job and not skipping jobs or is not task
-        if (force_data or not root.is_data) and (not root.is_job or not skip_jobs):
-            task_result_list += root.launch_all_instances()
-        else:
-            for instance in root.instances:
-                instance.set_status('COMPLETED')
-    wait_tasks_to_finish(task_result_list)
+    new_exec_nodes = root_nodes
 
     # Monitoring and next executions loop
-    while monitor.is_something_executing() and not api.has_cancel_request():
+    while new_exec_nodes or monitor.is_something_executing() and not api.has_cancel_request():
+        # perform new executions
+        tasks_result_list = []
+        for new_node in new_exec_nodes:
+            monitor.add_node(new_node)
+            if (force_data or not new_node.is_data) and (not new_node.is_job or not skip_jobs):
+                tasks_result_list += new_node.launch_all_instances()
+
+        wait_tasks_to_finish(tasks_result_list)
         # Monitor the infrastructure
         monitor.update_status()
         exec_nodes_finished = []
         new_exec_nodes = []
         for node_name, exec_node in monitor.get_executions_iterator():
             if exec_node.check_status():
-                exec_node.clean_all_instances()
-                exec_nodes_finished.append(node_name)
-                new_nodes_to_execute = exec_node.get_children_ready()
-                for new_node in new_nodes_to_execute:
-                    new_exec_nodes.append(new_node)
+                if exec_node.completed:
+                    ctx.logger.info("Finished job " + str(exec_node.name))
+                    exec_node.clean_all_instances()
+                    exec_nodes_finished.append(node_name)
+                    new_nodes_to_execute = exec_node.get_children_ready()
+                    for new_node in new_nodes_to_execute:
+                        new_exec_nodes.append(new_node)
             else:
                 # Something went wrong in the node, cancel execution
                 cancel_all(monitor.get_executions_iterator())
@@ -478,19 +498,11 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         # remove finished nodes
         for node_name in exec_nodes_finished:
             monitor.finish_node(node_name)
-        # perform new executions
-        tasks_result_list = []
-        for new_node in new_exec_nodes:
-            monitor.add_node(new_node)
-            if (force_data or not new_node.is_data) and (not new_node.is_job or not skip_jobs):
-                task_result_list += new_node.launch_all_instances()
-            else:
-                for instance in new_node.instances:
-                    instance.set_status('COMPLETED')
 
         wait_tasks_to_finish(tasks_result_list)
 
     if monitor.is_something_executing():
+        ctx.logger.info("Cancelling jobs...")
         cancel_all(monitor.get_executions_iterator())
 
     ctx.logger.info(

@@ -75,7 +75,7 @@ def addThread(thread):
 def joinThreads():
     global forkedThreads
     for thread in forkedThreads:
-        thread.join
+        thread.join()
     forkedThreads = []
 
 
@@ -497,16 +497,12 @@ def deploy_job(script,
             workdir=workdir,
             wait_result=True)
         if exit_code != 0:
-            logger.warning(
-                "failed to deploy job: call '" + call + "', exit code " +
-                str(exit_code))
+            logger.warning("failed to deploy job: call '" + call + "', exit code " + str(exit_code))
         else:
             success = True
 
         if not skip_cleanup:
-            if not client.execute_shell_command(
-                    "rm " + name,
-                    workdir=workdir):
+            if not client.execute_shell_command("rm " + name, workdir=workdir):
                 logger.warning("failed removing bootstrap script")
 
     client.close_connection()
@@ -537,7 +533,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                     dest_output = data_mover_options['download']['target']
                     dmp.move_data(source, destination, source_input, dest_output)
                 except Exception as exp:
-                    ctx.logger.error("Error using data mover: {}".format(exp.message))
+                    ctx.logger.error("Error using data mover: {}".format(str(exp)))
 
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -567,7 +563,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                 workdir=workdir,
                 context=context_vars)
         except Exception as ex:
-            ctx.logger.error('Job could not be submitted because error ' + ex.message)
+            ctx.logger.error('Job could not be submitted because error ' + str(ex))
             raise ex
 
         ctx.logger.info('Job submitted')
@@ -597,7 +593,8 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
         simulate = ctx.instance.runtime_properties['simulate']
     except KeyError:
         # The job wasn't configured properly, so no cleanup needed
-        ctx.logger.warning('Job was not cleaned up as it was not configured.')
+        ctx.logger.error('Job was not cleaned up as it was not configured')
+        return
 
     try:
         name = kwargs['name']
@@ -611,10 +608,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             wm = InfrastructureInterface.factory(interface_type)
             if not wm:
                 client.close_connection()
-                raise NonRecoverableError(
-                    "Infrastructure Interface '" +
-                    interface_type +
-                    "' not supported.")
+                raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
             is_clean = wm.clean_job_aux_files(client,
                                               name,
                                               job_options,
@@ -628,14 +622,11 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             is_clean = True
 
         if is_clean:
-            ctx.logger.info(
-                'Job ' + name + ' (' + ctx.instance.id + ') cleaned.')
+            ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') cleaned.')
         else:
             ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not cleaned.')
     except Exception as exp:
-        print(traceback.format_exc())
-        ctx.logger.error(
-            'Something happend when trying to clean up: ' + exp.message)
+        ctx.logger.error('Something happened when trying to clean up:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -645,7 +636,8 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         simulate = ctx.instance.runtime_properties['simulate']
     except KeyError:
         # The job wasn't configured properly, no need to be stopped
-        ctx.logger.warning('Job was not stopped as it was not configured.')
+        ctx.logger.error('Job was not stopped as it was not configured properly.')
+        return
 
     try:
         name = kwargs['name']
@@ -685,21 +677,16 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id +
                                       ') not stopped.')
     except Exception as exp:
-        print(traceback.format_exc())
-        ctx.logger.error(
-            'Something happened when trying to stop: ' + exp.message)
-
+        ctx.logger.error('Something happened when trying to stop:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 @operation
 def publish(publish_list, data_mover_options, **kwargs):
     """ Publish the job outputs """
     try:
         simulate = ctx.instance.runtime_properties['simulate']
-    except KeyError as exp:
+    except KeyError:
         # The job wasn't configured properly, no need to publish
-        ctx.logger.warning(
-            'Job outputs where not published as' +
-            ' the job was not configured properly.')
+        ctx.logger.warning('Job outputs where not published as the job was not configured properly.')
         return
 
     try:
@@ -719,14 +706,14 @@ def publish(publish_list, data_mover_options, **kwargs):
                         dest_output = data_mover_options['upload']['target']
                         dmp.move_data(source, destination, source_input, dest_output)
                     except Exception as exp:
-                        ctx.logger.error("Error using data mover: {}".format(exp.message))
+                        ctx.logger.error('Error using data mover: {}:\n' + traceback.format_exc() + '\n' + str(exp))
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
-                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
+                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger) if "cpu" in audit else 0
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -786,17 +773,12 @@ def publish(publish_list, data_mover_options, **kwargs):
             ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
 
         if published:
-            ctx.logger.info(
-                'Job ' + name + ' (' + ctx.instance.id + ') published.')
+            ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') published.')
         else:
-            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id +
-                             ') not published.')
-            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id +
-                                      ') not published.')
+            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not published.')
+            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id + ') not published.')
     except Exception as exp:
-        print(traceback.format_exc())
-        ctx.logger.error(
-            'Cannot publish: ' + exp.message)
+        ctx.logger.error('Cannot publish:\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -835,10 +817,10 @@ def ecmwf_vertical_interpolation(query, **kwargs):
         command += " --" + arg + " " + str(arguments[arg]) if arguments[arg] is not "" else ""
 
     out_file = str(time())
-    command += " > " + out_file + " 2>&1"
+    # command += " > " + out_file + " 2>&1"
 
     ctx.logger.info("Sending command: " + command)
-    # client.execute_shell_command(command)
+    #client.execute_shell_command(command)
     client.close_connection()
 
     # Waits for confirmation that retrieval of data is finished and ready to upload to CKAN
@@ -875,38 +857,94 @@ def ecmwf_vertical_interpolation(query, **kwargs):
 @operation
 def download_data(**kwargs):
     ctx.logger.info('Downloading data...')
-    simulate = ctx.source.instance.runtime_properties['simulate']
+    simulate = ctx.instance.runtime_properties['simulate']
 
-    if not simulate and 'data_urls' in ctx.target.instance.runtime_properties \
-            and ctx.target.instance.runtime_properties['data_urls']:
-        inputs = ctx.target.instance.runtime_properties['data_urls']
-        credentials = ctx.source.instance.runtime_properties['credentials']
-        workdir = ctx.source.instance.runtime_properties['workdir']
-        name = "data_download_" + ctx.target.instance.id + ".sh"
-        interface_type = ctx.source.instance.runtime_properties['infrastructure_interface']
+    if not simulate and 'data_urls' in ctx.instance.runtime_properties \
+            and ctx.instance.runtime_properties['data_urls']:
+        data_urls = ctx.instance.runtime_properties['data_urls']
+        inputs = data_urls
+        credentials = ctx.instance.runtime_properties['credentials']
+        workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
+            else ctx.instance.runtime_properties['workdir']
+        name = "data_download_" + ctx.instance.id + ".sh"
+        interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/"
-        ctx.logger.info(ctx.target.node.properties)
-        script += "data_download_unzip.sh" if 'unzip_data' in ctx.target.node.properties \
-                                           and ctx.target.node.properties['unzip_data'] else "data_download.sh"
+        script += "data_download_unzip.sh" if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data']\
+            else "data_download.sh"
         skip_cleanup = False
-        if deploy_job(
-                script,
-                inputs,
-                credentials,
-                interface_type,
-                workdir,
-                name,
-                ctx.logger,
-                skip_cleanup):
+        if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
+            files_downloaded = ctx.instance.runtime_properties['files_downloaded']\
+                if 'files_downloaded' in ctx.instance.runtime_properties else []
+            if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data']:
+                # TODO: save filenames after being unzipped so they can be deleted
+                pass
+            else:
+                for url in data_urls:
+                    files_downloaded.append(url.rpartition('/')[-1])
+
+            ctx.instance.runtime_properties['files_downloaded'] = files_downloaded
         else:
             ctx.logger.error('Data could not be downloaded')
             raise NonRecoverableError("Data failed to download")
-    elif 'data_urls' in ctx.target.instance.runtime_properties and ctx.target.instance.runtime_properties['data_urls']:
+    elif 'data_urls' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['data_urls']:
         ctx.logger.info("... data download simulated")
     else:
         ctx.logger.warning('...nothing to download')
 
+
+@operation
+def delete_data(**kwargs):
+    simulate = ctx.instance.runtime_properties['simulate']
+    if "files_downloaded" in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded']\
+            and not simulate:
+        inputs = ctx.instance.runtime_properties["files_downloaded"]
+        credentials = ctx.instance.runtime_properties['credentials']
+        workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
+            else ctx.instance.runtime_properties['workdir']
+        name = "data_download_" + ctx.instance.id + ".sh"
+        interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+        script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/"
+        script += "data_delete.sh"
+        skip_cleanup = False
+        if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+            ctx.logger.info('...data deleted')
+            ctx.instance.runtime_properties["files_downloaded"] = []
+        else:
+            ctx.logger.error('Data could not be deleted')
+    elif 'files_downloaded' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded']:
+        ctx.logger.info("...data deletion simulated")
+    else:
+        ctx.logger.warning('...nothing to delete')
+
+
+@operation
+def preconfigure_data(
+        config,
+        credentials,
+        external_monitor_entrypoint,
+        external_monitor_port,
+        external_monitor_type,
+        external_monitor_orchestrator_port,
+        monitor_period,
+        simulate,
+        **kwargs):  # pylint: disable=W0613
+    """ Save infrastructure properties in the data node instance (credentials, etc.) """
+    ctx.logger.info('Preconfiguring data..')
+
+    if 'credentials' not in ctx.target.instance.runtime_properties:
+        ctx.source.instance.runtime_properties['credentials'] = credentials
+    else:
+        ctx.source.instance.runtime_properties['credentials'] = ctx.target.instance.runtime_properties['credentials']
+
+    ctx.source.instance.runtime_properties['external_monitor_entrypoint'] = external_monitor_entrypoint
+    ctx.source.instance.runtime_properties['external_monitor_port'] = external_monitor_port
+    ctx.source.instance.runtime_properties['external_monitor_type'] = external_monitor_type
+    ctx.source.instance.runtime_properties['monitor_orchestrator_port'] = external_monitor_orchestrator_port
+    ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
+    ctx.source.instance.runtime_properties['simulate'] = simulate
+    ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
+    ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 def getHours(cput):
     return int(cput[:cput.index(':')])

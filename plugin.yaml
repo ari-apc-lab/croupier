@@ -237,6 +237,18 @@ node_types:
                 description: True if the files need to be unzipped after downloading
                 type: boolean
                 default: False
+            dest_data:
+                description: Path where the data needs to be downloaded to. If left blank it will be the job workdir
+                type: string
+                default: ""
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start:
+                    implementation: croupier.croupier_plugin.tasks.download_data
+            croupier.interfaces.lifecycle:
+                delete:
+                    implementation: croupier.croupier_plugin.tasks.delete_data
+                    max_retries: 0
 
     croupier.nodes.ECMWFVerticalInterpolation:
         derived_from: croupier.nodes.Data
@@ -258,7 +270,7 @@ node_types:
                 default: True
         interfaces:
             cloudify.interfaces.lifecycle:
-                start:
+                configure:
                     implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
                     max_retries: 0
                     inputs:
@@ -307,6 +319,30 @@ relationships:
                         simulate:
                             default: { get_property: [TARGET, simulate] }
 
+    data_target_infrestructure:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_data
+                    inputs:
+                        config:
+                            default: { get_property: [ TARGET, config ] }
+                        credentials:
+                            default: { get_property: [ TARGET, credentials ] }
+                        external_monitor_entrypoint:
+                            default: { get_property: [ TARGET, external_monitor_entrypoint ] }
+                        external_monitor_port:
+                            default: { get_property: [ TARGET, external_monitor_port ] }
+                        external_monitor_type:
+                            default: { get_property: [ TARGET, external_monitor_type ] }
+                        external_monitor_orchestrator_port:
+                            default: { get_property: [ TARGET, external_monitor_orchestrator_port ] }
+                        monitor_period:
+                            default: { get_property: [ TARGET, monitor_period ] }
+                        simulate:
+                            default: { get_property: [ TARGET, simulate ] }
+
     job_depends_on:
         derived_from: cloudify.relationships.depends_on
 
@@ -315,4 +351,4 @@ relationships:
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 postconfigure:
-                    implementation: croupier.croupier_plugin.tasks.download_data
+                    implementation: croupier.croupier_plugin.tasks.pass_data_info

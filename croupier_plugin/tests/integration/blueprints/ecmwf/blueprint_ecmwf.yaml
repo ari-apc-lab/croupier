@@ -47,12 +47,12 @@ node_templates:
 #            simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"
 
-    job:
+    job1:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                    - touch llegue
+                    - touch test
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
@@ -60,6 +60,22 @@ node_templates:
               target: hpc
             - type: job_needs_data
               target: weather_data
+
+    job2:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - tar -czf test.tar *.grib test
+                max_time: "00:01:00"
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: hpc
+            - type: job_needs_data
+              target: weather_data
+            - type: job_depends_on
+              target: job1
 
     weather_data:
         type: croupier.nodes.ECMWFVerticalInterpolation
@@ -71,4 +87,4 @@ node_templates:
 outputs:
     single_job_name:
         description: easy job calculation
-        value: { get_attribute: [job, job_name] }
+        value: { get_attribute: [job1, job_name] }
