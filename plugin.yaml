@@ -319,7 +319,7 @@ relationships:
                         simulate:
                             default: { get_property: [TARGET, simulate] }
 
-    data_target_infrestructure:
+    data_target_infrastructure:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
