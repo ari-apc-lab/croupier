@@ -1,0 +1,25 @@
+#CESGA DataManagement Infrastructure
+cesga_data_access_infra:
+  type: croupier.nodes.DataAccessInfrastructure
+  properties:
+    endpoint: ft2.cesga.es
+  relationships:
+    - type: supported_interfaces
+      target: cesga_data_access_interface
+
+cesga_data_access_interface:
+  type: croupier.nodes.DataAccessInterface
+  properties:
+    supported_protocols:
+      - SCP
+      - Filesystem
+      - RSync
+  relationships:
+    - type: credentials
+      target: cesga_credentials_ssh
+
+cesga_credentials_ssh:
+  type: croupier.nodes.AccountCredentials
+  properties:
+    username: yosu
+    password: 12345
