@@ -713,7 +713,8 @@ def publish(publish_list, data_mover_options, **kwargs):
 
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
-                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger) if "cpu" in audit else 0
+                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger) \
+                    if "cput" in audit and audit["cput"] else 0
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -727,8 +728,7 @@ def publish(publish_list, data_mover_options, **kwargs):
                 else:
                     ctx.logger.error(
                         'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
-                        'Croupier instance not registered in Accounting'.
-                            format(workflow_id=ctx.workflow_id))
+                        'Croupier instance not registered in Accounting'.format(workflow_id=ctx.workflow_id))
 
             # Report metrics to Monitoring component
             if monitoring_client.report_to_monitoring:
