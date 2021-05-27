@@ -72,8 +72,10 @@ class JobGraphInstance(object):
 
             # build job name
             instance_components = instance.id.split('_')
-            self.name = runtime_properties["job_prefix"] +\
-                instance_components[-1]
+            self.name = instance_components[0] + instance_components[1]
+
+            #self.name = runtime_properties["job_prefix"] +\
+            #    instance_components[-1]
         else:
             self._status = 'NONE'
             self.name = instance.id
