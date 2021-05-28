@@ -48,7 +48,7 @@ class GraphInstance(object):
         self.node = parent
         self.completed = True
         self.failed = False
-        self.audit = None
+        self.audit = {}
         self.runtime_properties = instance._node_instance.runtime_properties
 
     def launch(self):
@@ -142,9 +142,10 @@ class JobGraphInstance(TaskGraphInstance):
 
     def set_status(self, status):
         """ Update the instance state """
+        before = self.completed
         super().set_status(status)
 
-        if self.completed:
+        if self.completed and not before:
             self.publish()
 
     def clean(self):

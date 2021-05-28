@@ -243,7 +243,7 @@ class TestPlugin(unittest.TestCase):
         resources_to_copy=[(os.path.join('blueprints', 'ecmwf', 'inputs_ecmwf_def.yaml'), './')],
         inputs='load_ecmwf_inputs')
     def test_ecmwf(self, cfy_local):
-        """ Multi-HPC Blueprint """
+        """ ECMWF Blueprint """
         self.run_test(cfy_local)
 
 

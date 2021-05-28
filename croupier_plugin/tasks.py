@@ -626,7 +626,8 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
         else:
             ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not cleaned.')
     except Exception as exp:
-        ctx.logger.error('Something happened when trying to clean up:' + '\n' + traceback.format_exc() + '\n' + str(exp))
+        ctx.logger.error(
+            'Something happened when trying to clean up:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -679,6 +680,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
     except Exception as exp:
         ctx.logger.error('Something happened when trying to stop:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
+
 @operation
 def publish(publish_list, data_mover_options, **kwargs):
     """ Publish the job outputs """
@@ -714,7 +716,7 @@ def publish(publish_list, data_mover_options, **kwargs):
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
                 convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger) \
-                    if "cput" in audit and audit["cput"] else 0
+                if audit is not None and "cput" in audit and audit["cput"] else 0
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -738,8 +740,10 @@ def publish(publish_list, data_mover_options, **kwargs):
                     monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
                     if "reporting_user" in monitoring_options:
                         username = monitoring_options["reporting_user"]
-                    else:
+                    elif 'job_owner' in audit:
                         username = audit['job_owner']
+                    else:
+                        username = "unknown_user"
                 if hpc_interface is not None and "infrastructure_host" in hpc_interface.runtime_properties:
                     infrastructure_host = hpc_interface.runtime_properties["infrastructure_host"]
                 # Report metrics to monitoring in a non-blocking call
@@ -820,7 +824,7 @@ def ecmwf_vertical_interpolation(query, **kwargs):
     # command += " > " + out_file + " 2>&1"
 
     ctx.logger.info("Sending command: " + command)
-    #client.execute_shell_command(command)
+    # client.execute_shell_command(command)
     client.close_connection()
 
     # Waits for confirmation that retrieval of data is finished and ready to upload to CKAN
@@ -868,13 +872,13 @@ def download_data(**kwargs):
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/"
-        script += "data_download_unzip.sh" if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data']\
+        script = str(os.path.dirname(os.path.realpath(__file__))) + "/scripts/"
+        script += "data_download_unzip.sh" if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data'] \
             else "data_download.sh"
         skip_cleanup = False
         if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
-            files_downloaded = ctx.instance.runtime_properties['files_downloaded']\
+            files_downloaded = ctx.instance.runtime_properties['files_downloaded'] \
                 if 'files_downloaded' in ctx.instance.runtime_properties else []
             if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data']:
                 # TODO: save filenames after being unzipped so they can be deleted
@@ -896,7 +900,7 @@ def download_data(**kwargs):
 @operation
 def delete_data(**kwargs):
     simulate = ctx.instance.runtime_properties['simulate']
-    if "files_downloaded" in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded']\
+    if "files_downloaded" in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded'] \
             and not simulate:
         inputs = ctx.instance.runtime_properties["files_downloaded"]
         credentials = ctx.instance.runtime_properties['credentials']
@@ -904,7 +908,7 @@ def delete_data(**kwargs):
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = str(os.path.dirname(os.path.realpath(__file__)))+"/scripts/"
+        script = str(os.path.dirname(os.path.realpath(__file__))) + "/scripts/"
         script += "data_delete.sh"
         skip_cleanup = False
         if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):

@@ -72,7 +72,7 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         if exit_code == 0:
             states = self._parse_states(output, logger)
         for job_name in job_names:
-            audits[job_name] = None
+            audits[job_name] = {}
 
         return states, audits
 
