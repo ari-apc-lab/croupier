@@ -895,6 +895,7 @@ def download_data(**kwargs):
         ctx.logger.info("... data download simulated")
     else:
         ctx.logger.warning('...nothing to download')
+        raise NonRecoverableError("There was no data to download")
 
 
 @operation
@@ -953,10 +954,12 @@ def preconfigure_data(
 
 @operation
 def pass_data_info(**kwargs):
+
     files_downloaded = ctx.source.instance.runtime_properties['files_downloaded'] if \
         'files_downloaded' in ctx.source.instance.runtime_properties else []
-    for file in ctx.target.instance.runtime_properties['files_downloaded']:
-        files_downloaded.append(file)
+    if 'files_downloaded' in ctx.target.instance.runtime_properties:
+        for file in ctx.target.instance.runtime_properties['files_downloaded']:
+            files_downloaded.append(file)
     ctx.source.instance.runtime_properties['files_downloaded'] = files_downloaded
 
 

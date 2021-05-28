@@ -245,6 +245,7 @@ node_types:
             cloudify.interfaces.lifecycle:
                 start:
                     implementation: croupier.croupier_plugin.tasks.download_data
+                    max_retries: 0
             croupier.interfaces.lifecycle:
                 delete:
                     implementation: croupier.croupier_plugin.tasks.delete_data
@@ -352,3 +353,4 @@ relationships:
             cloudify.interfaces.relationship_lifecycle:
                 postconfigure:
                     implementation: croupier.croupier_plugin.tasks.pass_data_info
+                    max_retries: 0
