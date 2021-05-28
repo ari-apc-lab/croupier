@@ -824,7 +824,7 @@ def ecmwf_vertical_interpolation(query, **kwargs):
     # command += " > " + out_file + " 2>&1"
 
     ctx.logger.info("Sending command: " + command)
-    # client.execute_shell_command(command)
+    client.execute_shell_command(command)
     client.close_connection()
 
     # Waits for confirmation that retrieval of data is finished and ready to upload to CKAN
