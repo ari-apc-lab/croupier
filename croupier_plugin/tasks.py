@@ -820,8 +820,9 @@ def ecmwf_vertical_interpolation(query, **kwargs):
     for arg in arguments:
         command += " --" + arg + " " + str(arguments[arg]) if arguments[arg] is not "" else ""
 
-    out_file = str(time())
-    # command += " > " + out_file + " 2>&1"
+    # out_file = str(time())
+    out_file = "/dev/null"
+    command += " > " + out_file + " 2>&1"
 
     ctx.logger.info("Sending command: " + command)
     client.execute_shell_command(command)

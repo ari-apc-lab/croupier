@@ -28,13 +28,13 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     # to speed things up, it is possible downloading this file,
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/plugin.yaml
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/croupier_plugin/tests/integration/blueprints/ecmwf/inputs_ecmwf_def.yaml
 
 node_templates:
-    hpc:
+    hpc-vulcan:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config: { get_input: hpc_interface_config }
@@ -88,6 +88,12 @@ node_templates:
               target: hpc
 
 outputs:
-    single_job_name:
-        description: easy job calculation
+    job1_name:
+        description: job1 job name
         value: { get_attribute: [job1, job_name] }
+    job2_name:
+        description: job2 job name
+        value: { get_attribute: [ job2, job_name ] }
+    weather_data:
+        description: ckan url to weather data
+        value: { get_attribute: [ weather_data, data_urls ] }
