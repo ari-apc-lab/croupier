@@ -17,7 +17,7 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Jesús Ramos Rivas
+# @author: Jesus Ramos Rivas
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.ramos.external@atos.net
 #
@@ -57,7 +57,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc
+              target: hpc-vulcan
             - type: job_needs_data
               target: weather_data
 
@@ -71,7 +71,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc
+              target: hpc-vulcan
             - type: job_needs_data
               target: weather_data
             - type: job_depends_on
@@ -85,7 +85,7 @@ node_templates:
             query: { get_input: ecmwf_query }
         relationships:
             - type: data_target_infrastructure
-              target: hpc
+              target: hpc-vulcan
 
 outputs:
     job1_name:

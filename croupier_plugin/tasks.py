@@ -822,7 +822,7 @@ def ecmwf_vertical_interpolation(query, **kwargs):
 
     # out_file = str(time())
     out_file = "/dev/null"
-    command += " > " + out_file + " 2>&1"
+    command += " > " + out_file + " 2>&1 & disown"
 
     ctx.logger.info("Sending command: " + command)
     client.execute_shell_command(command)
@@ -873,7 +873,7 @@ def download_data(**kwargs):
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = str(os.path.dirname(os.path.realpath(__file__))) + "/scripts/"
+        script = "https://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/croupier_plugin/scripts/"
         script += "data_download_unzip.sh" if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data'] \
             else "data_download.sh"
         skip_cleanup = False
@@ -910,7 +910,7 @@ def delete_data(**kwargs):
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = str(os.path.dirname(os.path.realpath(__file__))) + "/scripts/"
+        script = "https://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/croupier_plugin/scripts/"
         script += "data_delete.sh"
         skip_cleanup = False
         if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
