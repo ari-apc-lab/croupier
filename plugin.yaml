@@ -38,14 +38,130 @@ workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
 
+data_types:
+    croupier.data.infrastructure.Config:
+        properties:
+            country_tz:
+                description: 'Timezone of HPC interface'
+                type: string
+                required: false
+            infrastructure_interface:
+                description: 'Scheduler of HPC interface. Supported Values: SLURM, TORQUE, PBSPRO'
+                type: string
+
+    croupier.data.infrastructure.Credentials:
+        properties:
+            host:
+                description: 'Endpoint of HPC interface'
+                type: string
+            user:
+                description: 'Username of HPC account'
+                type: string
+            password:
+                description: 'Password of HPC account'
+                type: string
+            private_key:
+                description: 'SSH private key to connect to HPC infrastructure'
+                type: string
+            private_key_password:
+                description: 'Password for SSH private key to connect to HPC infrastructure'
+                type: string
+                required: false
+                default: ''
+
+    croupier.data.job.Options:
+        properties:
+            commands:
+                description: 'List of commands to be included in job submission script. It is incompatible with script property'
+                type: list
+                required: false #Either commands or script must be present
+            script:
+                description: 'Script to be launched with job submission. It is incompatible with commands property'
+                type: string
+                required: false #Either commands or script must be present
+            arguments:
+                description: 'List of arguments to be sent to the script'
+                type: list
+                required: false
+            nodes:
+                description: '(SLURM|TORQUE) Controls the minimum/maximum number of nodes allocated to the job'
+                type: integer
+                required: false
+            tasks:
+                description: '(SLURM) Controls the number of tasks to be created for the job'
+                type: integer
+                required: false
+            tasks_per_node:
+                description: '(SLURM) Controls the maximum number of tasks per allocated node. (TORQUE) Processors per node'
+                type: integer
+                required: false
+            max_time:
+                description: 'Walltime (TORQUE) or Maxtime (SLURM) for job'
+                type: string
+                required: false
+            partition:
+                description: '(SLURM) partition where to submit the job to'
+                type: string
+                required: false
+            queue:
+                description: '(TORQUE) partition where to submit the job to'
+                type: string
+                required: false
+            scale:
+                description: 'Specifies the task ids of a job array TORQUE (-t 0-XX), SLURM (--array=0-XX)'
+                type: integer
+                required: false
+            memory:
+                description: 'Maximum amount of physical memory used by the job TORQUE (-l mem=XX), SLURM (--mem=XX)'
+                type: integer
+                required: false
+            mail_user:
+                description: 'Declares the list of users to whom mail is sent by the execution server when it sends mail about the job. TORQUE (-M XX), SLURM (--mail-user=XX)'
+                type: string
+                required: false
+            mail_type:
+                description: 'Defines the set of conditions under which the execution server will send a mail message about the job. TORQUE (-m XX), SLURM (--mail-type=XX)'
+                type: string
+                required: false
+            account:
+                description: 'Defines the account string associated with the job TORQUE (-A XX), SLURM (--A XX)'
+                type: string
+                required: false
+            stderr_file:
+                description: 'Defines the path to be used for the standard error stream of the batch job TORQUE|SLURM (-e XX)'
+                type: string
+                required: false
+            stdout_file:
+                description: 'Defines the path to be used for the standard output stream of the batch job TORQUE|SLURM (-o XX)'
+                type: string
+                required: false
+            group_name:
+                description: 'FIXME: Not used, but read by TORQUE'
+                type: string
+                required: false
+            scale_max_in_parallel:
+                description: ''
+                type: integer
+                required: false
+            reservation:
+                description: 'To launch a job in the context of a reservation SLURM (--reservation=XX)'
+                type: string
+                required: false
+            qos:
+                description: 'The quality of service associated with a job SLURM (--qos=XX)'
+                type: string
+                required: false
+
 node_types:
     croupier.nodes.InfrastructureInterface:
         derived_from: cloudify.nodes.Compute
         properties:
             config:
                 description: type, and optionally timezone
+                type: croupier.data.infrastructure.Config
             credentials:
                 description: SSH credentials
+                type: croupier.data.infrastructure.Credentials
             external_monitor_entrypoint:
                 description: Monitor entrypoint, port and orchestrator port
                 default: ""
@@ -189,6 +305,7 @@ node_types:
                 default: {}
             job_options:
                 description: Job main command and options
+                type: croupier.data.job.Options
             publish:
                 description: Config to publish its outputs
                 default: []
@@ -247,6 +364,67 @@ node_types:
 
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job
+
+    croupier.nodes.DataTransfer:
+        derived_from: cloudify.nodes.Root
+        properties:
+            transfer_protocol:
+                description: 'protocol to transfer data from source to target'
+                type: string
+
+    croupier.nodes.DataSource:
+        derived_from: cloudify.nodes.Root
+
+    croupier.nodes.FileDataSource:
+        derived_from: croupier.nodes.DataSource
+        properties:
+            filepath:
+                description: 'location of data source in filesystem'
+                type: string
+
+    croupier.nodes.WebDataSource:
+        derived_from: croupier.nodes.DataSource
+        properties:
+            resource:
+                description: 'URI of data source in Web'
+                type: string
+
+    croupier.nodes.DataAccessInfrastructure:
+        derived_from: cloudify.nodes.Root
+        properties:
+            endpoint:
+                description: 'accessible (via protocol) endpoint of infrastructure'
+                type: string
+
+    croupier.nodes.DataAccessInterface:
+        derived_from: cloudify.nodes.Root
+        properties:
+            supported_protocols:
+                description: 'access protocols supported by the interface'
+                type: list
+
+    croupier.nodes.Credentials:
+        derived_from: cloudify.nodes.Root
+
+    croupier.nodes.AccountCredentials:
+        derived_from: croupier.nodes.Credentials
+        properties:
+            username:
+                description: 'Account username'
+                type: string
+            password:
+                description: 'Account password'
+                type: string
+
+    croupier.nodes.KeyCredentials:
+        derived_from: croupier.nodes.Credentials
+        properties:
+            key:
+                description: 'User private key'
+                type: string
+            key_password:
+                description: 'Password for User private key'
+                type: string
 
 relationships:
     interface_contained_in:
@@ -307,4 +485,41 @@ relationships:
                         simulate:
                             default: { get_property: [TARGET, simulate] }
     job_depends_on:
+        derived_from: cloudify.relationships.depends_on
+
+    from_source:
+        derived_from: cloudify.relationships.connected_to
+#        source_interfaces:
+#            cloudify.interfaces.relationship_lifecycle:
+#                preconfigure:
+#                    implementation: croupier.croupier_plugin.tasks.configure_data_transfer_source
+
+    to_target:
+        derived_from: cloudify.relationships.connected_to
+#        source_interfaces:
+#            cloudify.interfaces.relationship_lifecycle:
+#                preconfigure:
+#                    implementation: croupier.croupier_plugin.tasks.configure_data_transfer_target
+
+    input:
+        derived_from: cloudify.relationships.connected_to
+#        source_interfaces:
+#            cloudify.interfaces.relationship_lifecycle:
+#                preconfigure:
+#                    implementation: croupier.croupier_plugin.tasks.configure_job_input
+
+    output:
+        derived_from: cloudify.relationships.connected_to
+#        source_interfaces:
+#            cloudify.interfaces.relationship_lifecycle:
+#                preconfigure:
+#                    implementation: croupier.croupier_plugin.tasks.configure_job_output
+
+    located_at:
+        derived_from: cloudify.relationships.contained_in
+
+    supported_interfaces:
+        derived_from: cloudify.relationships.depends_on
+
+    credentials:
         derived_from: cloudify.relationships.depends_on

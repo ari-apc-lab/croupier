@@ -34,29 +34,33 @@ inputs:
     default: $HOME
   sodalite_hpc_interface_config:
     description: timezone and HPC interface
+    type: croupier.data.infrastructure.Config
     default:
       country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   sodalite_hpc_interface_credentials:
     description: HPC credentials
-    default: { }
+    type: croupier.data.infrastructure.Credentials
 
   ################### CESGA HPC Infrastructre ##################
   cesga_hpc_base_dir:
     description: HPC working directory
+    type: string
     default: $HOME
   cesga_hpc_interface_config:
     description: timezone and HPC interface
+    type: croupier.data.infrastructure.Config
     default:
       country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   cesga_hpc_interface_credentials:
     description: HPC credentials
-    default: {}
-
-
+    type: croupier.data.infrastructure.Credentials
   partition_name:
     default: default
+    type: string
+
+
 
   ################### Data Mover ##################
   data_mover_options:

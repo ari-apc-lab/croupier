@@ -28,6 +28,7 @@ tasks.py: Holds the plugin tasks
 '''
 from __future__ import print_function
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import str
 import socket
@@ -120,6 +121,46 @@ def preconfigure_interface(
         ctx.logger.info('..preconfigured ')
     else:
         ctx.logger.warning('Infrastructure Interface simulated')
+
+
+# @operation
+# def configure_data_transfer_source(**kwargs):
+#     """ Configuring Data Transfer source instance """
+#     ctx.logger.info('Configuring Data Transfer source ..')
+#
+#     # Associate data transfer object to source
+#     data_transfer_instance = ctx.source.instance
+#     data_transfer_node = ctx.source.node
+#     data_source_instance = ctx.target.instance
+#     if 'data_transfers' not in data_source_instance.runtime_properties:
+#         data_source_instance.runtime_properties['data_transfers'] = []
+#     data_source_instance.runtime_properties['data_transfers'].append({data_transfer_node, data_transfer_instance})
+
+
+# @operation
+# def configure_data_transfer_target(**kwargs):
+#     """ Configuring Data Transfer source instance """
+#     ctx.logger.info('Configuring Data Transfer target ..')
+#
+#     # Associate data transfer object to target
+#     data_transfer_instance = ctx.source.instance
+#     data_transfer_node = ctx.source.node
+#     data_target_instance = ctx.target.instance
+#     if 'data_transfers' not in data_target_instance.runtime_properties:
+#         data_target_instance.runtime_properties['data_transfers'] = []
+#     data_target_instance.runtime_properties['data_transfers'].append({data_transfer_node, data_transfer_instance})
+
+
+# @operation
+# def configure_job_input(**kwargs):
+#     """ Configuring Job input instance """
+#     ctx.logger.info('Configuring Job input ..')
+#
+#
+# @operation
+# def configure_job_output(**kwargs):
+#     """ Configuring Job output instance """
+#     ctx.logger.info('Configuring Job output ..')
 
 
 @operation
@@ -849,7 +890,7 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
             command=command, code=str(exit_code), output=output))
         return 0
     else:
-        return int(output[output.find('=')+1:].rstrip("\n"))
+        return int(output[output.find('=') + 1:].rstrip("\n"))
 
 
 @operation
@@ -888,7 +929,7 @@ def publish(publish_list, data_mover_options, **kwargs):
 
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
-                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client,  logger=ctx.logger)
+                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -921,7 +962,8 @@ def publish(publish_list, data_mover_options, **kwargs):
                 thread = threading.Thread(
                     target=report_metrics_to_monitoring,
                     args=(
-                        audit, ctx.workflow_id, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host, ctx.logger
+                        audit, ctx.workflow_id, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host,
+                        ctx.logger
                     )
                 )
                 addThread(thread)

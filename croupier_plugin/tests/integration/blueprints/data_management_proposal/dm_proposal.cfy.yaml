@@ -36,7 +36,7 @@ in1:
 in2:
   type: croupier.nodes.WebDataSource
   properties:
-    uri: /query1/
+    resource: /query1/
   relationships:
     - type: located_at
       target: cloud_data_access_infra
@@ -44,7 +44,7 @@ in2:
 in3:
   type: croupier.nodes.WebDataSource
   properties:
-    uri: /query2/
+    resource: /query2/
   relationships:
     - type: located_at
       target: cloud_data_access_infra
@@ -52,7 +52,7 @@ in3:
 in4:
   type: croupier.nodes.FileDataSource
   properties:
-    filename: /path/to/in4
+    filepath: /path/to/in4
   relationships:
     - type: located_at
       target: sodalite_data_access_infra
@@ -61,7 +61,7 @@ in4:
 out1:
   type: croupier.nodes.FileDataSource
   properties:
-    filename: /path/to/out1
+    filepath: /path/to/out1
   relationships:
     - type: located_at
       target: cesga_data_access_infra
@@ -69,7 +69,7 @@ out1:
 out2:
   type: croupier.nodes.FileDataSource
   properties:
-    filename: /path/to/out2
+    filepath: /path/to/out2
   relationships:
     - type: located_at
       target: cesga_data_access_infra

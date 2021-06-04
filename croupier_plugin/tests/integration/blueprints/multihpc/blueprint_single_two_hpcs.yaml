@@ -28,8 +28,10 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/multihpc/inputs_multiple_hpcs_def.yaml
+#    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
+    - plugin.yaml
+#    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/croupier_plugin/tests/integration/blueprints/multihpc/inputs_multiple_hpcs_def.yaml
+    - inputs_multiple_hpcs_def.yaml
 
 node_templates:
     cesga_hpc:
@@ -73,6 +75,12 @@ node_templates:
         relationships:
             - type: job_managed_by_interface
               target: cesga_hpc
+            - type: input
+              target: in1
+            - type: input
+              target: in2
+            - type: output
+              target: out1
 
     sodalite_job:
         type: croupier.nodes.Job
@@ -91,6 +99,156 @@ node_templates:
         relationships:
             - type: job_managed_by_interface
               target: sodalite_hpc
+            - type: job_depends_on
+              target: cesga_job
+            - type: input
+              target: in3
+            - type: input
+              target: in4
+            - type: output
+              target: out2
+
+    #Data transfer support
+
+    #INPUTS
+    in1:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/in1
+        relationships:
+            - type: located_at
+              target: cesga_data_access_infra
+
+    in2:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /query1/
+        relationships:
+            - type: located_at
+              target: cloud_data_access_infra
+
+    in3:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /query2/
+        relationships:
+            - type: located_at
+              target: cloud_data_access_infra
+
+    in4:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/in4
+        relationships:
+            - type: located_at
+              target: sodalite_data_access_infra
+
+    #OUTPUTS
+    out1:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/out1
+        relationships:
+            - type: located_at
+              target: cesga_data_access_infra
+
+    out2:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/out2
+        relationships:
+            - type: located_at
+              target: sodalite_data_access_infra
+
+    # DATA TRANSFER
+    dt1:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSync
+        relationships:
+            - type: from_source
+              target: out1
+            - type: to_target
+              target: in4
+
+    # DATA INFRASTRUCTURES
+
+    #CESGA DataManagement Infrastructure
+    cesga_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: ft2.cesga.es
+        relationships:
+            - type: supported_interfaces
+              target: cesga_data_access_interface
+
+    cesga_data_access_interface:
+        type: croupier.nodes.DataAccessInterface
+        properties:
+            supported_protocols:
+                - SCP
+                - Filesystem
+                - RSync
+        relationships:
+            - type: credentials
+              target: cesga_credentials_ssh
+
+    cesga_credentials_ssh:
+        type: croupier.nodes.AccountCredentials
+        properties:
+            username: yosu
+            password: 12345
+
+    #SODALITE DataManagement Infrastructure
+    sodalite_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: sodalite-fe.hlrs.de
+        relationships:
+            - type: supported_interfaces
+              target: sodalite_data_access_interface
+
+    sodalite_data_access_interface:
+        type: croupier.nodes.DataAccessInterface
+        properties:
+            supported_protocols:
+                - Filesystem
+                - RSync
+        relationships:
+            - type: credentials
+              target: sodalite_credentials_ssh
+
+    sodalite_credentials_ssh:
+        type: croupier.nodes.KeyCredentials
+        properties:
+            key: "key content ..."
+            key_password: "key password ..."
+
+    #Cloud DataManagement Infrastructure
+    cloud_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: cloud.sodalite.eu
+        relationships:
+            - type: supported_interfaces
+              target: cloud_data_access_interface
+
+    cloud_data_access_interface:
+        type: croupier.nodes.DataAccessInterface
+        properties:
+            supported_protocols:
+                - HTTP
+        relationships:
+            - type: credentials
+              target: cloud_credentials_ssh
+
+    cloud_credentials_ssh:
+        type: croupier.nodes.AccountCredentials
+        properties:
+            username: yosu_cloud
+            password: 54321
+
+    #End - Data transfer support
 
 outputs:
     cesga_job_name:

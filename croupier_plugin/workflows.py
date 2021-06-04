@@ -75,8 +75,8 @@ class JobGraphInstance(object):
 
             # build job name
             instance_components = instance.id.split('_')
-            self.name = runtime_properties["job_prefix"] +\
-                instance_components[-1]
+            self.name = runtime_properties["job_prefix"] + \
+                        instance_components[-1]
         else:
             self._status = 'NONE'
             self.name = instance.id
@@ -124,7 +124,7 @@ class JobGraphInstance(object):
             self.winstance.send_event('State changed to ' + self._status)
 
             self.completed = not self.parent_node.is_job or \
-                self._status == 'COMPLETED'
+                             self._status == 'COMPLETED'
 
             if self.completed:
                 self.publish()
@@ -133,11 +133,11 @@ class JobGraphInstance(object):
                 self.failed = False
             else:
                 self.failed = self.parent_node.is_job and \
-                    (self._status == 'BOOT_FAIL' or
-                     self._status == 'CANCELLED' or
-                     self._status == 'FAILED' or
-                     self._status == 'REVOKED' or
-                     self._status == 'TIMEOUT')
+                              (self._status == 'BOOT_FAIL' or
+                               self._status == 'CANCELLED' or
+                               self._status == 'FAILED' or
+                               self._status == 'REVOKED' or
+                               self._status == 'TIMEOUT')
 
     def clean(self):
         """ Cleans job's aux files """
@@ -184,6 +184,13 @@ class JobGraphNode(object):
 
         if self.is_job:
             self.status = 'WAITING'
+            self.outputs = []
+            nodes = ctx.nodes
+            # TODO Collect outputs associated to data transfer objects
+            #  For each DS node connected by output relationship:
+            #  find data transfer object in nodes, such as DT|from-source == DS node
+            #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
+            #  For data management graph nodes use DMGraphNode class (to be created)
         else:
             self.status = 'NONE'
 
@@ -303,6 +310,16 @@ class JobGraphNode(object):
         self.status = 'CANCELED'
 
 
+def isDataManagementNode(node):
+    return not ('croupier.nodes.Job' in node.type_hierarchy or
+                'croupier.nodes.InfrastructureInterface' in node.type_hierarchy)
+
+
+def isDataManagementRelationship(relationship):
+    return ('input' == relationship._relationship['type'] or
+            'output' == relationship._relationship['type'])
+
+
 def build_graph(nodes):
     """ Creates a new graph of nodes and instances with the job wrapper """
 
@@ -311,7 +328,14 @@ def build_graph(nodes):
     # first create node structure
     nodes_map = {}
     root_nodes = []
+    # TODO Associate Data Transfer nodes to job inputs/outputs
+    # TODO Returned tuple in this method should only return the graph of HPC interfaces and jobs
+    # TODO In another method, associate to entries on this map of type Job with the list of
+    # TODO inputs/outputs affected by a data transfer. In such a case, collect in the graph
+    # TODO the associated infrastructure, interface and credentials.
     for node in nodes:
+        if isDataManagementNode(node):  # Ignore nodes defined for data management for building the graph
+            continue
         new_node = JobGraphNode(node, job_instances_map)
         nodes_map[node.id] = new_node
         # check if it is root node
@@ -323,6 +347,8 @@ def build_graph(nodes):
     # then set relationships
     for _, child in nodes_map.items():
         for relationship in child.cfy_node.relationships:
+            if isDataManagementRelationship(relationship):  # Ignore nodes defined for data management for building the graph
+                continue
             parent = nodes_map[relationship.target_node.id]
             parent.add_child(child)
             child.add_parent(parent)
