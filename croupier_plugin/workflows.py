@@ -37,6 +37,39 @@ from croupier_plugin.job_requester import JobRequester
 LOOP_PERIOD = 1
 
 
+def isOutputRelationship(relationship):
+    return 'output' == relationship._relationship['type']
+
+def isFromSourceRelationship(relationship):
+    return 'from_source' == relationship._relationship['type']
+
+
+def isDataManagementNode(node):
+    return not ('croupier.nodes.Job' in node.type_hierarchy or
+                'croupier.nodes.InfrastructureInterface' in node.type_hierarchy)
+
+
+def isDataTransferNode(node):
+    return 'croupier.nodes.DataTransfer' in node.type_hierarchy
+
+
+def isDataManagementRelationship(relationship):
+    return ('input' == relationship._relationship['type'] or
+            'output' == relationship._relationship['type'])
+
+
+def findDataTransferInstancesForSource(data_source, nodes):
+    #  find data transfer object in nodes, such as DT|from-source == DS node
+    dt_instances = []
+    for node in nodes:
+        if isDataTransferNode(node):
+            for relationship in node.relationships:
+                if isFromSourceRelationship(relationship):
+                    if data_source.id == relationship.target_node.id:
+                        dt_instances.append(node)
+    return dt_instances
+
+
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
 
@@ -173,6 +206,11 @@ class JobGraphInstance(object):
         self._status = 'CANCELLED'
 
 
+class DMGraphNode:
+    # TODO
+    pass
+
+
 class JobGraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
@@ -186,11 +224,18 @@ class JobGraphNode(object):
             self.status = 'WAITING'
             self.outputs = []
             nodes = ctx.nodes
-            # TODO Collect outputs associated to data transfer objects
-            #  For each DS node connected by output relationship:
-            #  find data transfer object in nodes, such as DT|from-source == DS node
-            #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
-            #  For data management graph nodes use DMGraphNode class (to be created)
+            # Collect outputs associated to data transfer objects
+            for relationship in node.relationships:
+                #  For each DS node connected by output relationship:
+                if isOutputRelationship(relationship):
+                    output = relationship.target_node
+                    #  find data transfer object in nodes, such as DT|from-source == DS node
+                    dt_instances = findDataTransferInstancesForSource(output, nodes)
+                    #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
+                    #  For data management graph nodes use DMGraphNode class (to be created)
+                    if dt_instances:
+                        self.outputs.append(DMGraphNode(output, job_instances_map))
+
         else:
             self.status = 'NONE'
 
@@ -310,16 +355,6 @@ class JobGraphNode(object):
         self.status = 'CANCELED'
 
 
-def isDataManagementNode(node):
-    return not ('croupier.nodes.Job' in node.type_hierarchy or
-                'croupier.nodes.InfrastructureInterface' in node.type_hierarchy)
-
-
-def isDataManagementRelationship(relationship):
-    return ('input' == relationship._relationship['type'] or
-            'output' == relationship._relationship['type'])
-
-
 def build_graph(nodes):
     """ Creates a new graph of nodes and instances with the job wrapper """
 
@@ -328,11 +363,6 @@ def build_graph(nodes):
     # first create node structure
     nodes_map = {}
     root_nodes = []
-    # TODO Associate Data Transfer nodes to job inputs/outputs
-    # TODO Returned tuple in this method should only return the graph of HPC interfaces and jobs
-    # TODO In another method, associate to entries on this map of type Job with the list of
-    # TODO inputs/outputs affected by a data transfer. In such a case, collect in the graph
-    # TODO the associated infrastructure, interface and credentials.
     for node in nodes:
         if isDataManagementNode(node):  # Ignore nodes defined for data management for building the graph
             continue
