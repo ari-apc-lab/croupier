@@ -123,46 +123,6 @@ def preconfigure_interface(
         ctx.logger.warning('Infrastructure Interface simulated')
 
 
-# @operation
-# def configure_data_transfer_source(**kwargs):
-#     """ Configuring Data Transfer source instance """
-#     ctx.logger.info('Configuring Data Transfer source ..')
-#
-#     # Associate data transfer object to source
-#     data_transfer_instance = ctx.source.instance
-#     data_transfer_node = ctx.source.node
-#     data_source_instance = ctx.target.instance
-#     if 'data_transfers' not in data_source_instance.runtime_properties:
-#         data_source_instance.runtime_properties['data_transfers'] = []
-#     data_source_instance.runtime_properties['data_transfers'].append({data_transfer_node, data_transfer_instance})
-
-
-# @operation
-# def configure_data_transfer_target(**kwargs):
-#     """ Configuring Data Transfer source instance """
-#     ctx.logger.info('Configuring Data Transfer target ..')
-#
-#     # Associate data transfer object to target
-#     data_transfer_instance = ctx.source.instance
-#     data_transfer_node = ctx.source.node
-#     data_target_instance = ctx.target.instance
-#     if 'data_transfers' not in data_target_instance.runtime_properties:
-#         data_target_instance.runtime_properties['data_transfers'] = []
-#     data_target_instance.runtime_properties['data_transfers'].append({data_transfer_node, data_transfer_instance})
-
-
-# @operation
-# def configure_job_input(**kwargs):
-#     """ Configuring Job input instance """
-#     ctx.logger.info('Configuring Job input ..')
-#
-#
-# @operation
-# def configure_job_output(**kwargs):
-#     """ Configuring Job output instance """
-#     ctx.logger.info('Configuring Job output ..')
-
-
 @operation
 def configure_execution(
         config,

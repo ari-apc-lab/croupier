@@ -20,6 +20,9 @@ license information in the project root.
 @author: Javier Carnero
          Atos Research & Innovation, Atos Spain S.A.
          e-mail: javier.carnero@atos.net
+@author: Jesus Gorronogoitia
+         Atos Research & Innovation, Atos Spain S.A.
+         e-mail: jesus.gorronogoitia@atos.net
 
 workflows.py - Holds the plugin workflows
 '''
@@ -208,7 +211,12 @@ class JobGraphInstance(object):
 
 class DMGraphNode:
     # TODO
-    pass
+    def __init__(self, output, job, dt_instances, job_instances_map):
+        self.name = output.id
+        self.type = output.type
+        self.cfy_node = output
+        self.dt_instances = dt_instances
+        self.job = job
 
 
 class JobGraphNode(object):
@@ -234,7 +242,7 @@ class JobGraphNode(object):
                     #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
                     #  For data management graph nodes use DMGraphNode class (to be created)
                     if dt_instances:
-                        self.outputs.append(DMGraphNode(output, job_instances_map))
+                        self.outputs.append(DMGraphNode(output, self, dt_instances, job_instances_map))
 
         else:
             self.status = 'NONE'

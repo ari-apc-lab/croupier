@@ -20,6 +20,9 @@
 # @author: Javier Carnero
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
 #
 # plugin.yaml
 
@@ -489,31 +492,15 @@ relationships:
 
     from_source:
         derived_from: cloudify.relationships.connected_to
-#        source_interfaces:
-#            cloudify.interfaces.relationship_lifecycle:
-#                preconfigure:
-#                    implementation: croupier.croupier_plugin.tasks.configure_data_transfer_source
 
     to_target:
         derived_from: cloudify.relationships.connected_to
-#        source_interfaces:
-#            cloudify.interfaces.relationship_lifecycle:
-#                preconfigure:
-#                    implementation: croupier.croupier_plugin.tasks.configure_data_transfer_target
 
     input:
         derived_from: cloudify.relationships.connected_to
-#        source_interfaces:
-#            cloudify.interfaces.relationship_lifecycle:
-#                preconfigure:
-#                    implementation: croupier.croupier_plugin.tasks.configure_job_input
 
     output:
         derived_from: cloudify.relationships.connected_to
-#        source_interfaces:
-#            cloudify.interfaces.relationship_lifecycle:
-#                preconfigure:
-#                    implementation: croupier.croupier_plugin.tasks.configure_job_output
 
     located_at:
         derived_from: cloudify.relationships.contained_in
