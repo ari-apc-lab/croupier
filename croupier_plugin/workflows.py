@@ -36,41 +36,47 @@ import time
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
 from croupier_plugin.job_requester import JobRequester
+import croupier_plugin.data_management.data_management as dm
 
 LOOP_PERIOD = 1
 
 
-def isOutputRelationship(relationship):
-    return 'output' == relationship._relationship['type']
-
-def isFromSourceRelationship(relationship):
-    return 'from_source' == relationship._relationship['type']
-
-
-def isDataManagementNode(node):
-    return not ('croupier.nodes.Job' in node.type_hierarchy or
-                'croupier.nodes.InfrastructureInterface' in node.type_hierarchy)
-
-
-def isDataTransferNode(node):
-    return 'croupier.nodes.DataTransfer' in node.type_hierarchy
-
-
-def isDataManagementRelationship(relationship):
-    return ('input' == relationship._relationship['type'] or
-            'output' == relationship._relationship['type'])
-
-
-def findDataTransferInstancesForSource(data_source, nodes):
-    #  find data transfer object in nodes, such as DT|from-source == DS node
-    dt_instances = []
-    for node in nodes:
-        if isDataTransferNode(node):
-            for relationship in node.relationships:
-                if isFromSourceRelationship(relationship):
-                    if data_source.id == relationship.target_node.id:
-                        dt_instances.append(node)
-    return dt_instances
+# def isOutputRelationship(relationship):
+#     return 'output' == relationship._relationship['type']
+#
+#
+# def isFromSourceRelationship(relationship):
+#     return 'from_source' == relationship._relationship['type']
+#
+#
+# def isToTargetRelationship(relationship):
+#     return 'to_target' == relationship._relationship['type']
+#
+#
+# def isDataManagementNode(node):
+#     return not ('croupier.nodes.Job' in node.type_hierarchy or
+#                 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy)
+#
+#
+# def isDataTransferNode(node):
+#     return 'croupier.nodes.DataTransfer' in node.type_hierarchy
+#
+#
+# def isDataManagementRelationship(relationship):
+#     return ('input' == relationship._relationship['type'] or
+#             'output' == relationship._relationship['type'])
+#
+#
+# def findDataTransferInstancesForSource(data_source, nodes):
+#     #  find data transfer object in nodes, such as DT|from-source == DS node
+#     dt_instances = []
+#     for node in nodes:
+#         if isDataTransferNode(node):
+#             for relationship in node.relationships:
+#                 if isFromSourceRelationship(relationship):
+#                     if data_source.id == relationship.target_node.id:
+#                         dt_instances.append(node)
+#     return dt_instances
 
 
 class JobGraphInstance(object):
@@ -146,7 +152,7 @@ class JobGraphInstance(object):
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
                                                   kwargs={"name": self.name, "audit": self.audit,
-                                                          "host": self.host})
+                                                          "outputs": self.parent_node.outputs})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
@@ -210,14 +216,50 @@ class JobGraphInstance(object):
         self._status = 'CANCELLED'
 
 
-class DMGraphNode:
-    # TODO
-    def __init__(self, output, job, dt_instances, job_instances_map):
-        self.name = output.id
-        self.type = output.type
-        self.cfy_node = output
-        self.dt_instances = dt_instances
-        self.job = job
+# def createDataSourceNode(output, dt_instances=None):
+#         dsNode = {}
+#         dsNode['id'] = output.id
+#         dsNode['type'] = output.type
+#         dsNode['properties'] = output.properties
+#         data_transfer_instances = []
+#         if dt_instances:
+#             for dt_instance in dt_instances:
+#                 data_transfer_instances.append(createDataTransferNode(dt_instance))
+#         dsNode['dt_instances'] = data_transfer_instances
+#         return dsNode
+
+# class DataSourceNode:
+#     def __init__(self, output, job=None, dt_instances=None):
+#         self.id = output.id
+#         self.type = output.type
+#         self.properties = output.properties
+#         data_transfer_instances = []
+#         if dt_instances:
+#             for dt_instance in dt_instances:
+#                 data_transfer_instances.append(DataTransferNode(dt_instance))
+#         self.dt_instances = data_transfer_instances
+#         self.job = job
+
+
+# def createDataTransferNode(dt_instance):
+#     dtNode = {}
+#     dtNode['id'] =  dt_instance.id
+#     for relationship in dt_instance.relationships:
+#         if isFromSourceRelationship(relationship):
+#             dtNode['fromSource'] = createDataSourceNode(relationship.target_node)
+#         if isToTargetRelationship(relationship):
+#             dtNode['toTarget'] = createDataSourceNode(relationship.target_node)
+#     return dtNode
+
+
+# class DataTransferNode:
+#     def __init__(self, dt_instance):
+#         self.id = dt_instance.id
+#         for relationship in dt_instance.relationships:
+#             if isFromSourceRelationship(relationship):
+#                 self.fromSource = DataSourceNode(relationship.target_node)
+#             if isToTargetRelationship(relationship):
+#                 self.toTarget = DataSourceNode(relationship.target_node)
 
 
 class JobGraphNode(object):
@@ -236,15 +278,14 @@ class JobGraphNode(object):
             # Collect outputs associated to data transfer objects
             for relationship in node.relationships:
                 #  For each DS node connected by output relationship:
-                if isOutputRelationship(relationship):
+                if dm.isOutputRelationship(relationship):
                     output = relationship.target_node
                     #  find data transfer object in nodes, such as DT|from-source == DS node
-                    dt_instances = findDataTransferInstancesForSource(output, nodes)
+                    dt_instances = dm.findDataTransferInstancesForSource(output, nodes)
                     #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
                     #  For data management graph nodes use DMGraphNode class (to be created)
                     if dt_instances:
-                        self.outputs.append(DMGraphNode(output, self, dt_instances, job_instances_map))
-
+                        self.outputs.append(dm.createDataSourceNode(output, dt_instances))
         else:
             self.status = 'NONE'
 
@@ -373,7 +414,7 @@ def build_graph(nodes):
     nodes_map = {}
     root_nodes = []
     for node in nodes:
-        if isDataManagementNode(node):  # Ignore nodes defined for data management for building the graph
+        if dm.isDataManagementNode(node):  # Ignore nodes defined for data management for building the graph
             continue
         new_node = JobGraphNode(node, job_instances_map)
         nodes_map[node.id] = new_node
@@ -386,7 +427,7 @@ def build_graph(nodes):
     # then set relationships
     for _, child in nodes_map.items():
         for relationship in child.cfy_node.relationships:
-            if isDataManagementRelationship(relationship):  # Ignore nodes defined for data management for building the graph
+            if dm.isDataManagementRelationship(relationship):  # Ignore nodes defined for data management for building the graph
                 continue
             parent = nodes_map[relationship.target_node.id]
             parent.add_child(child)

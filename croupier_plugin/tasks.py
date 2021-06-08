@@ -52,6 +52,7 @@ from croupier_plugin.accounting_client.model.resource_consumption_record import 
 from croupier_plugin.accounting_client.model.resource_consumption import (ResourceConsumption, MeasureUnit)
 from croupier_plugin.accounting_client.model.reporter import (Reporter, ReporterType)
 from croupier_plugin.accounting_client.model.resource import (ResourceType)
+import croupier_plugin.data_management.data_management as dm
 
 # from celery.contrib import rdb
 
@@ -874,6 +875,8 @@ def publish(publish_list, data_mover_options, **kwargs):
             # Data Movement
             # TODO Implement generic (data transfer driven) data movement
             #   Integrate former GridFTP based data mover
+            if 'outputs' in kwargs:
+                dm.processDataTransfer(kwargs['outputs'])
 
             if len(data_mover_options) > 0 and \
                     'upload' in data_mover_options and data_mover_options['upload']:
