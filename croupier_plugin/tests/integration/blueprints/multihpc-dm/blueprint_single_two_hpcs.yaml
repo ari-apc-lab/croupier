@@ -76,6 +76,12 @@ node_templates:
         relationships:
             - type: job_managed_by_interface
               target: cesga_hpc
+            - type: input
+              target: in1
+            - type: input
+              target: in2
+            - type: output
+              target: out1
 
     sodalite_job:
         type: croupier.nodes.Job
@@ -96,6 +102,65 @@ node_templates:
               target: sodalite_hpc
             - type: job_depends_on
               target: cesga_job
+            - type: input
+              target: in3
+            - type: input
+              target: in4
+            - type: output
+              target: out2
+
+    # BEGIN DATA MANAGEMENT
+
+    #INPUTS
+    in1:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/in1
+            located_at: { get_input: cesga_data_access_infra }
+
+    in2:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /query1/
+            located_at: { get_input: cloud_data_access_infra }
+
+    in3:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /query2/
+            located_at: { get_input: cloud_data_access_infra }
+
+    in4:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/in4
+            located_at: { get_input: sodalite_data_access_infra }
+
+    #OUTPUTS
+    out1:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/out1
+            located_at: { get_input: cesga_data_access_infra }
+
+    out2:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: /path/to/out2
+            located_at: { get_input: cesga_data_access_infra }
+
+    # DATA TRANSFER
+    dt1:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSync
+        relationships:
+            - type: from_source
+              target: out1
+            - type: to_target
+              target: in4
+
+# END DATA MANAGEMENT
 
 outputs:
     cesga_job_name:

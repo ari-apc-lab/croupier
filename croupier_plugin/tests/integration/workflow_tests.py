@@ -54,6 +54,14 @@ def _load_inputs(inputs_file, *args, **kwargs):
     return inputs
 
 
+def _load_multiple_inputs(inputs_files, *args, **kwargs):
+    inputs = {}
+    for inputs_file in inputs_files:
+        inputs.update(_load_inputs(inputs_file))
+
+    return inputs
+
+
 class TestPlugin(unittest.TestCase):
     """ Test workflows class """
 
@@ -265,6 +273,26 @@ class TestPlugin(unittest.TestCase):
                                        './')],
                    inputs='load_multihpc_inputs')
     def test_multihpc(self, cfy_local):
+        """ Multi-HPC Blueprint """
+        self.run_test(cfy_local)
+
+    # Multi-HPC with DM workflow
+    def load_multihpc_dm_inputs(self, *args, **kwargs):
+        inputs_files = [
+            os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', 'multihpc-dm', 'cesga-sodalite-blueprint-inputs.yaml'),
+            os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', 'multihpc-dm', 'cesga_dm.cfy.yaml'),
+            os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', 'multihpc-dm', 'cloud_dm.cfy.yaml'),
+            os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', 'multihpc-dm', 'sodalite_dm.cfy.yaml')
+        ]
+        return _load_multiple_inputs(inputs_files)
+
+    @workflow_test(os.path.join('blueprints', 'multihpc-dm', 'blueprint_single_two_hpcs.yaml'),
+                   copy_plugin_yaml=True,
+                   resources_to_copy=[(os.path.join('blueprints', 'multihpc-dm',
+                                                    'inputs_multiple_hpcs_def.yaml'),
+                                       './')],
+                   inputs='load_multihpc_dm_inputs')
+    def test_multihpc_dm(self, cfy_local):
         """ Multi-HPC Blueprint """
         self.run_test(cfy_local)
 

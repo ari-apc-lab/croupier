@@ -1,0 +1,9 @@
+#CESGA DataManagement Infrastructure
+sodalite_data_access_infra:
+  endpoint: sodalite-fe.hlrs.de
+  supported_protocols:
+    - Filesystem
+    - RSync
+  credentials:
+    username: yosu
+    key: "key content ..."

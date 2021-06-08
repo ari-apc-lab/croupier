@@ -145,7 +145,8 @@ class JobGraphInstance(object):
         self.winstance.send_event('Publishing job outputs..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
-                                                  kwargs={"name": self.name, "audit": self.audit})
+                                                  kwargs={"name": self.name, "audit": self.audit,
+                                                          "host": self.host})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:

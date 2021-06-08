@@ -871,6 +871,10 @@ def publish(publish_list, data_mover_options, **kwargs):
         published = True
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
+            # Data Movement
+            # TODO Implement generic (data transfer driven) data movement
+            #   Integrate former GridFTP based data mover
+
             if len(data_mover_options) > 0 and \
                     'upload' in data_mover_options and data_mover_options['upload']:
                 if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
@@ -890,6 +894,7 @@ def publish(publish_list, data_mover_options, **kwargs):
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
                 convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger)
+
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
