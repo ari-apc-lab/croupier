@@ -6,6 +6,10 @@ from cloudify.exceptions import CommandExecutionError
 import tempfile
 
 
+def isInputRelationship(relationship):
+    return 'input' == relationship._relationship['type']
+
+
 def isOutputRelationship(relationship):
     return 'output' == relationship._relationship['type']
 
@@ -27,13 +31,21 @@ def isDataTransferNode(node):
     return 'croupier.nodes.DataTransfer' in node.type_hierarchy
 
 
+def isDataSourceNode(node):
+    return 'croupier.nodes.DataSource' in node.type_hierarchy
+
+
+def isJobNode(node):
+    return 'croupier.nodes.Job' in node.type_hierarchy
+
+
 def isDataManagementRelationship(relationship):
     return ('input' == relationship._relationship['type'] or
             'output' == relationship._relationship['type'])
 
 
 def findDataTransferInstancesForSource(data_source, nodes):
-    #  find data transfer object in nodes, such as DT|from-source == DS node
+    #  find data transfer object in nodes, such as DT|from_source == DS node
     dt_instances = []
     for node in nodes:
         if isDataTransferNode(node):
@@ -42,6 +54,103 @@ def findDataTransferInstancesForSource(data_source, nodes):
                     if data_source.id == relationship.target_node.id:
                         dt_instances.append(node)
     return dt_instances
+
+
+def findDataTransferInstancesForTarget(data_source, nodes):
+    #  find data transfer object in nodes, such as DT|to_target == DS node
+    dt_instances = []
+    for node in nodes:
+        if isDataTransferNode(node):
+            for relationship in node.relationships:
+                if isToTargetRelationship(relationship):
+                    if data_source.id == relationship.target_node.id:
+                        dt_instances.append(node)
+    return dt_instances
+
+
+def findDataSourceById(input_id):
+    for node in ctx.nodes:
+        if isDataSourceNode(node):
+            if node.id == input_id:
+                return node
+    return None
+
+
+def removeDataTransferInstancesConnectedToJob(job_node, nodes, root_nodes):
+    for node in nodes:
+        if isDataTransferNode(node):
+            dt = node
+            if isDTFromSourceInJobOutputs(dt, job_node):
+                to_target_rel = getToTargetRelationship(dt)
+                input_id = to_target_rel.target_node.id
+                removeDTFromInputForAllJobs(dt.id, input_id, root_nodes)
+
+
+def removeDTFromInputForAllJobs(dt_id, input_id, root_nodes):
+    jobs = []
+    for node in root_nodes:
+        findJobsConnectedToInput(input_id, root_nodes, jobs)
+    for job in jobs:
+        removeDataTransferInJobInput(dt_id, job, input_id)
+
+
+def findJobsConnectedToInput(input_id, nodes, jobs):
+    for node in nodes:
+        if node.is_job:
+            for _input in node.inputs:
+                if _input['id'] == input_id:
+                    if node not in jobs:
+                        jobs.append(node)
+        if node.children:
+            findJobsConnectedToInput(input_id, node.children, jobs)
+    return jobs
+
+
+def removeDataTransferInJobInput(dt_id, job, input_id):
+    for _input in job.inputs:
+        if _input['id'] == input_id:
+            if 'dt_instances' in _input:
+                for dt in _input['dt_instances']:
+                    if dt['id'] == dt_id:
+                        _input['dt_instances'].remove(dt)
+
+
+def isDTFromSourceInJobOutputs(dt, job_node):
+    from_source_rel = getFromSourceRelationship(dt)
+    for output in job_node.outputs:
+        if from_source_rel.target_node.id == output['id']:
+            return True
+    return False
+
+
+def getToTargetRelationship(dt):
+    for relationship in dt.relationships:
+        if isToTargetRelationship(relationship):
+            return relationship
+    return None
+
+
+def getFromSourceRelationship(dt):
+    for relationship in dt.relationships:
+        if isFromSourceRelationship(relationship):
+            return relationship
+    return None
+
+
+def getInputRelationships(job):
+    inputs = []
+    for relationship in job.relationships:
+        if isInputRelationship(relationship):
+            inputs.append(relationship)
+    return inputs
+
+
+def getOutputRelationships(job):
+    outputs = []
+    for relationship in job.relationships:
+        if isInputRelationship(relationship):
+            outputs.append(relationship)
+    return outputs
 
 
 def createDataSourceNode(output, dt_instances=None):
@@ -83,14 +192,14 @@ def ssh_credentials(host, dm_credentials):
     return credentials
 
 
-def processDataTransfer(outputs):
-    # For each output in outputs
-    # For each data transfer object in output
+def processDataTransfer(inouts):
+    # For each inout in inouts
+    # For each data transfer object in inout
     # execute data_transfer
     # TODO parallel processing of data transfer
-    for output in outputs:
-        if 'dt_instances' in output:
-            for dt_config in output['dt_instances']:
+    for inout in inouts:
+        if 'dt_instances' in inout:
+            for dt_config in inout['dt_instances']:
                 dt = DataTransfer.factory(dt_config)
                 dt.process()
 
@@ -152,6 +261,8 @@ class RSyncDataTransfer:
             ftp_client = SFtpClient(credentials)
 
             if "username" in to_target_infra_credentials and "password" in to_target_infra_credentials:
+                # NOTE rsync authentication with username/password requires sshpass which it is not installed
+                # some HPC frontends
                 target_username = to_target_infra_credentials['username']
                 target_password = to_target_infra_credentials['password']
                 dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no -o ' \
@@ -172,7 +283,8 @@ class RSyncDataTransfer:
                     ftp_client.sendKeyFile(ssh_client, key_filepath, target_key_filepath)
                     dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i {key_file}"  {ds_source}  {username}@{' \
                                  'target_endpoint}:{ds_target}'.format(
-                        username=target_username, key_file=target_key_filepath, target_endpoint=to_target_infra_endpoint,
+                        username=target_username, key_file=target_key_filepath,
+                        target_endpoint=to_target_infra_endpoint,
                         ds_source=from_source_data_url, ds_target=to_target_data_url
                     )
 
@@ -192,6 +304,7 @@ class RSyncDataTransfer:
                 ftp_client.removeFile(target_key_filepath)
             ftp_client.close_connection()
             ssh_client.close_connection()
+
 
 # Test
 

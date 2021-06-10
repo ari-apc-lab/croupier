@@ -523,7 +523,11 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         type_hierarchy
 
     if not simulate:
+        if 'inputs' in kwargs and kwargs['inputs']:
+            dm.processDataTransfer(kwargs['inputs'])
+
         # Do data download (from Cloud to HPC) if requested
+        # TODO integrate GridFTP data mover with about processDataTransfer
         if len(data_mover_options) > 0 and \
                 'download' in data_mover_options and data_mover_options['download']:
             if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
@@ -873,8 +877,7 @@ def publish(publish_list, data_mover_options, **kwargs):
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
             # Data Movement
-            # TODO Implement generic (data transfer driven) data movement
-            #   Integrate former GridFTP based data mover
+            # TODO Integrate former GridFTP based data mover in Data Movement Transfer
             if 'outputs' in kwargs and kwargs['outputs']:
                 dm.processDataTransfer(kwargs['outputs'])
 

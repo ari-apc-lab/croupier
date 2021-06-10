@@ -82,10 +82,11 @@ LOOP_PERIOD = 1
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
 
-    def __init__(self, parent, instance):
+    def __init__(self, parent, instance, root_nodes):
         self._status = 'WAITING'
         self.parent_node = parent
         self.winstance = instance
+        self.root_nodes = root_nodes
 
         self.completed = not self.parent_node.is_job  # True if is not a job
         self.failed = False
@@ -132,7 +133,7 @@ class JobGraphInstance(object):
         self.winstance.send_event('Queuing job..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.queue',
-                                                  kwargs={"name": self.name})
+                                                  kwargs={"name": self.name, "inputs": self.parent_node.inputs})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
@@ -157,6 +158,11 @@ class JobGraphInstance(object):
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
+
+        # Remove completed data transfer objects for associated jobs
+        dm.removeDataTransferInstancesConnectedToJob(self.parent_node, ctx.nodes, self.root_nodes)
+        for output in self.parent_node.outputs:
+            output['dt_instances'] = []
 
         return result.task
 
@@ -265,7 +271,7 @@ class JobGraphInstance(object):
 class JobGraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
-    def __init__(self, node, job_instances_map):
+    def __init__(self, node, job_instances_map, root_nodes):
         self.name = node.id
         self.type = node.type
         self.cfy_node = node
@@ -274,25 +280,35 @@ class JobGraphNode(object):
         if self.is_job:
             self.status = 'WAITING'
             self.outputs = []
-            nodes = ctx.nodes
+            self.inputs = []
             # Collect outputs associated to data transfer objects
             for relationship in node.relationships:
                 #  For each DS node connected by output relationship:
                 if dm.isOutputRelationship(relationship):
-                    output = relationship.target_node
+                    _output = relationship.target_node
                     #  find data transfer object in nodes, such as DT|from-source == DS node
-                    dt_instances = dm.findDataTransferInstancesForSource(output, nodes)
+                    nodes = ctx.nodes
+                    dt_instances = dm.findDataTransferInstancesForSource(_output, nodes)
                     #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
-                    #  For data management graph nodes use DMGraphNode class (to be created)
+                    #  For data management graph nodes use DMGraphNode class
                     if dt_instances:
-                        self.outputs.append(dm.createDataSourceNode(output, dt_instances))
+                        self.outputs.append(dm.createDataSourceNode(_output, dt_instances))
+                #  For each DS node connected by input relationship:
+                if dm.isInputRelationship(relationship):
+                    _input = relationship.target_node
+                    #  find data transfer object in nodes, such as DT|to_target == DS node
+                    nodes = ctx.nodes
+                    dt_instances = dm.findDataTransferInstancesForTarget(_input, nodes)
+                    #  if such DT node exist, add the DS node to inputs collection to this JobGraphNode
+                    #  For data management graph nodes use DMGraphNode class
+                    if dt_instances:
+                        self.inputs.append(dm.createDataSourceNode(_input, dt_instances))
         else:
             self.status = 'NONE'
 
         self.instances = []
         for instance in node.instances:
-            graph_instance = JobGraphInstance(self,
-                                              instance)
+            graph_instance = JobGraphInstance(self, instance, root_nodes)
             self.instances.append(graph_instance)
             if graph_instance.parent_node.is_job:
                 job_instances_map[graph_instance.name] = graph_instance
@@ -416,7 +432,7 @@ def build_graph(nodes):
     for node in nodes:
         if dm.isDataManagementNode(node):  # Ignore nodes defined for data management for building the graph
             continue
-        new_node = JobGraphNode(node, job_instances_map)
+        new_node = JobGraphNode(node, job_instances_map, root_nodes)
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
@@ -522,7 +538,6 @@ class Monitor(object):
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-
     root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
