@@ -133,14 +133,14 @@ node_templates:
     in4:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: /path/to/in4
+            filepath: ~/test/
             located_at: { get_input: sodalite_data_access_infra }
 
     #OUTPUTS
     out1:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: /path/to/out1
+            filepath: ~/Next_trials_ITAINNOVA.zip
             located_at: { get_input: cesga_data_access_infra }
 
     out2:

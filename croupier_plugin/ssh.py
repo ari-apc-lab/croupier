@@ -35,13 +35,14 @@ from builtins import bytes
 from builtins import str
 from builtins import object
 import io
+import os
 import logging
 import select
 import socket
 import _thread
 
 from croupier_plugin.utilities import shlex_quote
-from paramiko import RSAKey, client, ssh_exception
+from paramiko import SSHClient, RSAKey, client, ssh_exception
 
 try:
     import socketserver
@@ -55,6 +56,76 @@ except ImportError:
 logging.getLogger("paramiko").setLevel(logging.WARNING)
 # Hack to avoid "Error reading SSH protocol banner" random issue
 logging.getLogger('paramiko.transport').addHandler(logging.NullHandler())
+
+
+class SFtpClient(object):
+    _client = None
+
+    def __init__(self, credentials):
+        self._client = SSHClient()
+        self._host = credentials['host']
+        self._port = int(credentials['port']) if 'port' in credentials else 22
+        self._client.load_host_keys(os.path.expanduser(os.path.join("~", ".ssh", "known_hosts")))
+
+        private_key = None
+        if 'private_key' in credentials and credentials['private_key']:
+            key_data = credentials['private_key']
+            if not isinstance(key_data, str):
+                key_data = str(key_data, "utf-8")
+            key_file = io.StringIO()
+            key_file.write(key_data)
+            key_file.seek(0)
+            if 'private_key_password' in credentials and \
+                    credentials['private_key_password'] != "":
+                private_key_password = credentials['private_key_password']
+            else:
+                private_key_password = None
+            private_key = RSAKey.from_private_key(
+                key_file,
+                password=private_key_password)
+
+        retries = 5
+        passwd = credentials['password'] if 'password' in credentials else None
+        while True:
+            try:
+                self._client.connect(
+                    self._host,
+                    port=self._port,
+                    username=credentials['user'],
+                    pkey=private_key,
+                    password=passwd,
+                    look_for_keys=False
+                )
+            except ssh_exception.SSHException as err:
+                if retries > 0 and \
+                        str(err) == "Error reading SSH protocol banner":
+                    retries -= 1
+                    logging.getLogger("paramiko"). \
+                        warning("Retrying SSH connection: " + str(err))
+                    continue
+                else:
+                    raise err
+            break
+
+    def sendKeyFile(self, ssh_client, localpath, remotepath):
+        self.sendFile(localpath, remotepath)
+        # Give 600 permissions to file
+        return ssh_client.execute_shell_command('chmod 600 ' + remotepath,wait_result=True)
+
+    def sendFile(self, localpath, remotepath):
+        sftp = self._client.open_sftp()
+        sftp.put(localpath, remotepath)
+        sftp.close()
+
+    def removeFile(self, remotepath):
+        sftp = self._client.open_sftp()
+        sftp.remove(remotepath)
+        sftp.close()
+
+    def close_connection(self):
+        """Closes opened connection"""
+        if self._client is not None:
+            self._client.close()
 
 
 class SshClient(object):

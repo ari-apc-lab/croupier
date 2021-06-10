@@ -875,7 +875,7 @@ def publish(publish_list, data_mover_options, **kwargs):
             # Data Movement
             # TODO Implement generic (data transfer driven) data movement
             #   Integrate former GridFTP based data mover
-            if 'outputs' in kwargs:
+            if 'outputs' in kwargs and kwargs['outputs']:
                 dm.processDataTransfer(kwargs['outputs'])
 
             if len(data_mover_options) > 0 and \
