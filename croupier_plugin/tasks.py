@@ -480,9 +480,10 @@ def deploy_job(script,
     # Execute the script and manage the output
     success = False
     client = SshClient(credentials)
+    script_content = script if script[0] == '#' else ctx.get_resource(script)
     if wm.create_shell_script(client,
                               name,
-                              ctx.get_resource(script),
+                              script_content,
                               logger,
                               workdir=workdir):
         call = "./" + name
@@ -716,7 +717,7 @@ def publish(publish_list, data_mover_options, **kwargs):
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
                 convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger) \
-                if audit is not None and "cput" in audit and audit["cput"] else 0
+                    if audit is not None and "cput" in audit and audit["cput"] else 0
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -873,10 +874,13 @@ def download_data(**kwargs):
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = str(os.path.dirname(os.path.realpath(__file__))) + "/scripts/"
-        script += "data_download_unzip.sh" if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data']\
-            else "data_download.sh"
+        script = data_download_unzip_script() if 'unzip_data' in ctx.node.properties and ctx.node.properties[
+            'unzip_data'] \
+            else data_download_script()
         skip_cleanup = False
+        ctx.logger.info("script: " + script)
+        f = open(script, "r")
+        ctx.logger.info("contents: " + f.read())
         if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
             files_downloaded = ctx.instance.runtime_properties['files_downloaded'] \
@@ -910,8 +914,7 @@ def delete_data(**kwargs):
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = str(os.path.dirname(os.path.realpath(__file__))) + "/scripts/"
-        script += "data_delete.sh"
+        script = data_delete_script()
         skip_cleanup = False
         if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data deleted')
@@ -955,7 +958,6 @@ def preconfigure_data(
 
 @operation
 def pass_data_info(**kwargs):
-
     files_downloaded = ctx.source.instance.runtime_properties['files_downloaded'] if \
         'files_downloaded' in ctx.source.instance.runtime_properties else []
     if 'files_downloaded' in ctx.target.instance.runtime_properties:
@@ -1128,3 +1130,16 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
         return 0
     else:
         return int(output[output.find('=') + 1:].rstrip("\n"))
+
+
+def data_download_script():
+    return '#!/bin/bash\nfor url in "$@"\ndo\n  wget "$url"\ndone'
+
+
+def data_download_unzip_script():
+    return '#!/usr/bin/env bash\nfor url in "$@"\ndo\n  wget "$url"\n  filename=$(basename "$url")\n  unzip ' \
+           '"$filename"\n  rm "$filename"\ndone '
+
+
+def data_delete_script():
+    return '#!/bin/bash\nfor file in "$@"\ndo\n  rm -r "$file"\ndone'

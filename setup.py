@@ -49,8 +49,7 @@ setup(
               'croupier_plugin.monitoring',
               ],
     package_data={'croupier_plugin.infrastructure_interfaces': ['*.sh'],
-                  'croupier_plugin': ['*.cfg', os.path.join("scripts", "*.sh")]},
-    data_files=[('scripts', [os.path.join('croupier_plugin', 'scripts', 'data_download.sh'), os.path.join('croupier_plugin','scripts', 'data_download_unzip.sh'), os.path.join('croupier_plugin', 'scripts', 'data_delete.sh')])],
+                  'croupier_plugin': ['*.cfg']},
     include_package_data=True,
     zip_safe=False,
     install_requires=[
