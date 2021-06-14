@@ -878,9 +878,6 @@ def download_data(**kwargs):
             'unzip_data'] \
             else data_download_script()
         skip_cleanup = False
-        ctx.logger.info("script: " + script)
-        f = open(script, "r")
-        ctx.logger.info("contents: " + f.read())
         if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
             files_downloaded = ctx.instance.runtime_properties['files_downloaded'] \
