@@ -23,7 +23,7 @@ license information in the project root.
 
 setup.py
 '''
-
+import os
 
 from setuptools import setup
 
@@ -49,7 +49,8 @@ setup(
               'croupier_plugin.monitoring',
               ],
     package_data={'croupier_plugin.infrastructure_interfaces': ['*.sh'],
-                  'croupier_plugin': ['*.cfg']},
+                  'croupier_plugin': ['*.cfg', os.path.join("scripts", "*.sh")]},
+    data_files=[('scripts', [os.path.join('croupier_plugin', 'scripts', 'data_download.sh'), os.path.join('croupier_plugin','scripts', 'data_download_unzip.sh'), os.path.join('croupier_plugin', 'scripts', 'data_delete.sh')])],
     include_package_data=True,
     zip_safe=False,
     install_requires=[

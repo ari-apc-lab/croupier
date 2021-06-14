@@ -874,7 +874,7 @@ def download_data(**kwargs):
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         script = "https://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/croupier_plugin/scripts/"
-        script += "data_download_unzip.sh" if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data'] \
+        script += "data_download_unzip.sh" if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data']\
             else "data_download.sh"
         skip_cleanup = False
         if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
