@@ -78,7 +78,6 @@ class TaskGraphInstance(GraphInstance):
         self.instance = instance
         self._status = 'WAITING'
         self.completed = False
-        ctx.logger.info("runtime_properties:" + str(self.runtime_properties))
 
 
 class JobGraphInstance(TaskGraphInstance):
@@ -189,10 +188,10 @@ class DataGraphInstance(TaskGraphInstance):
         ctx.logger.info(self.source_urls)
 
     def launch(self):
+        self.instance.execute_operation('cloudify.interfaces.delete')
         """ Launches the data gathering algorithm """
-        self.erase_data_urls()
         self.instance.send_event('Launched gathering data process...')
-        result = self.instance.execute_operation('cloudify.interfaces.lifecycle.start')
+        result = self.instance.execute_operation('cloudify.interfaces.lifecycle.configure')
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
@@ -207,11 +206,6 @@ class DataGraphInstance(TaskGraphInstance):
         self.source_urls = self.runtime_properties['data_urls'] \
             if 'data_urls' in self.runtime_properties else []
 
-    def erase_data_urls(self):
-        if 'data_urls' in self.runtime_properties:
-            self.instance._node_properties['data_urls'] = []
-        self.update_properties()
-        result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete')
 
 class GraphNode(object):
     """ Wrap to add job functionalities to nodes """
@@ -511,21 +505,6 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     return
 
 
-@workflow
-def gather_data(**kwargs):  # pylint: disable=W0613
-    execute_jobs(force_data=True, skip_jobs=True, **kwargs)
-
-
-@workflow
-def run_jobs_force_get_data(**kwargs):  # pylint: disable=W0613
-    execute_jobs(force_data=True, skip_jobs=False)
-
-
-@workflow
-def run_jobs(**kwargs):  # pylint: disable=W0613
-    execute_jobs(force_data=False, skip_jobs=False)
-
-
 def cancel_all(executions):
     """Cancel all pending or running jobs"""
     for _, exec_node in executions:
@@ -538,3 +517,28 @@ def wait_tasks_to_finish(tasks_result_list):
     for result in tasks_result_list:
         result.get()
         # task.wait_for_terminated()
+
+
+@workflow
+def run_jobs(**kwargs):  # pylint: disable=W0613
+    execute_jobs(force_data=False, skip_jobs=False)
+
+
+# TODO: Implement these workflows properly
+
+'''
+@workflow
+def gather_data(**kwargs):  # pylint: disable=W0613
+    execute_jobs(force_data=True, skip_jobs=True, **kwargs)
+
+
+@workflow
+def run_jobs_force_get_data(**kwargs):  # pylint: disable=W0613
+    execute_jobs(force_data=True, skip_jobs=False)
+'''
+
+
+
+
+
+
