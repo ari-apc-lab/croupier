@@ -37,10 +37,10 @@ plugins:
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
-    get_data:
-        mapping: croupier.croupier_plugin.workflows.get_data
-    run_jobs_force_get_data:
-        mapping: croupier.croupier_plugin.workflows.run_jobs_force_get_data
+#    get_data:
+#        mapping: croupier.croupier_plugin.workflows.get_data
+#    run_jobs_force_get_data:
+#        mapping: croupier.croupier_plugin.workflows.run_jobs_force_get_data
 node_types:
     croupier.nodes.InfrastructureInterface:
         derived_from: cloudify.nodes.Compute
