@@ -73,24 +73,24 @@
 
 # PART 1
 
-18 2 * * * /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && sh create_inputs_file_seasonal_part1.sh'
+# 18 2 * * * /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && sh create_inputs_file_seasonal_part1.sh'
 
-20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-00 -i blueprint-inputs-seasonal-part1-and-2.yaml seasonal_part1_00_${D}_${M}'
-20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-06 -i blueprint-inputs-seasonal-part1-and-2.yaml seasonal_part1_06_${D}_${M}'
-20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-12 -i blueprint-inputs-seasonal-part1-and-2.yaml seasonal_part1_12_${D}_${M}'
-20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-18 -i blueprint-inputs-seasonal-part1-and-2.yaml seasonal_part1_18_${D}_${M}'
+# 20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-00 -i blueprint-inputs-seasonal-part1.yaml seasonal_part1_00_${D}_${M}'
+# 20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-06 -i blueprint-inputs-seasonal-part1.yaml seasonal_part1_06_${D}_${M}'
+# 20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-12 -i blueprint-inputs-seasonal-part1.yaml seasonal_part1_12_${D}_${M}'
+# 20 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part1-18 -i blueprint-inputs-seasonal-part1.yaml seasonal_part1_18_${D}_${M}'
 
-25 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_00_${D}_${M} install'
-30 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_00_${D}_${M} run_jobs'
+# 25 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_00_${D}_${M} install'
+# 30 2 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_00_${D}_${M} run_jobs'
 
-25 3 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_06_${D}_${M} install'
-30 3 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_06_${D}_${M} run_jobs'
+# 25 3 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_06_${D}_${M} install'
+# 30 3 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_06_${D}_${M} run_jobs'
 
-25 4 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_12_${D}_${M} install'
-30 4 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_12_${D}_${M} run_jobs'
+# 25 4 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_12_${D}_${M} install'
+# 30 4 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_12_${D}_${M} run_jobs'
 
-25 5 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_18_${D}_${M} install'
-30 5 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_18_${D}_${M} run_jobs'
+# 25 5 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_18_${D}_${M} install'
+# 30 5 * * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part1_18_${D}_${M} run_jobs'
 
 # PART 2
 
@@ -99,10 +99,10 @@
 # 20 2 1-10 * * /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && sh create_inputs_file_seasonal_part2_12.sh'
 # 20 2 1-10 * * /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && sh create_inputs_file_seasonal_part2_18.sh'
 
-#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-00 -i blueprint-inputs-seasonal-part2.yaml seasonal_part2_00_${D}_${M}'
-#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-06 -i blueprint-inputs-seasonal-part2.yaml seasonal_part2_06_${D}_${M}'
-#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-12 -i blueprint-inputs-seasonal-part2.yaml seasonal_part2_12_${D}_${M}'
-#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-18 -i blueprint-inputs-seasonal-part2.yaml seasonal_part2_18_${D}_${M}'
+#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-00 -i blueprint-inputs-seasonal-part2-00.yaml seasonal_part2_00_${D}_${M}'
+#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-06 -i blueprint-inputs-seasonal-part2-06.yaml seasonal_part2_06_${D}_${M}'
+#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-12 -i blueprint-inputs-seasonal-part2-12.yaml seasonal_part2_12_${D}_${M}'
+#21 2 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cd $HOME/croupier_scripts_generating_input_files && cfy deployments create -b seasonal-part2-18 -i blueprint-inputs-seasonal-part2-18.yaml seasonal_part2_18_${D}_${M}'
 
 #55 6 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part2_00_${D}_${M} install'
 #00 7 1-10 * * . $HOME/.profile; /usr/bin/env bash -c 'cfy executions start -d seasonal_part2_00_${D}_${M} run_jobs'
