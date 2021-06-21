@@ -161,6 +161,7 @@ data_types:
             username:
                 description: 'Account username'
                 type: string
+                required: false
             password:
                 description: 'Account password'
                 type: string
@@ -185,6 +186,7 @@ data_types:
             credentials:
                 description: 'Credentials to access the data access infrastructure'
                 type: croupier.data.dm.Credentials
+                required: false
 
 
 node_types:

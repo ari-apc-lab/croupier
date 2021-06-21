@@ -64,7 +64,8 @@ node_templates:
         properties:
             job_options:
                 commands:
-                - "touch test_$1.output"
+                - "module load python/3.6.8"
+                - "~/croupier/dm_test/unzip.py -i ~/cantrbry.zip -o ~/croupier/dm_test/cantbry/"
                 arguments:
                 - script
                 nodes: 1
@@ -77,18 +78,17 @@ node_templates:
             - type: job_managed_by_interface
               target: cesga_hpc
             - type: input
-              target: in1
-            - type: input
-              target: in2
+              target: canterbury_corpus_in
             - type: output
-              target: out1
+              target: alice_out
 
     sodalite_job:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                    - "touch test_$1.output"
+                    - "module load python/3.6.8"
+                    - "~/croupier/dm_test/word_count.py -i ~/croupier/dm_test/alice.txt -o ~/croupier/dm_test/alice.output"
                 arguments:
                     - script
                 nodes: 1
@@ -103,62 +103,56 @@ node_templates:
             - type: job_depends_on
               target: cesga_job
             - type: input
-              target: in3
-            - type: input
-              target: in4
-            - type: output
-              target: out2
+              target: alice_in
 
     # BEGIN DATA MANAGEMENT
 
     #INPUTS
-    in1:
+    canterbury_corpus_in:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: /path/to/in1
+            filepath: ~/cantrbry.zip
             located_at: { get_input: cesga_data_access_infra }
 
-    in2:
+    canterbury_corpus_web:
         type: croupier.nodes.WebDataSource
         properties:
-            resource: /query1/
+            resource: /resources/cantrbry.zip
             located_at: { get_input: cloud_data_access_infra }
 
-    in3:
-        type: croupier.nodes.WebDataSource
-        properties:
-            resource: /query2/
-            located_at: { get_input: cloud_data_access_infra }
-
-    in4:
+    alice_in:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/test/
+            filepath: ~/croupier/dm_test/alice.txt
             located_at: { get_input: sodalite_data_access_infra }
 
     #OUTPUTS
-    out1:
+    alice_out:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/Next_trials_ITAINNOVA.zip
-            located_at: { get_input: cesga_data_access_infra }
-
-    out2:
-        type: croupier.nodes.FileDataSource
-        properties:
-            filepath: /path/to/out2
+            filepath: ~/croupier/dm_test/cantbry/alice29.txt
             located_at: { get_input: cesga_data_access_infra }
 
     # DATA TRANSFER
-    dt1:
+    dt_http:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: canterbury_corpus_web
+            - type: to_target
+              target: canterbury_corpus_in
+
+    dt_rsync:
         type: croupier.nodes.DataTransfer
         properties:
             transfer_protocol: RSync
         relationships:
             - type: from_source
-              target: out1
+              target: alice_out
             - type: to_target
-              target: in4
+              target: alice_in
 
 # END DATA MANAGEMENT
 

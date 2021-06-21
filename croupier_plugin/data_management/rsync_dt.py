@@ -1,6 +1,6 @@
 from croupier_plugin.data_management.data_management import DataTransfer, ssh_credentials
-from cloudify import ctx
 from croupier_plugin.ssh import SshClient, SFtpClient
+from cloudify import ctx
 from cloudify.exceptions import CommandExecutionError
 import tempfile
 
@@ -14,7 +14,7 @@ class RSyncDataTransfer(DataTransfer):
         ftp_client = None
 
         try:
-            ctx.logger.info('Processing data transfer')
+            ctx.logger.info('Processing rsync data transfer')
             #  Copy source data into target data by invoking rsync command at target data infrastructure
             #  Create rsync command (check available credentials for target data infrastructure)
             #  If credential include user/password, rsync command is:

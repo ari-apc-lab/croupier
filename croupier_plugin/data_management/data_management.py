@@ -209,6 +209,9 @@ class DataTransfer:
         if dt_config['transfer_protocol'].upper() == "RSYNC":
             from croupier_plugin.data_management.rsync_dt import RSyncDataTransfer
             return RSyncDataTransfer(dt_config)
+        elif dt_config['transfer_protocol'].upper() == "HTTP":
+            from croupier_plugin.data_management.http_dt import WGetDataTransfer
+            return WGetDataTransfer(dt_config)
 
     def process(self):
         raise NotImplementedError(
