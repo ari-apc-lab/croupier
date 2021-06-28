@@ -25,6 +25,7 @@ job_requester.py: Holds the functions that requests jobs information
 '''
 
 
+from builtins import object
 import time
 from threading import Lock
 
@@ -46,7 +47,7 @@ class JobRequester(object):
             states = {}
             audits = {}
 
-            for host, settings in monitor_jobs.iteritems():
+            for host, settings in monitor_jobs.items():
                 # Only get info when it is safe
                 if host in self._last_time:
                     seconds_to_wait = settings['period'] - \

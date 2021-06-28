@@ -18,6 +18,11 @@
 # TODO: Before use it need to test the input parameters are correct received from the Cloudify blueprint/yaml file.
 # TODO: modify to support 2 different GridFTP servers, current version only uses the hezelhen GridFtp.
 
+from __future__ import print_function
+from __future__ import division
+from builtins import str
+from past.utils import old_div
+from builtins import object
 import os
 import wget
 import os.path
@@ -43,7 +48,7 @@ def isDirectory(dirname):
     return dirname.endswith('/')
 
 
-class Workspaces:
+class Workspaces(object):
     # Allocate workspace via SSH
     # The workspace will be reused if it already exists, and the lifetime will not be extended
     def create_ws(self, user_id, SSH_HOST, user_ssh_credentials, ws_name, lifetime):
@@ -75,7 +80,7 @@ class Workspaces:
         return response
 
 
-class Local_gridftp_conf:
+class Local_gridftp_conf(object):
     # constructor of class, need place the mandatory generic files if missing
     def __init__(self):
         if not os.path.exists(home + "/.globus/certificates"):
@@ -128,7 +133,7 @@ class Local_gridftp_conf:
         self.start_proxy(grid_cert_passwd)
 
 
-class GridFTPServer:
+class GridFTPServer(object):
     # The parameters SSH_HOST is optional, it can left as empty string ""
     def __init__(self, name, user_id, WS_BASE_PATH, GRIDFTP_PORT, GRIDFTP_HOST, SSH_HOST, srv_path):
         self.name = name
@@ -164,7 +169,7 @@ class GridFTPServer:
 # Set a new instance of the class DataMover, it creates the workspace and takes the credentials to use.
 
 
-class DataMover:
+class DataMover(object):
     def __init__(self, my_server, new_ws, usersshkey, ws_name, ws_lifetime, userkey, usercert, grid_cert_passwd):
         self.size_bytes = 0
         self.start_time = 0
@@ -177,7 +182,7 @@ class DataMover:
         f = open(user_ssh_credentials, "w+")
         f.write(usersshkey)
         f.close()
-        os.chmod(user_ssh_credentials, 0600)
+        os.chmod(user_ssh_credentials, 0o600)
 
         hlrs_workspace = Workspaces()
 
@@ -302,17 +307,17 @@ class DataMover:
 
     def get_transfer_time_length_human(self):
         dt = self.end_time - self.start_time
-        dd = dt / 86400
+        dd = old_div(dt, 86400)
         dt2 = dt - 86400 * dd
-        dh = dt2 / 3600
+        dh = old_div(dt2, 3600)
         dt3 = dt2 - 3600 * dh
-        dm = dt3 / 60
+        dm = old_div(dt3, 60)
         ds = dt3 - 60 * dm
         human_time = format(dd, ".0f") + ":" + format(dh, ".0f") + ":" + format(dm, "02.0f") + ":" + format(ds, "02.4f")
         return human_time
 
 
-class Metricspublisher:
+class Metricspublisher(object):
     def __init__(self, prometheus_server):
         self.prometheus_server = prometheus_server
 

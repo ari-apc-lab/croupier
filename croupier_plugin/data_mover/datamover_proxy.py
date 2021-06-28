@@ -1,10 +1,12 @@
+from __future__ import absolute_import
+from builtins import object
 import traceback
 
-from data_mover import (DataMover, GridFTPServer)
+from .data_mover import (DataMover, GridFTPServer)
 from cloudify import ctx
 
 
-class DataMoverProxy:
+class DataMoverProxy(object):
     my_servers = {}
     logger = None
 

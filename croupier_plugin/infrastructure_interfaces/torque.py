@@ -27,9 +27,13 @@ license information in the project root.
 
 torque.py
 '''
-
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import map
 from croupier_plugin.ssh import SshClient
-from infrastructure_interface import InfrastructureInterface
+from .infrastructure_interface import InfrastructureInterface
 from croupier_plugin.utilities import shlex_quote
 import re
 import datetime
@@ -274,7 +278,7 @@ class Torque(InfrastructureInterface):
 
     @staticmethod
     def _parse_qstat_detailed(qstat_output):
-        from StringIO import StringIO
+        from io import StringIO
         jobs = {}
         audits = {}
         for job in Torque._tokenize_qstat_detailed(StringIO(qstat_output)):

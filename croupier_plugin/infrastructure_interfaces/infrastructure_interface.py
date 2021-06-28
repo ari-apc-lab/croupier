@@ -23,6 +23,10 @@ license information in the project root.
 
 infrastructure_interface.py
 '''
+from builtins import str
+from builtins import range
+from past.builtins import basestring
+from builtins import object
 import io
 import os
 import string
@@ -602,6 +606,12 @@ class InfrastructureInterface(object):
         # @TODO: why not to use ctx.download_resource and
         #        ssh_client.open_sftp().put(...)?
         # escape for echo command
+        # Converting script_content to str or array of str
+        try:
+            script_content = script_content.decode()
+        except (UnicodeDecodeError, AttributeError):
+            pass
+
         script_data = script_content \
             .replace("\\", "\\\\") \
             .replace("$", "\\$") \

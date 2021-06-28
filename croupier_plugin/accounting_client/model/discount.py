@@ -1,6 +1,7 @@
+from __future__ import absolute_import
 import enum
 
-from base import AccountingBase
+from .base import AccountingBase
 
 
 class DiscountUnit(enum.Enum):

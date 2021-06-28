@@ -1,0 +1,90 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# inputs_def.yaml
+
+
+inputs:
+  ################### HPC Infrastructre ##################
+  hpc_base_dir:
+    description: HPC working directory
+    default: $HOME
+  hpc_interface_config:
+    description: timezone and HPC interface
+    default:
+      country_tz: Europe/Madrid
+      infrastructure_interface: SLURM
+  hpc_interface_credentials:
+    description: HPC credentials
+    default: {}
+  mpi_load_command:
+    default: ''
+  singularity_load_command:
+    default: ''
+  singularity_image_uri:
+    default: ''
+  singularity_image_filename:
+    default: ''
+  partition_name:
+    default: default
+  singularity_image_storage:
+    description: Path to store the downloaded singularity image
+    default: $HOME
+  singularity_mount_point:
+    default: /mnt
+  scratch_voulume_mount_point:
+    default: /scratch
+  job_config_content:
+    description: Content of job_config file
+    default: ''
+  job_config_pathname:
+    description: Pathname of job_config file
+    default: ''
+
+  ################### Data Mover ##################
+  data_mover_options:
+    description: Data Mover options
+    default: {}
+
+  ################### Monitoring ##################
+  monitoring_options:
+    description: Monitoring options
+    default: {}
+
+  ################### Accounting ##################
+  accounting_options:
+    description: Accounting options
+    default: {}
+
+  #################### Other ####################
+  instance_id:
+    default: test-jcarnero
+
+  job_prefix:
+    default: atos
+
+  monitor_entrypoint:
+    default: ''

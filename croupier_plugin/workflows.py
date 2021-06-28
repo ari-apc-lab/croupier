@@ -24,6 +24,9 @@ license information in the project root.
 workflows.py - Holds the plugin workflows
 '''
 
+from builtins import next
+from builtins import str
+from builtins import object
 import sys
 import time
 
@@ -88,7 +91,8 @@ class JobGraphInstance(object):
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.queue',
                                                   kwargs={"name": self.name})
-        result.task.wait_for_terminated()
+        # result.task.wait_for_terminated()
+        result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
         else:
@@ -96,7 +100,7 @@ class JobGraphInstance(object):
             init_state = 'PENDING'
         self.set_status(init_state)
         self.jobid = self.winstance._node_instance.runtime_properties['job_id']
-        return result.task
+        return result
 
     def publish(self):
         """ Publish the job's instance outputs """
@@ -107,7 +111,8 @@ class JobGraphInstance(object):
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
                                                   kwargs={"name": self.name, "jobid": self.jobid, "audit": self.audit})
-        result.task.wait_for_terminated()
+        # result.task.wait_for_terminated()
+        result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
 
@@ -163,7 +168,8 @@ class JobGraphInstance(object):
                                                   'lifecycle.cancel',
                                                   kwargs={"name": self.name, "jobid": self.jobid})
         self.winstance.send_event('.. job canceled')
-        result.task.wait_for_terminated()
+        result.get()
+        # result.task.wait_for_terminated()
 
         self._status = 'CANCELLED'
 
@@ -211,12 +217,12 @@ class JobGraphNode(object):
         if not self.is_job:
             return []
 
-        tasks_list = []
+        tasks_result_list = []
         for job_instance in self.instances:
-            tasks_list.append(job_instance.queue())
+            tasks_result_list.append(job_instance.queue())
 
         self.status = 'QUEUED'
-        return tasks_list
+        return tasks_result_list
 
     def is_ready(self):
         """ True if it has no more dependencies to satisfy """
@@ -311,12 +317,12 @@ def build_graph(nodes):
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
-            node.relationships.next()
+            next(node.relationships)
         except StopIteration:
             root_nodes.append(new_node)
 
     # then set relationships
-    for _, child in nodes_map.iteritems():
+    for _, child in nodes_map.items():
         for relationship in child.cfy_node.relationships:
             parent = nodes_map[relationship.target_node.id]
             parent.add_child(child)
@@ -371,11 +377,11 @@ class Monitor(object):
             states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
 
             # set job audit
-            for jobid, audit in audits.iteritems():
-                self.job_instances_map[jobid] = audit
+            for inst_name, audit in audits.items():
+                self.job_instances_map[inst_name].audit = audit
 
             # finally set job status
-            for jobid, state in states.iteritems():
+            for jobid, state in states.items():
                 self.job_instances_map[jobid].set_status(state)
 
             self.continued_errors = 0
@@ -393,7 +399,7 @@ class Monitor(object):
 
     def get_executions_iterator(self):
         """ Executing nodes iterator """
-        return self._execution_pool.iteritems()
+        return self._execution_pool.items()
 
     def add_node(self, node):
         """ Adds a node to the execution pool """
@@ -416,11 +422,11 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
     monitor = Monitor(job_instances_map, ctx.logger)
 
     # Execution of first job instances
-    tasks_list = []
+    task_result_list = []
     for root in root_nodes:
-        tasks_list += root.queue_all_instances()
+        task_result_list += root.queue_all_instances()
         monitor.add_node(root)
-    wait_tasks_to_finish(tasks_list)
+    wait_tasks_to_finish(task_result_list)
 
     # Monitoring and next executions loop
     while monitor.is_something_executing() and not api.has_cancel_request():
@@ -445,11 +451,11 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
         for node_name in exec_nodes_finished:
             monitor.finish_node(node_name)
         # perform new executions
-        tasks_list = []
+        tasks_result_list = []
         for new_node in new_exec_nodes:
-            tasks_list += new_node.queue_all_instances()
+            tasks_result_list += new_node.queue_all_instances()
             monitor.add_node(new_node)
-        wait_tasks_to_finish(tasks_list)
+        wait_tasks_to_finish(tasks_result_list)
 
     if monitor.is_something_executing():
         cancel_all(monitor.get_executions_iterator())
@@ -466,7 +472,8 @@ def cancel_all(executions):
     raise api.ExecutionCancelled()
 
 
-def wait_tasks_to_finish(tasks_list):
+def wait_tasks_to_finish(tasks_result_list):
     """Blocks until all tasks have finished"""
-    for task in tasks_list:
-        task.wait_for_terminated()
+    for result in tasks_result_list:
+        result.get()
+        # task.wait_for_terminated()

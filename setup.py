@@ -34,9 +34,9 @@ setup(
     # Do not use underscores in the plugin name.
     name='croupier',
 
-    version='3.0.0',
-    author='Javier Carnero',
-    author_email='javier.carnero@atos.net',
+    version='3.1.0',
+    author='Jesus Gorronogoitia',
+    author_email='jesus.gorronogoitia@atos.net',
     description='Plugin to use HPC resources in Cloudify',
 
     # This must correspond to the actual packages in the plugin.
@@ -54,10 +54,11 @@ setup(
     zip_safe=False,
     install_requires=[
         # Necessary dependency for developing plugins, do not remove!
-        "cloudify-common>=5.0.5",
+        "cloudify-common==5.1.4",
         "paramiko==2.7.2",
-        "pyyaml",
-        "wget"
+        "pyyaml==5.3.1",
+        "wget",
+        "future==0.18.2"
     ],
-    license='LICENSE'
+    license='Apache APLv2.0'
 )
