@@ -73,8 +73,8 @@ node_templates:
                 max_time: "00:01:00"
                 scale: 2
             deployment:
-                bootstrap: "scripts/singularity_bootstrap_example.sh"
-                revert: "scripts/singularity_revert_example.sh"
+                bootstrap: "scripts/singularity_bootstrap.sh"
+                revert: "scripts/singularity_revert.sh"
                 inputs:
                     - { get_input: singularity_image_storage }
                     - { get_input: singularity_image_filename }

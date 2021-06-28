@@ -147,9 +147,9 @@ class TestPlugin(unittest.TestCase):
         resources_to_copy=[
             (os.path.join('blueprints', 'inputs_def.yaml'), './'),
             (os.path.join('blueprints', 'scripts',
-                          'singularity_bootstrap_example.sh'), 'scripts'),
+                          'singularity_bootstrap.sh'), 'scripts'),
             (os.path.join('blueprints', 'scripts',
-                          'singularity_revert_example.sh'), 'scripts')],
+                          'singularity_revert.sh'), 'scripts')],
         inputs='load_cesga_hpc_singularity_easy_inputs')
     def test_singularity_easy(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -528,9 +528,9 @@ class TestPlugin(unittest.TestCase):
         resources_to_copy=[
             (os.path.join('blueprints', 'inputs_def.yaml'), './'),
             (os.path.join('blueprints', 'scripts',
-                          'singularity_bootstrap_example.sh'), 'scripts'),
+                          'singularity_bootstrap.sh'), 'scripts'),
             (os.path.join('blueprints', 'scripts',
-                          'singularity_revert_example.sh'), 'scripts')],
+                          'singularity_revert.sh'), 'scripts')],
         inputs='set_inputs')
     def test_singularity(self, cfy_local):
         """ Single Singularity Job Blueprint """

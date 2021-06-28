@@ -37,69 +37,49 @@ class TestPlugin(unittest.TestCase):
 
     def set_inputs(self, *args, **kwargs):  # pylint: disable=W0613
         """ Parse inputs yaml file """
-        # Chech whether a local inputs file is available
+        # Check whether a local inputs file is available
         inputs_file = 'blueprint-inputs.yaml'
-        if os.path.isfile(os.path.join('croupier_plugin',
-                                       'tests',
-                                       'integration',
-                                       'inputs',
-                                       'local-blueprint-inputs.yaml')):
+        if os.path.isfile(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', 'local-blueprint-inputs'
+                                                                                            '.yaml')):
             inputs_file = 'local-blueprint-inputs.yaml'
         inputs = {}
         print("Using inputs file:", inputs_file)
-        with open(os.path.join('croupier_plugin',
-                               'tests',
-                               'integration',
-                               'inputs',
-                               inputs_file),
-                  'r') as stream:
+        with open(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', inputs_file), 'r') as stream:
             try:
                 inputs = yaml.full_load(stream)
             except yaml.YAMLError as exc:
-                print exc
+                print(exc)
 
         return inputs
 
     def load_inputs(self, inputs_file, *args, **kwargs):
         """ Parse inputs yaml file """
         # Check whether a inputs_file file is available
-        if not os.path.isfile(os.path.join('croupier_plugin',
-                                       'tests',
-                                       'integration',
-                                       'inputs',
-                                       inputs_file)):
-            raise IOError(
-                errno.ENOENT, os.strerror(errno.ENOENT), inputs_file)
+        if not os.path.isfile(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', inputs_file)):
+            raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), inputs_file)
         inputs = {}
         print("Using inputs file:", inputs_file)
-        with open(os.path.join('croupier_plugin',
-                               'tests',
-                               'integration',
-                               'inputs',
-                               inputs_file),
-                  'r') as stream:
+        with open(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', inputs_file), 'r') as stream:
             try:
                 inputs = yaml.full_load(stream)
             except yaml.YAMLError as exc:
-                print exc
+                print(exc)
 
         return inputs
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_met_00.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'precip_00.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'wind_00.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'temp_00.sh'), 'scripts'),
-        ],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'precip_00.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'wind_00.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'temp_00.sh'), 'scripts')],
         inputs='set_inputs')
     def test_agroapps_zerozero(self, cfy_local):
         """ Single BATCH Job Blueprint """
         cfy_local.execute('install', task_retries=0)
-        #cfy_local.execute('run_jobs', task_retries=0)
-        #cfy_local.execute('uninstall', task_retries=0)
+        # cfy_local.execute('run_jobs', task_retries=0)
+        # cfy_local.execute('uninstall', task_retries=0)
 
         # extract single node instance
         instance = cfy_local.storage.get_node_instances()[0]
@@ -107,18 +87,14 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
-
-
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='set_inputs')
     def test_single(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -132,8 +108,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -144,12 +119,9 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_singularity.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts',
-                          'singularity_bootstrap_example.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts',
-                          'singularity_revert_example.sh'), 'scripts')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts')],
         inputs='load_cesga_hpc_singularity_easy_inputs')
     def test_singularity_easy(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -163,26 +135,23 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_met_12.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'precip_12.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'wind_12.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'temp_12.sh'), 'scripts'),
-        ],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'precip_12.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'wind_12.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'temp_12.sh'), 'scripts')],
         inputs='set_inputs')
     def test_agroapps_twelve(self, cfy_local):
         """ Single BATCH Job Blueprint """
         cfy_local.execute('install', task_retries=0)
-        #cfy_local.execute('run_jobs', task_retries=0)
-        #cfy_local.execute('uninstall', task_retries=0)
+        # cfy_local.execute('run_jobs', task_retries=0)
+        # cfy_local.execute('uninstall', task_retries=0)
 
         # extract single node instance
         instance = cfy_local.storage.get_node_instances()[0]
@@ -190,20 +159,15 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
-
-
-
 
     # Agroapps test in CESGA HPC
     @workflow_test(
         os.path.join('blueprints', 'blueprint_agroapps_test_GFS_00.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_cesga_hpc_inputs')
     def test_cesga_agroapps(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -217,11 +181,9 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
-
 
     # Easy test in CESGA HPC
     def load_cesga_hpc_inputs(self, *args, **kwargs):
@@ -230,8 +192,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_easy.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_cesga_hpc_inputs')
     def test_easy_job(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -245,8 +206,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -257,8 +217,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_sodalite_hpc_inputs')
     def test_single_sodalite(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -284,11 +243,9 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_bernoulli.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'create_bernoulli_script.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'delete_bernoulli_script.sh'), 'scripts')
-        ],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'create_bernoulli_script.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'delete_bernoulli_script.sh'), 'scripts')],
         inputs='load_sodalite_hpc_inputs')
     def test_bernoulli_sodalite(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -302,8 +259,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -314,8 +270,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single_hawk.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_hawk_hpc_inputs')
     def test_single_hawk(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -329,8 +284,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -341,8 +295,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single_hpc_datamover.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_hpc_data_mover_inputs')
     def test_hpc_datamover(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -356,8 +309,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -368,11 +320,9 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')
-        ],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')],
         inputs='load_agroclimate_zones_inputs')
     def test_agroclimate_zones_pilot(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -386,8 +336,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -398,8 +347,7 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot_vulcan.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='load_agroclimate_zones_inputs_vulcan')
     def test_agroclimate_zones_pilot_vulcan(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -413,8 +361,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -425,11 +372,9 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot_data_mover_vulcan.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')
-        ],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')],
         inputs='load_agroclimate_zones_data_mover_inputs_vulcan')
     def test_agroclimate_zones_pilot_data_mover_vulcan(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -443,8 +388,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -455,11 +399,9 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot_datamover.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')
-        ],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')],
         inputs='load_agroclimate_zones_data_mover_inputs')
     def test_agroclimate_zones_pilot_datamover(self, cfy_local):
         """ Single BATCH Job Blueprint """
@@ -473,21 +415,16 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
-
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_single_script.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts', 'create_script.sh'),
-             'scripts'),
-            (os.path.join('blueprints', 'scripts', 'delete_script.sh'),
-             'scripts')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
         inputs='set_inputs')
     def test_single_script(self, cfy_local):
         """ Single BATCH Job Blueprint with script"""
@@ -501,16 +438,14 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_publish.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='set_inputs')
     def test_publish(self, cfy_local):
         """ Single BATCH Output Job Blueprint """
@@ -524,16 +459,14 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_scale.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
         inputs='set_inputs')
     def test_scale(self, cfy_local):
         """ BATCH Scale Job Blueprint """
@@ -547,20 +480,16 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
     @workflow_test(
         os.path.join('blueprints', 'blueprint_singularity.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[
-            (os.path.join('blueprints', 'inputs_def.yaml'), './'),
-            (os.path.join('blueprints', 'scripts',
-                          'singularity_bootstrap_example.sh'), 'scripts'),
-            (os.path.join('blueprints', 'scripts',
-                          'singularity_revert_example.sh'), 'scripts')],
+        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                           (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
+                           (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts')],
         inputs='set_inputs')
     def test_singularity(self, cfy_local):
         """ Single Singularity Job Blueprint """
@@ -574,28 +503,18 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
-    @workflow_test(os.path.join('blueprints',
-                                'blueprint_singularity_scale.yaml'),
+    @workflow_test(os.path.join('blueprints', 'blueprint_singularity_scale.yaml'),
                    copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints',
-                                                    'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'bootstrap_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'revert_example.sh'),
-                                       'scripts')],
+                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                                      (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
+                                      (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts')],
                    inputs='set_inputs')
     def test_singularity_scale(self, cfy_local):
-        """ Single Singularity Sacale Job Blueprint """
+        """ Single Singularity Scale Job Blueprint """
         cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
@@ -606,22 +525,15 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
     @workflow_test(os.path.join('blueprints', 'blueprint_four.yaml'),
                    copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints',
-                                                    'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                       'create_script.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                       'delete_script.sh'),
-                                       'scripts')],
+                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                                      (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
+                                      (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
                    inputs='set_inputs')
     def test_four(self, cfy_local):
         """ Four Jobs Blueprint """
@@ -635,30 +547,17 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
     @workflow_test(os.path.join('blueprints', 'blueprint_four_singularity.yaml'),
                    copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints',
-                                                    'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'bootstrap_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'revert_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'create_script.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'delete_script.sh'),
-                                       'scripts')],
+                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                                      (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
+                                      (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts'),
+                                      (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
+                                      (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
                    inputs='set_inputs')
     def test_four_singularity(self, cfy_local):
         """ Four Jobs Blueprint """
@@ -672,22 +571,15 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
     @workflow_test(os.path.join('blueprints', 'blueprint_four_scale.yaml'),
                    copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints',
-                                                    'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'create_script.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'delete_script.sh'),
-                                       'scripts')],
+                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                                      (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
+                                      (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
                    inputs='set_inputs')
     def test_four_scale(self, cfy_local):
         """ Four Scale Jobs Blueprint """
@@ -701,8 +593,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 
@@ -765,17 +656,9 @@ class TestPlugin(unittest.TestCase):
 
     @workflow_test(os.path.join('blueprints', 'blueprint_eosc.yaml'),
                    copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints',
-                                                    'inputs_def.yaml'),
-                                       './'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'bootstrap_example.sh'),
-                                       'scripts'),
-                                      (os.path.join('blueprints', 'scripts',
-                                                    'singularity_' +
-                                                    'revert_example.sh'),
-                                       'scripts')],
+                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
+                                      (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
+                                      (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts')],
                    inputs='set_inputs')
     def test_eosc(self, cfy_local):
         """ EOSC Blueprint """
@@ -789,8 +672,7 @@ class TestPlugin(unittest.TestCase):
         # due to a cfy bug sometimes login keyword is not ready in the tests
         if 'login' in instance.runtime_properties:
             # assert runtime properties is properly set in node instance
-            self.assertEqual(instance.runtime_properties['login'],
-                             True)
+            self.assertEqual(instance.runtime_properties['login'], True)
         else:
             logging.warning('[WARNING] Login could not be tested')
 

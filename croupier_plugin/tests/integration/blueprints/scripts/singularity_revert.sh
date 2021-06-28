@@ -23,7 +23,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# singularity_revert_example.sh
+# singularity_revert.sh
 
 
 if [ -f $1/$2 ]; then

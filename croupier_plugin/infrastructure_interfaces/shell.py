@@ -54,9 +54,7 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         return "pkill -f " + name
 
 # Monitor
-    def get_states(self, workdir, credentials, job_names, logger):
-        # TODO set start time of consulting
-        # (sacct only check current day)
+    def get_states(self, workdir, credentials, job_ids, logger):
         call = "cat croupier-monitor.data"
 
         client = SshClient(credentials)

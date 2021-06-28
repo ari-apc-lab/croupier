@@ -48,7 +48,7 @@ class JobGraphInstance(object):
 
         if parent.is_job:
             self._status = 'WAITING'
-
+            self.jobid = ''
             # Get runtime properties
             runtime_properties = instance._node_instance.runtime_properties
             ctx.logger.info("runtime_properties:" + str(runtime_properties))
@@ -72,10 +72,8 @@ class JobGraphInstance(object):
 
             # build job name
             instance_components = instance.id.split('_')
-            self.name = instance_components[0] + instance_components[1]
+            self.name = runtime_properties["job_prefix"] + "_".join(instance_components[:-1])
 
-            #self.name = runtime_properties["job_prefix"] +\
-            #    instance_components[-1]
         else:
             self._status = 'NONE'
             self.name = instance.id
@@ -97,6 +95,7 @@ class JobGraphInstance(object):
             self.winstance.send_event('.. job queued')
             init_state = 'PENDING'
         self.set_status(init_state)
+        self.jobid = self.winstance._node_instance.runtime_properties['job_id']
         return result.task
 
     def publish(self):
@@ -107,7 +106,7 @@ class JobGraphInstance(object):
         self.winstance.send_event('Publishing job outputs..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
-                                                  kwargs={"name": self.name, "audit": self.audit})
+                                                  kwargs={"name": self.name, "jobid": self.jobid, "audit": self.audit})
         result.task.wait_for_terminated()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
@@ -162,7 +161,7 @@ class JobGraphInstance(object):
         self.winstance.send_event('Cancelling job..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cancel',
-                                                  kwargs={"name": self.name})
+                                                  kwargs={"name": self.name, "jobid": self.jobid})
         self.winstance.send_event('.. job canceled')
         result.task.wait_for_terminated()
 
@@ -372,12 +371,12 @@ class Monitor(object):
             states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
 
             # set job audit
-            for inst_name, audit in audits.iteritems():
-                self.job_instances_map[inst_name].audit = audit
+            for jobid, audit in audits.iteritems():
+                self.job_instances_map[jobid] = audit
 
             # finally set job status
-            for inst_name, state in states.iteritems():
-                self.job_instances_map[inst_name].set_status(state)
+            for jobid, state in states.iteritems():
+                self.job_instances_map[jobid].set_status(state)
 
             self.continued_errors = 0
         except Exception as exp:

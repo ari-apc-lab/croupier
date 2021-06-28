@@ -135,23 +135,11 @@ node_types:
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [SELF, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
+                            default: { get_property: [SELF, external_monitor_port] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:
@@ -162,23 +150,11 @@ node_types:
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [SELF, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
+                            default: { get_property: [SELF, external_monitor_port] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -275,32 +251,13 @@ relationships:
                         credentials:
                             default: { get_property: [TARGET, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [TARGET, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_port],
-                                }
+                            default: { get_property: [TARGET, external_monitor_port] }
                         external_monitor_type:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_type],
-                                }
+                            default: { get_property: [TARGET, external_monitor_type] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            TARGET,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [TARGET, external_monitor_orchestrator_port] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
                         monitor_period:

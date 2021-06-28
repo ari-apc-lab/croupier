@@ -271,10 +271,9 @@ class Slurm(InfrastructureInterface):
     #     return job_settings
 
     # Monitor
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, credentials, job_ids, logger):
         # TODO set start time of consulting
-        # (sacct only check current day)
-        call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names)
+        call = "sacct -n -o JobIDRaw,State -X -P -j=" + ','.join(job_ids)
 
         client = SshClient(credentials)
 
@@ -291,9 +290,9 @@ class Slurm(InfrastructureInterface):
 
         # Get job execution audits for monitoring metrics
         audits = {}
-        for job_name in job_names:
-            if states[job_name] != 'PENDING':
-                audits[job_name] = get_job_metrics(job_name, client, workdir, logger)
+        for job_id in job_ids:
+            if states[job_id] != 'PENDING':
+                audits[job_id] = get_job_metrics(job_id, client, workdir, logger)
 
         client.close_connection()
 
