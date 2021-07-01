@@ -159,7 +159,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'blueprint_agroapps_test_GFS_00.yaml'),
         copy_plugin_yaml=True,
         resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='load_cesga_hpc_inputs')
+        inputs='set_inputs')
     def test_cesga_agroapps(self, cfy_local):
         """ CESGA Agroapps Job Blueprint """
         self.run_test(cfy_local)

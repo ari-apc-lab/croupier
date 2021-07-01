@@ -41,6 +41,7 @@ from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
 from croupier_plugin.monitoring.monitoring import (PrometheusPublisher)
+from croupier_plugin.workflows import JobGraphInstance
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
@@ -571,6 +572,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     else:
         ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
         is_submitted = True
+        jobid = "Simulated"
 
     if jobid:
         ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') sent.')
@@ -582,6 +584,8 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     ctx.instance.runtime_properties['job_name'] = name
     ctx.instance.runtime_properties['job_id'] = jobid
+    JobGraphInstance.register_jobid(kwargs['pseudo_deployment_id'], name, jobid)
+    ctx.instance.update()
 
 
 @operation
