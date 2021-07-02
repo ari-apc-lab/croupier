@@ -96,12 +96,12 @@ def _parse_states(raw_states, logger):
     return parsed
 
 
-def get_job_metrics(job_name, ssh_client, workdir, logger):
+def get_job_metrics(job_id, ssh_client, workdir, logger):
     # Get job execution audits for monitoring metrics
     audits = {}
     audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
-    audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X" \
-        .format(job_name=job_name, metrics=audit_metrics)
+    audit_command = "sacct -j {job_id} -o {metrics} -p --noheader -X" \
+        .format(job_id=job_id, metrics=audit_metrics)
 
     output, exit_code = ssh_client.execute_shell_command(
         audit_command,
@@ -273,26 +273,27 @@ class Slurm(InfrastructureInterface):
     # Monitor
     def get_states(self, workdir, credentials, job_ids, logger):
         # TODO set start time of consulting
-        call = "sacct -n -o JobIDRaw,State -X -P -j=" + ','.join(job_ids)
-
+        call = "sacct -n -o JobIDRaw,State -X -P -j " + ','.join(job_ids)
         client = SshClient(credentials)
 
         output, exit_code = client.execute_shell_command(
             call,
             workdir=workdir,
             wait_result=True)
-
         states = {}
         if exit_code == 0:
             states = _parse_states(output, logger)
         else:
-            logger.error("Failed to get job states")
+            logger.error("Failed to get job states: " + output)
 
         # Get job execution audits for monitoring metrics
         audits = {}
         for job_id in job_ids:
-            if states[job_id] != 'PENDING':
-                audits[job_id] = get_job_metrics(job_id, client, workdir, logger)
+            if job_id in states:
+                if states[job_id] != 'PENDING':
+                    audits[job_id] = get_job_metrics(job_id, client, workdir, logger)
+            else:
+                logger.warning("Could not parse the state of job_id: " + job_id + "Parsed dict:" + str(states))
 
         client.close_connection()
 

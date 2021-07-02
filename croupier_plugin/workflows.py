@@ -86,7 +86,7 @@ class JobGraphInstance(object):
             self.name = instance.id
             self.monitor_url = ""
 
-    def queue(self):
+    def queue(self, monitor):
         """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
@@ -103,8 +103,9 @@ class JobGraphInstance(object):
             self.winstance.send_event('.. job queued')
             init_state = 'PENDING'
         self.set_status(init_state)
-        instances = ctx.node_instances
         self.jobid = DB_JOBID[self.pseudo_deployment_id][self.name]
+        ctx.logger.info("Jobid saved is: " + self.jobid)
+        monitor.register_jobid(self.jobid, self.name)
         return result
 
     def publish(self):
@@ -221,14 +222,14 @@ class JobGraphNode(object):
         """ Adds a child node """
         self.children.append(node)
 
-    def queue_all_instances(self):
+    def queue_all_instances(self, monitor):
         """ Sends all job instances to the infrastructure queue """
         if not self.is_job:
             return []
 
         tasks_result_list = []
         for job_instance in self.instances:
-            tasks_result_list.append(job_instance.queue())
+            tasks_result_list.append(job_instance.queue(monitor))
 
         self.status = 'QUEUED'
         return tasks_result_list
@@ -346,10 +347,10 @@ class Monitor(object):
     MAX_ERRORS = 5
 
     def __init__(self, job_instances_map, logger):
-        self.job_ids = {}
         self._execution_pool = {}
         self.timestamp = 0
         self.job_instances_map = job_instances_map
+        self.job_instances_map_jobid = {}
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
@@ -382,25 +383,25 @@ class Monitor(object):
             return
 
         # then look for the status of the instances through its name
-        try:
-            states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
+#        try:
+        states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
 
-            # set job audit
-            for inst_name, audit in audits.items():
-                self.job_instances_map[inst_name].audit = audit
+        # set job audit
+        for jobid, audit in audits.items():
+            self.job_instances_map_jobid[jobid].audit = audit
 
-            # finally set job status
-            for jobid, state in states.items():
-                self.job_instances_map[jobid].set_status(state)
+        # finally set job status
+        for jobid, state in states.items():
+            self.job_instances_map_jobid[jobid].set_status(state)
 
-            self.continued_errors = 0
-        except Exception as exp:
-            if self.continued_errors >= Monitor.MAX_ERRORS:
-                self.logger.error(str(exp))
-                raise exp
-            else:
-                self.logger.warning(str(exp))
-                self.continued_errors += 1
+        self.continued_errors = 0
+#        except Exception as exp:
+#            if self.continued_errors >= Monitor.MAX_ERRORS:
+#                self.logger.error(str(exp))
+#                raise exp
+#            else:
+#                self.logger.warning(str(exp))
+#                self.continued_errors += 1
 
         # We wait to slow down the loop
         sys.stdout.flush()  # necessary to output work properly with sleep
@@ -422,6 +423,10 @@ class Monitor(object):
         """ True if there are nodes executing """
         return self._execution_pool
 
+    def register_jobid(self, jobid, name):
+        """ Registers the jobid to an instance by name """
+        self.job_instances_map_jobid[jobid] = self.job_instances_map[name]
+
 
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
@@ -434,7 +439,7 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
     # Execution of first job instances
     task_result_list = []
     for root in root_nodes:
-        task_result_list += root.queue_all_instances()
+        task_result_list += root.queue_all_instances(monitor)
         monitor.add_node(root)
     wait_tasks_to_finish(task_result_list)
 
@@ -463,7 +468,7 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
         # perform new executions
         tasks_result_list = []
         for new_node in new_exec_nodes:
-            tasks_result_list += new_node.queue_all_instances()
+            tasks_result_list += new_node.queue_all_instances(monitor)
             monitor.add_node(new_node)
         wait_tasks_to_finish(tasks_result_list)
 

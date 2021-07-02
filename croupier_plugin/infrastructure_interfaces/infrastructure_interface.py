@@ -263,7 +263,7 @@ class InfrastructureInterface(object):
             logger.error("Job submission '" + call + "' exited with code " +
                          str(exit_code) + ":\n" + output)
             return False
-        return output.split(' ')[-1]
+        return output.split(' ')[-1].strip()
 
     def clean_job_aux_files(self,
                             ssh_client,

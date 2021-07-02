@@ -71,6 +71,7 @@ class JobRequester(object):
                             settings['jobids'],
                             logger
                         )
+                        print(partial_states)
                     else:
                         partial_states = self._no_states(
                             host,

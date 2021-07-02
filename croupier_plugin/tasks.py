@@ -566,8 +566,6 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         except Exception as ex:
             ctx.logger.error('Job could not be submitted because error ' + ex.message)
             raise ex
-
-        ctx.logger.info('Job submitted, jobid: ' + jobid)
         client.close_connection()
     else:
         ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
@@ -575,7 +573,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         jobid = "Simulated"
 
     if jobid:
-        ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') sent.')
+        ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') sent. Jobid: ' + jobid)
     else:
         ctx.logger.error(
             'Job ' + name + ' (' + ctx.instance.id + ') not sent.')
