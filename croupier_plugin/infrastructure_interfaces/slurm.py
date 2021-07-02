@@ -96,12 +96,12 @@ def _parse_states(raw_states, logger):
     return parsed
 
 
-def get_job_metrics(job_name, ssh_client, workdir, logger):
+def get_job_metrics(job_id, ssh_client, workdir, logger):
     # Get job execution audits for monitoring metrics
     audits = {}
     audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
-    audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X" \
-        .format(job_name=job_name, metrics=audit_metrics)
+    audit_command = "sacct -j {job_id} -o {metrics} -p --noheader -X" \
+        .format(job_id=job_id, metrics=audit_metrics)
 
     output, exit_code = ssh_client.execute_shell_command(
         audit_command,
@@ -271,18 +271,15 @@ class Slurm(InfrastructureInterface):
     #     return job_settings
 
     # Monitor
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, credentials, job_ids, logger):
         # TODO set start time of consulting
-        # (sacct only check current day)
-        call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names)
-
+        call = "sacct -n -o JobIDRaw,State -X -P -j " + ','.join(job_ids)
         client = SshClient(credentials)
 
         output, exit_code = client.execute_shell_command(
             call,
             workdir=workdir,
             wait_result=True)
-
         states = {}
         if exit_code == 0:
             states = _parse_states(output, logger)
@@ -291,9 +288,9 @@ class Slurm(InfrastructureInterface):
 
         # Get job execution audits for monitoring metrics
         audits = {}
-        for job_name in job_names:
-            if states[job_name] != 'PENDING':
-                audits[job_name] = get_job_metrics(job_name, client, workdir, logger)
+        for job_id in job_ids:
+            if states[job_id] != 'PENDING':
+                audits[job_id] = get_job_metrics(job_id, client, workdir, logger)
 
         client.close_connection()
 

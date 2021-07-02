@@ -60,21 +60,21 @@ class JobRequester(object):
                     partial_states = self._get_prometheus(
                         host,
                         settings['config'],
-                        settings['names'])
+                        settings['jobids'])
                 else:  # internal
                     wm = InfrastructureInterface.factory(settings['type'])
                     if wm:
                         partial_states, audits = wm.get_states(
                             settings['workdir'],
                             settings['config'],
-                            settings['names'],
+                            settings['jobids'],
                             logger
                         )
                     else:
                         partial_states = self._no_states(
                             host,
                             settings['type'],
-                            settings['names'],
+                            settings['jobids'],
                             logger)
                 states.update(partial_states)
 

@@ -37,6 +37,7 @@ from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
 from croupier_plugin.monitoring.monitoring import (PrometheusPublisher)
+from croupier_plugin.workflows import JobGraphInstance
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
@@ -550,7 +551,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         ctx.logger.info('Submitting the job ...')
 
         try:
-            is_submitted = wm.submit_job(
+            jobid = wm.submit_job(
                 client,
                 name,
                 job_options,
@@ -561,15 +562,14 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         except Exception as ex:
             ctx.logger.error('Job could not be submitted because error ' + ex.message)
             raise ex
-
-        ctx.logger.info('Job submitted')
         client.close_connection()
     else:
         ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
         is_submitted = True
+        jobid = "Simulated"
 
-    if is_submitted:
-        ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') sent.')
+    if jobid:
+        ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') sent. Jobid: ' + jobid)
     else:
         ctx.logger.error(
             'Job ' + name + ' (' + ctx.instance.id + ') not sent.')
@@ -577,6 +577,9 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
             'Job ' + name + ' (' + ctx.instance.id + ') not sent.')
 
     ctx.instance.runtime_properties['job_name'] = name
+    ctx.instance.runtime_properties['job_id'] = jobid
+    JobGraphInstance.register_jobid(kwargs['pseudo_deployment_id'], name, jobid)
+    ctx.instance.update()
 
 
 @operation
@@ -640,6 +643,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         ctx.logger.warning('Job was not stopped as it was not configured.')
 
     try:
+        jobid = kwargs['jobid']
         name = kwargs['name']
         is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
             type_hierarchy
@@ -657,7 +661,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
                     interface_type +
                     "' not supported.")
             is_stopped = wm.stop_job(client,
-                                     name,
+                                     jobid,
                                      job_options,
                                      is_singularity,
                                      ctx.logger,
@@ -863,6 +867,7 @@ def publish(publish_list, data_mover_options, **kwargs):
     try:
         name = kwargs['name']
         audit = kwargs['audit']
+        jobid = kwargs['jobid']
         published = True
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
@@ -884,7 +889,7 @@ def publish(publish_list, data_mover_options, **kwargs):
 
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
-                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client,  logger=ctx.logger)
+                convert_cput(audit["cput"], job_id=jobid, workdir=workdir, ssh_client=client,  logger=ctx.logger)
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -893,7 +898,7 @@ def publish(publish_list, data_mover_options, **kwargs):
                     username = accounting_options["reporting_user"]
                 if "croupier_reporter_id" in hpc_interface.runtime_properties:
                     croupier_reporter_id = hpc_interface.runtime_properties['croupier_reporter_id']
-                    report_metrics_to_accounting(audit, job_id=name, username=username,
+                    report_metrics_to_accounting(audit, job_id=jobid, username=username,
                                                  croupier_reporter_id=croupier_reporter_id, logger=ctx.logger)
                 else:
                     ctx.logger.error(

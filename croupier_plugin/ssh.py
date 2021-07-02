@@ -43,7 +43,6 @@ try:
 except ImportError:
     import socketserver as SocketServer
 
-
 # # @TODO `posixpath` can be used for common pathname manipulations on
 # #       remote HPC systems
 # import posixpath as cli_path
@@ -243,16 +242,13 @@ class SshClient(object):
             if wait_result:
                 # exit code is always ready at this point
                 exit_code = stdout.channel.recv_exit_status()
-                if exit_code == 0:
-                    output = ''.join(stdout_chunks)
-                else:
-                    output = ''.join(stdout_chunks)
-                return (output, exit_code)
+                output = ''.join([b.decode() for b in stdout_chunks])
+                return output, exit_code
             else:
                 return True
         else:
             if wait_result:
-                return (None, None)
+                return None, None
             else:
                 return False
 

@@ -31,13 +31,16 @@ from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
 from croupier_plugin.job_requester import JobRequester
 
+from uuid import uuid1 as uuid
+
 LOOP_PERIOD = 1
+DB_JOBID = {}
 
 
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
 
-    def __init__(self, parent, instance):
+    def __init__(self, parent, instance, pseudo_deployment_id):
         self._status = 'WAITING'
         self.parent_node = parent
         self.winstance = instance
@@ -45,10 +48,11 @@ class JobGraphInstance(object):
         self.completed = not self.parent_node.is_job  # True if is not a job
         self.failed = False
         self.audit = None
+        self.pseudo_deployment_id = pseudo_deployment_id
 
         if parent.is_job:
             self._status = 'WAITING'
-
+            self.jobid = ''
             # Get runtime properties
             runtime_properties = instance._node_instance.runtime_properties
             ctx.logger.info("runtime_properties:" + str(runtime_properties))
@@ -72,30 +76,34 @@ class JobGraphInstance(object):
 
             # build job name
             instance_components = instance.id.split('_')
-            self.name = '_'.join(instance_components[:-1])
+            self.name = runtime_properties["job_prefix"] + "_".join(instance_components[:-1])
 
         else:
             self._status = 'NONE'
             self.name = instance.id
             self.monitor_url = ""
 
-    def queue(self):
+    def queue(self, monitor):
         """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
 
         self.winstance.send_event('Queuing job..')
-        result = self.winstance.execute_operation('croupier.interfaces.'
-                                                  'lifecycle.queue',
-                                                  kwargs={"name": self.name})
-        result.task.wait_for_terminated()
+        result = self.winstance.execute_operation('croupier.interfaces.lifecycle.queue',
+                                                  kwargs={"name": self.name,
+                                                          "pseudo_deployment_id": self.pseudo_deployment_id})
+        # result.task.wait_for_terminated()
+        result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
         else:
             self.winstance.send_event('.. job queued')
             init_state = 'PENDING'
         self.set_status(init_state)
-        return result.task
+        self.jobid = DB_JOBID[self.pseudo_deployment_id][self.name]
+        ctx.logger.info("Jobid saved is: " + self.jobid)
+        monitor.register_jobid(self.jobid, self.name)
+        return result
 
     def publish(self):
         """ Publish the job's instance outputs """
@@ -105,8 +113,9 @@ class JobGraphInstance(object):
         self.winstance.send_event('Publishing job outputs..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
-                                                  kwargs={"name": self.name, "audit": self.audit})
-        result.task.wait_for_terminated()
+                                                  kwargs={"name": self.name, "jobid": self.jobid, "audit": self.audit})
+        # result.task.wait_for_terminated()
+        result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
 
@@ -160,17 +169,22 @@ class JobGraphInstance(object):
         self.winstance.send_event('Cancelling job..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cancel',
-                                                  kwargs={"name": self.name})
+                                                  kwargs={"name": self.name, "jobid": self.jobid})
         self.winstance.send_event('.. job canceled')
-        result.task.wait_for_terminated()
+        result.get()
+        # result.task.wait_for_terminated()
 
         self._status = 'CANCELLED'
+
+    @staticmethod
+    def register_jobid(pseudo_deployment_id, name, jobid):
+        DB_JOBID[pseudo_deployment_id][name] = jobid
 
 
 class JobGraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
-    def __init__(self, node, job_instances_map):
+    def __init__(self, node, job_instances_map, pseudo_deployment_id):
         self.name = node.id
         self.type = node.type
         self.cfy_node = node
@@ -184,7 +198,7 @@ class JobGraphNode(object):
         self.instances = []
         for instance in node.instances:
             graph_instance = JobGraphInstance(self,
-                                              instance)
+                                              instance, pseudo_deployment_id)
             self.instances.append(graph_instance)
             if graph_instance.parent_node.is_job:
                 job_instances_map[graph_instance.name] = graph_instance
@@ -205,17 +219,17 @@ class JobGraphNode(object):
         """ Adds a child node """
         self.children.append(node)
 
-    def queue_all_instances(self):
+    def queue_all_instances(self, monitor):
         """ Sends all job instances to the infrastructure queue """
         if not self.is_job:
             return []
 
-        tasks_list = []
+        tasks_result_list = []
         for job_instance in self.instances:
-            tasks_list.append(job_instance.queue())
+            tasks_result_list.append(job_instance.queue(monitor))
 
         self.status = 'QUEUED'
-        return tasks_list
+        return tasks_result_list
 
     def is_ready(self):
         """ True if it has no more dependencies to satisfy """
@@ -297,7 +311,7 @@ class JobGraphNode(object):
         self.status = 'CANCELED'
 
 
-def build_graph(nodes):
+def build_graph(nodes, pseudo_deployment_id ):
     """ Creates a new graph of nodes and instances with the job wrapper """
 
     job_instances_map = {}
@@ -306,7 +320,7 @@ def build_graph(nodes):
     nodes_map = {}
     root_nodes = []
     for node in nodes:
-        new_node = JobGraphNode(node, job_instances_map)
+        new_node = JobGraphNode(node, job_instances_map, pseudo_deployment_id)
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
@@ -330,10 +344,10 @@ class Monitor(object):
     MAX_ERRORS = 5
 
     def __init__(self, job_instances_map, logger):
-        self.job_ids = {}
         self._execution_pool = {}
         self.timestamp = 0
         self.job_instances_map = job_instances_map
+        self.job_instances_map_jobid = {}
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
@@ -348,14 +362,14 @@ class Monitor(object):
                 for job_instance in job_node.instances:
                     if not job_instance.simulate:
                         if job_instance.host in monitor_jobs:
-                            monitor_jobs[job_instance.host]['names'].append(
-                                job_instance.name)
+                            monitor_jobs[job_instance.host]['jobids'].append(
+                                job_instance.jobid)
                         else:
                             monitor_jobs[job_instance.host] = {
                                 'config': job_instance.monitor_config,
                                 'type': job_instance.monitor_type,
                                 'workdir': job_instance.workdir,
-                                'names': [job_instance.name],
+                                'jobids': [job_instance.jobid],
                                 'period': job_instance.monitor_period
                             }
                     else:
@@ -370,12 +384,12 @@ class Monitor(object):
             states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
 
             # set job audit
-            for inst_name, audit in audits.iteritems():
-                self.job_instances_map[inst_name].audit = audit
+            for jobid, audit in audits.iteritems():
+                self.job_instances_map_jobid[jobid].audit = audit
 
             # finally set job status
-            for inst_name, state in states.iteritems():
-                self.job_instances_map[inst_name].set_status(state)
+            for jobid, state in states.iteritems():
+                self.job_instances_map_jobid[jobid].set_status(state)
 
             self.continued_errors = 0
         except Exception as exp:
@@ -406,20 +420,25 @@ class Monitor(object):
         """ True if there are nodes executing """
         return self._execution_pool
 
+    def register_jobid(self, jobid, name):
+        """ Registers the jobid to an instance by name """
+        self.job_instances_map_jobid[jobid] = self.job_instances_map[name]
+
 
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-
-    root_nodes, job_instances_map = build_graph(ctx.nodes)
+    pseudo_deployment_id = uuid()
+    DB_JOBID[pseudo_deployment_id] = {}
+    root_nodes, job_instances_map = build_graph(ctx.nodes, pseudo_deployment_id)
     monitor = Monitor(job_instances_map, ctx.logger)
 
     # Execution of first job instances
-    tasks_list = []
+    task_result_list = []
     for root in root_nodes:
-        tasks_list += root.queue_all_instances()
+        task_result_list += root.queue_all_instances(monitor)
         monitor.add_node(root)
-    wait_tasks_to_finish(tasks_list)
+    wait_tasks_to_finish(task_result_list)
 
     # Monitoring and next executions loop
     while monitor.is_something_executing() and not api.has_cancel_request():
@@ -444,11 +463,11 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
         for node_name in exec_nodes_finished:
             monitor.finish_node(node_name)
         # perform new executions
-        tasks_list = []
+        tasks_result_list = []
         for new_node in new_exec_nodes:
-            tasks_list += new_node.queue_all_instances()
+            tasks_result_list += new_node.queue_all_instances(monitor)
             monitor.add_node(new_node)
-        wait_tasks_to_finish(tasks_list)
+        wait_tasks_to_finish(tasks_result_list)
 
     if monitor.is_something_executing():
         cancel_all(monitor.get_executions_iterator())
@@ -465,7 +484,8 @@ def cancel_all(executions):
     raise api.ExecutionCancelled()
 
 
-def wait_tasks_to_finish(tasks_list):
+def wait_tasks_to_finish(tasks_result_list):
     """Blocks until all tasks have finished"""
-    for task in tasks_list:
-        task.wait_for_terminated()
+    for result in tasks_result_list:
+        result.get()
+        # task.wait_for_terminated()

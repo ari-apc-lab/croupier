@@ -202,17 +202,17 @@ class Pbspro(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, credentials, job_ids, logger):
         return self._get_states_detailed(
             workdir,
             credentials,
-            job_names,
-            logger) if job_names else {}
+            job_ids,
+            logger) if job_ids else {}
 
     @staticmethod
-    def _get_states_detailed(workdir, credentials, job_names, logger):
+    def _get_states_detailed(workdir, credentials, job_ids, logger):
         """
-        Get job states by job names
+        Get job states by job ids
 
         This function uses `qstat` command to query PBSPro.
         Please don't launch this call very frequently. Polling it
@@ -228,21 +228,14 @@ class Pbspro(InfrastructureInterface):
         # identify job ids
         # Read environment, required by some HPC (e.g. HLRS Hawk)
         read_environment = "source /etc/profile > /dev/null 2>&1; "
-        call = read_environment + "echo {} | xargs -n 1 qselect -x -N".format(
-            shlex_quote(' '.join(map(shlex_quote, job_names))))
 
         client = SshClient(credentials)
 
-        output, exit_code = client.execute_shell_command(
-            call,
-            workdir=workdir,
-            wait_result=True)
-        job_ids = Pbspro._parse_qselect(output)
         if not job_ids:
             return {}
 
         # get detailed information about jobs
-        call = read_environment + "qstat -x -w -f {}".format(' '.join(map(str, job_ids)))
+        call = read_environment + "qstat -x -f {}".format(' '.join(map(str, job_ids)))
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -256,7 +249,7 @@ class Pbspro(InfrastructureInterface):
                 "cannot parse state response for job ids=[{}]".format(
                     ','.join(map(str, job_ids))))
             logger.warning(
-                "{err}\n`qstat -f` output to parse:\n\\[\n{text}\n\\]".format(
+                "{err}\n`qstat -x -f` output to parse:\n\\[\n{text}\n\\]".format(
                     err=str(e), text=output))
             # TODO: think whether error ignoring is better
             #       for the correct lifecycle
@@ -279,10 +272,10 @@ class Pbspro(InfrastructureInterface):
         jobs = {}
         audits = {}
         for job in Pbspro._tokenize_qstat_detailed(StringIO(qstat_output)):
-            name = job.get('Job_Name', '')
+            job_id = job.get("Job_Id", None)
             state_code = job.get('job_state', None)
             audit = {}
-            if name and state_code:
+            if job_id and state_code:
                 if state_code == 'F':
                     # Process timestamps from this format 'Tue Sep 22 13:29:49 2020'
                     # to this one "2020-04-15 01:26:59.000403"
@@ -315,8 +308,8 @@ class Pbspro(InfrastructureInterface):
                         exit_status, "FAILED")  # unknown failure by default
                 else:
                     state = Pbspro._job_states[state_code]
-            jobs[name] = state
-            audits[name] = audit
+            jobs[job_id] = state
+            audits[job_id] = audit
         return jobs, audits
 
     @staticmethod
@@ -394,45 +387,6 @@ class Pbspro(InfrastructureInterface):
         -11: "NODE_FAIL",  # OVERLIMIT_WT   Job exceeded a walltime limit
         -12: "TIMEOUT",  # OVERLIMIT_CPUT Job exceeded a CPU time limit
     }
-
-    @staticmethod
-    def _get_states_tabular(ssh_client, job_names, logger):
-        """
-        Get job states by job names
-
-        This function uses `qstat` command to query Torque.
-        Please don't launch this call very friquently. Polling it
-        frequently, especially across all users on the cluster,
-        will slow down response times and may bring
-        scheduling to a crawl.
-
-        It invokes `tail/awk` to make simple parsing on the remote HPC.
-        """
-        # TODO:(emepetres) set start day of consulting
-        # @caution This code fails to manage the situation
-        #          if several jobs have the same name
-        call = "qstat -i `echo {} | xargs -n 1 qselect -N` " \
-               "| tail -n+6 | awk '{{ print $4 \"|\" $10 }}'".format(
-            shlex_quote(' '.join(map(shlex_quote, job_names))))
-        output, exit_code = ssh_client.send_command(call, wait_result=True)
-
-        return Pbspro._parse_qstat_tabular(output) if exit_code == 0 else {}
-
-    @staticmethod
-    def _parse_qstat_tabular(qstat_output):
-        """ Parse two colums `qstat` entries into a dict """
-
-        def parse_qstat_record(record):
-            name, state_code = map(str.strip, record.split('|'))
-            return name, Pbspro._job_states[state_code]
-
-        jobs = qstat_output.splitlines()
-        parsed = {}
-        # @TODO: think of catch-and-log parsing exceptions
-        if jobs and (len(jobs) > 1 or jobs[0] != ''):
-            parsed = dict(map(parse_qstat_record, jobs))
-
-        return parsed
 
 
 def execute_ssh_command(command, workdir, ssh_client, logger):

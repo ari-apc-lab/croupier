@@ -175,7 +175,7 @@ class InfrastructureInterface(object):
         @rtype string
         @param context: Dictionary containing context env vars
         @rtype dictionary of strings
-        @return Slurm's job name sent. None if an error arise.
+        @return Slurm's job Id sent. None if an error arise.
         """
         if not SshClient.check_ssh_client(ssh_client, logger):
             logger.error('check_ssh_client failed')
@@ -259,7 +259,7 @@ class InfrastructureInterface(object):
             logger.error("Job submission '" + call + "' exited with code " +
                          str(exit_code) + ":\n" + output)
             return False
-        return True
+        return output.split(' ')[-1].strip()
 
     def clean_job_aux_files(self,
                             ssh_client,
@@ -293,7 +293,7 @@ class InfrastructureInterface(object):
 
     def stop_job(self,
                  ssh_client,
-                 name,
+                 job_id,
                  job_options,
                  is_singularity,
                  logger,
@@ -303,10 +303,10 @@ class InfrastructureInterface(object):
 
         @type ssh_client: SshClient
         @param ssh_client: ssh client connected to an HPC login node
-        @type name: string
-        @param name: name of the job
-        @type job_settings: dictionary
-        @param job_settings: dictionary with the job options
+        @type job_id: string
+        @param job_id: Job ID of the job
+        @type job_options: dictionary
+        @param job_options: dictionary with the job options
         @type is_singularity: bool
         @param is_singularity: True if the job is in a container
         @rtype string
@@ -315,7 +315,7 @@ class InfrastructureInterface(object):
         if not SshClient.check_ssh_client(ssh_client, logger):
             return False
 
-        call = self._build_job_cancellation_call(name,
+        call = self._build_job_cancellation_call(job_id,
                                                  job_options,
                                                  logger)
         if call is None:
@@ -402,16 +402,17 @@ class InfrastructureInterface(object):
             "'_get_envar' not implemented.")
 
     # Monitor
-    def get_states(self, ssh_client, job_names, logger):
+    def get_states(self, workdir, credentials, job_ids, logger):
         """
         Get the states of the jobs names
-
+        @type workdir: string
+        @param workdir: Working directory of the HPC
         @type credentials: dictionary
-        @param credentials: dictionary with the HPC SSH credentials
-        @type job_names: list
-        @param job_names: list of the job names to retrieve their states
+        @param credentials: SSH credentials to connect to the HPC
+        @type job_ids: list
+        @param job_ids: list of the job ids to retrieve their states
         @rtype dict
-        @return a dictionary of job names and its states
+        @return a dictionary of job ids and its states
         """
         raise NotImplementedError("'get_states' not implemented.")
 
