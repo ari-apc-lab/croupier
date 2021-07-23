@@ -429,7 +429,7 @@ class Monitor(object):
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-    pseudo_deployment_id = uuid()
+    pseudo_deployment_id = str(uuid())
     DB_JOBID[pseudo_deployment_id] = {}
     root_nodes, job_instances_map = build_graph(ctx.nodes, pseudo_deployment_id)
     monitor = Monitor(job_instances_map, ctx.logger)
