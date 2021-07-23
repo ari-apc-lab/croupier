@@ -185,6 +185,7 @@ node_types:
                             default: { get_property: [SELF, deployment] }
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
+                    max_retries: 0
                 stop:
                     implementation: croupier.croupier_plugin.tasks.revert_job
                     inputs:
@@ -201,6 +202,7 @@ node_types:
                             default: { get_property: [SELF, job_options] }
                         data_mover_options:
                             default: { get_property: [SELF, data_mover_options] }
+                    max_retries: 0
                 publish:
                     implementation: croupier.croupier_plugin.tasks.publish
                     inputs:
