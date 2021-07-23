@@ -180,11 +180,11 @@ class JobGraphInstance(object):
         self._status = 'CANCELLED'
 
     @staticmethod
-    def register_jobid(pseudo_deployment_id, name, jobid):
+    def register_jobid(pseudo_deployment_id, name, jobid, logger):
         if pseudo_deployment_id not in DB_JOBID:
             DB_JOBID[pseudo_deployment_id] = {}
         DB_JOBID[pseudo_deployment_id][name] = jobid
-        ctx.logger.debug("In register_jobid method, just registered jobid "+jobid+" DB_JOBID:\n"
+        logger.debug("In register_jobid method, just registered jobid "+jobid+" DB_JOBID:\n"
                          + str(DB_JOBID[pseudo_deployment_id]))
 
 
