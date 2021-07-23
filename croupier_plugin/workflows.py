@@ -178,6 +178,8 @@ class JobGraphInstance(object):
 
     @staticmethod
     def register_jobid(pseudo_deployment_id, name, jobid):
+        if pseudo_deployment_id not in DB_JOBID:
+            DB_JOBID[pseudo_deployment_id] = {}
         DB_JOBID[pseudo_deployment_id][name] = jobid
 
 
