@@ -37,7 +37,7 @@ from uuid import uuid1 as uuid
 LOOP_PERIOD = 1
 
 
-class LockingJobidStorage:
+class LockingJobidStorage(object):
     def __init__(self):
         self.db_jobid = {}
         self.lock = threading.Lock()
