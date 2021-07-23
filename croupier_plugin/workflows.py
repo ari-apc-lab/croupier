@@ -394,11 +394,12 @@ class Monitor(object):
             self.continued_errors = 0
         except Exception as exp:
             if self.continued_errors >= Monitor.MAX_ERRORS:
-                self.logger.error(str(exp))
+                self.logger.error("Error when monitoring jobs: " + str(exp))
                 raise exp
             else:
-                self.logger.warning(str(exp))
                 self.continued_errors += 1
+                count = str(self.continued_errors)+"/"+str(Monitor.MAX_ERRORS)
+                self.logger.warning("Error when monitoring jobs ("+count+"): " + str(exp))
 
         # We wait to slow down the loop
         sys.stdout.flush()  # necessary to output work properly with sleep
