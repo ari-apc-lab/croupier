@@ -100,9 +100,11 @@ class JobGraphInstance(object):
             self.winstance.send_event('.. job queued')
             init_state = 'PENDING'
         self.set_status(init_state)
-        ctx.logger.info("Saving jobid for job " + self.name)
+        ctx.logger.debug("Saving jobid for job " + self.name)
+        ctx.logger.debug("DB_JOBID is:\n" + str(DB_JOBID))
+        ctx.logger.debug("DB_JOBID for this deployment is:\n" + str(DB_JOBID[self.pseudo_deployment_id]))
         self.jobid = DB_JOBID[self.pseudo_deployment_id][self.name]
-        ctx.logger.info("Jobid saved is: " + self.jobid)
+        ctx.logger.debug("Jobid saved is: " + self.jobid)
         monitor.register_jobid(self.jobid, self.name)
         return result
 
