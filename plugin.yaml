@@ -29,7 +29,7 @@ plugins:
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
-        source: https://github.com/ari-apc-lab/croupier/archive/permedcoe.zip
+        source: https://github.com/ari-apc-lab/croupier/archive/grapevine_production.zip
         install_arguments: -r plugin-requirements.txt
         package_name: croupier
         package_version: "3.1.0"
@@ -134,23 +134,11 @@ node_types:
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [SELF, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
+                            default: { get_property: [SELF, external_monitor_port] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:
@@ -161,23 +149,11 @@ node_types:
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [SELF, external_monitor_entrypoint], }
                         external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
+                            default: { get_property: [SELF, external_monitor_port] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -274,32 +250,13 @@ relationships:
                         credentials:
                             default: { get_property: [TARGET, credentials] }
                         external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_entrypoint],
-                                }
+                            default: { get_property: [TARGET, external_monitor_entrypoint] }
                         external_monitor_port:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_port],
-                                }
+                            default: { get_property: [TARGET, external_monitor_port] }
                         external_monitor_type:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_type],
-                                }
+                            default: { get_property: [TARGET, external_monitor_type] }
                         external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            TARGET,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                            default: { get_property: [TARGET, external_monitor_orchestrator_port] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
                         monitor_period:
