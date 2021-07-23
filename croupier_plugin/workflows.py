@@ -25,6 +25,7 @@ workflows.py - Holds the plugin workflows
 '''
 
 import sys
+import threading
 import time
 
 from cloudify.decorators import workflow
@@ -34,13 +35,38 @@ from croupier_plugin.job_requester import JobRequester
 from uuid import uuid1 as uuid
 
 LOOP_PERIOD = 1
-DB_JOBID = {}
+
+
+class LockingJobidStorage:
+    def __init__(self):
+        self.db_jobid = {}
+        self.lock = threading.Lock()
+
+    def acquire_lock(self):
+        self.lock.acquire()
+
+    def release_lock(self):
+        self.lock.release()
+
+    def register(self, name, jobid):
+        self.db_jobid[name] = jobid
+
+    def get(self, name):
+        with self.lock:
+            return self.db_jobid[name]
+
+    def clear(self):
+        with self.lock:
+            self.db_jobid = {}
+
+
+DB_JOBID = LockingJobidStorage()
 
 
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
 
-    def __init__(self, parent, instance, pseudo_deployment_id):
+    def __init__(self, parent, instance):
         self._status = 'WAITING'
         self.parent_node = parent
         self.winstance = instance
@@ -48,7 +74,6 @@ class JobGraphInstance(object):
         self.completed = not self.parent_node.is_job  # True if is not a job
         self.failed = False
         self.audit = None
-        self.pseudo_deployment_id = pseudo_deployment_id
 
         if parent.is_job:
             self._status = 'WAITING'
@@ -87,11 +112,9 @@ class JobGraphInstance(object):
         """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
-
+        DB_JOBID.acquire_lock()
         self.winstance.send_event('Queuing job..')
-        result = self.winstance.execute_operation('croupier.interfaces.lifecycle.queue',
-                                                  kwargs={"name": self.name,
-                                                          "pseudo_deployment_id": self.pseudo_deployment_id})
+        result = self.winstance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
         # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
@@ -101,9 +124,8 @@ class JobGraphInstance(object):
             init_state = 'PENDING'
         self.set_status(init_state)
         ctx.logger.debug("Saving jobid for job " + self.name)
-        ctx.logger.debug("DB_JOBID is:\n" + str(DB_JOBID))
-        ctx.logger.debug("DB_JOBID for this deployment is:\n" + str(DB_JOBID[self.pseudo_deployment_id]))
-        self.jobid = DB_JOBID[self.pseudo_deployment_id][self.name]
+        with DB_JOBID.lock:
+            self.jobid = DB_JOBID.get(self.name)
         ctx.logger.debug("Jobid saved is: " + self.jobid)
         monitor.register_jobid(self.jobid, self.name)
         return result
@@ -180,19 +202,15 @@ class JobGraphInstance(object):
         self._status = 'CANCELLED'
 
     @staticmethod
-    def register_jobid(pseudo_deployment_id, name, jobid, logger):
-        if pseudo_deployment_id not in DB_JOBID:
-            DB_JOBID[pseudo_deployment_id] = {name: jobid}
-        else:
-            DB_JOBID[pseudo_deployment_id][name] = jobid
-        logger.debug("In register_jobid method, just registered jobid "+jobid+" DB_JOBID:\n"
-                         + str(DB_JOBID[pseudo_deployment_id]))
+    def register_jobid(name, jobid):
+        DB_JOBID.register(name, jobid)
+        DB_JOBID.release_lock()
 
 
 class JobGraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
-    def __init__(self, node, job_instances_map, pseudo_deployment_id):
+    def __init__(self, node, job_instances_map):
         self.name = node.id
         self.type = node.type
         self.cfy_node = node
@@ -205,8 +223,7 @@ class JobGraphNode(object):
 
         self.instances = []
         for instance in node.instances:
-            graph_instance = JobGraphInstance(self,
-                                              instance, pseudo_deployment_id)
+            graph_instance = JobGraphInstance(self, instance)
             self.instances.append(graph_instance)
             if graph_instance.parent_node.is_job:
                 job_instances_map[graph_instance.name] = graph_instance
@@ -319,7 +336,7 @@ class JobGraphNode(object):
         self.status = 'CANCELED'
 
 
-def build_graph(nodes, pseudo_deployment_id ):
+def build_graph(nodes):
     """ Creates a new graph of nodes and instances with the job wrapper """
 
     job_instances_map = {}
@@ -328,7 +345,7 @@ def build_graph(nodes, pseudo_deployment_id ):
     nodes_map = {}
     root_nodes = []
     for node in nodes:
-        new_node = JobGraphNode(node, job_instances_map, pseudo_deployment_id)
+        new_node = JobGraphNode(node, job_instances_map)
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
@@ -437,9 +454,8 @@ class Monitor(object):
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-    pseudo_deployment_id = str(uuid())
-    DB_JOBID[pseudo_deployment_id] = {}
-    root_nodes, job_instances_map = build_graph(ctx.nodes, pseudo_deployment_id)
+    DB_JOBID.clear()
+    root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
     # Execution of first job instances
