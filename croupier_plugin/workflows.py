@@ -71,9 +71,12 @@ class JobGraphInstance(object):
             self.monitor_period = int(runtime_properties["monitor_period"])
 
             # build job name
-            instance_components = instance.id.split('_')
-            self.name = '_'.join(instance_components[:-1])
 
+            # As long as name is used to identify jobs in croupier, name can't be user input since it is not unique
+            # When jobid is changed to main key to identify jobs in croupier, first line can be used.
+
+            # self.name = '_'.join(instance.id.split('_')[:-1])    # Only the node name given by the user
+            self.name = instance.id                                # Full name given by cloudify (has random substring)
         else:
             self._status = 'NONE'
             self.name = instance.id
