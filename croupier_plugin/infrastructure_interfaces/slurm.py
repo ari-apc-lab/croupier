@@ -96,12 +96,12 @@ def _parse_states(raw_states, logger):
     return parsed
 
 
-def get_job_metrics(job_name, ssh_client, workdir, logger):
+def get_job_metrics(job_name, ssh_client, workdir, start_time, logger):
     # Get job execution audits for monitoring metrics
     audits = {}
     audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
-    audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X" \
-        .format(job_name=job_name, metrics=audit_metrics)
+    audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X -S {start_time}" \
+        .format(job_name=job_name, metrics=audit_metrics, start_time=start_time_tostr(start_time))
 
     output, exit_code = ssh_client.execute_shell_command(
         audit_command,
@@ -120,6 +120,10 @@ def execute_ssh_command(command, workdir, ssh_client, logger):
         logger.error("failed to execute command '" + command + "', exit code " + str(exit_code))
         return False
     return True
+
+
+def start_time_tostr(start_time):
+    return start_time.strftime("%m/%d/%y-%H:%M:%S")
 
 
 class Slurm(InfrastructureInterface):
@@ -272,9 +276,10 @@ class Slurm(InfrastructureInterface):
 
     # Monitor
     def get_states(self, workdir, credentials, job_names, logger):
-        # TODO set start time of consulting
-        # (sacct only check current day)
-        call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names)
+
+        start_time_str = start_time_tostr(self.start_time)
+
+        call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names) + " -S " + start_time_str
 
         client = SshClient(credentials)
 
@@ -293,7 +298,7 @@ class Slurm(InfrastructureInterface):
         audits = {}
         for job_name in job_names:
             if states[job_name] != 'PENDING':
-                audits[job_name] = get_job_metrics(job_name, client, workdir, logger)
+                audits[job_name] = get_job_metrics(job_name, client, workdir, start_time_str, logger)
 
         client.close_connection()
 

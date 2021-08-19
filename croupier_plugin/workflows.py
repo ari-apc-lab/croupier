@@ -26,6 +26,7 @@ workflows.py - Holds the plugin workflows
 
 import sys
 import time
+from datetime import datetime
 
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
@@ -340,6 +341,7 @@ class Monitor(object):
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
+        self.monitor_start_time = datetime.now()
 
     def update_status(self):
         """Gets all executing instances and update their state"""
@@ -370,7 +372,7 @@ class Monitor(object):
 
         # then look for the status of the instances through its name
         try:
-            states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
+            states, audits = self.jobs_requester.request(monitor_jobs, self.monitor_start_time, self.logger)
 
             # set job audit
             for inst_name, audit in audits.iteritems():

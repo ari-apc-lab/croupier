@@ -129,15 +129,16 @@ def get_prevailing_state(state1, state2):
 class InfrastructureInterface(object):
     infrastructure_interface = None
 
-    def __init__(self, infrastructure_interface):
+    def __init__(self, infrastructure_interface, monitor_start_time=None):
         self.infrastructure_interface = infrastructure_interface
+        self.monitor_start_time = monitor_start_time
         # self.audit_inserted = False
 
     @staticmethod
-    def factory(infrastructure_interface):
+    def factory(infrastructure_interface, monitor_start_time=None):
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
-            return Slurm(infrastructure_interface)
+            return Slurm(infrastructure_interface, monitor_start_time)
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
             return Torque(infrastructure_interface)
@@ -402,10 +403,12 @@ class InfrastructureInterface(object):
             "'_get_envar' not implemented.")
 
     # Monitor
-    def get_states(self, ssh_client, job_names, logger):
+    def get_states(self, workdir, credentials, job_names, logger):
         """
         Get the states of the jobs names
 
+        @type workdir: string
+        @param workdir: Working directory in the HPC
         @type credentials: dictionary
         @param credentials: dictionary with the HPC SSH credentials
         @type job_names: list
