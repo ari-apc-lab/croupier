@@ -96,12 +96,12 @@ def _parse_states(raw_states, logger):
     return parsed
 
 
-def get_job_metrics(job_name, ssh_client, workdir, monitor_start_time, logger):
+def get_job_metrics(job_name, ssh_client, workdir, monitor_start_time_str, logger):
     # Get job execution audits for monitoring metrics
     audits = {}
     audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
     audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X -S {start_time}" \
-        .format(job_name=job_name, metrics=audit_metrics, start_time=start_time_tostr(monitor_start_time))
+        .format(job_name=job_name, metrics=audit_metrics, start_time=monitor_start_time_str)
 
     output, exit_code = ssh_client.execute_shell_command(
         audit_command,
