@@ -41,7 +41,7 @@ class JobRequester(object):
         _last_time = {}
         _lock = Lock()
 
-        def request(self, monitor_jobs, start_time, logger):
+        def request(self, monitor_jobs, monitor_start_time, logger):
             """ Retrieves the status of every job"""
             states = {}
             audits = {}
@@ -62,7 +62,7 @@ class JobRequester(object):
                         settings['config'],
                         settings['names'])
                 else:  # internal
-                    wm = InfrastructureInterface.factory(settings['type'], start_time)
+                    wm = InfrastructureInterface.factory(settings['type'], monitor_start_time)
                     if wm:
                         partial_states, audits = wm.get_states(
                             settings['workdir'],
