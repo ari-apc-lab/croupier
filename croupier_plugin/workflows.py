@@ -32,35 +32,11 @@ from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
 from croupier_plugin.job_requester import JobRequester
 
-from uuid import uuid1 as uuid
 
 LOOP_PERIOD = 1
 
 
-class LockingJobidStorage(object):
-    def __init__(self):
-        self.db_jobid = {}
-        self.lock = threading.Lock()
-
-    def acquire_lock(self):
-        self.lock.acquire()
-
-    def release_lock(self):
-        self.lock.release()
-
-    def register(self, name, jobid):
-        self.db_jobid[name] = jobid
-
-    def get(self, name):
-        with self.lock:
-            return self.db_jobid[name]
-
-    def clear(self):
-        with self.lock:
-            self.db_jobid = {}
-
-
-DB_JOBID = LockingJobidStorage()
+DB_JOBID = {}
 
 
 class JobGraphInstance(object):
@@ -112,10 +88,9 @@ class JobGraphInstance(object):
         """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
-        DB_JOBID.acquire_lock()
         self.winstance.send_event('Queuing job..')
         result = self.winstance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
-        # result.task.wait_for_terminated()
+
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
@@ -123,10 +98,9 @@ class JobGraphInstance(object):
             self.winstance.send_event('.. job queued')
             init_state = 'PENDING'
         self.set_status(init_state)
-        ctx.logger.debug("Saving jobid for job " + self.name)
-        with DB_JOBID.lock:
-            self.jobid = DB_JOBID.get(self.name)
-        ctx.logger.debug("Jobid saved is: " + self.jobid)
+
+        self.jobid = DB_JOBID[self.name]
+        ctx.logger.debug("Saved jobid for job " + self.name + ": " + self.jobid)
         monitor.register_jobid(self.jobid, self.name)
         return result
 
@@ -139,7 +113,6 @@ class JobGraphInstance(object):
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
                                                   kwargs={"name": self.name, "jobid": self.jobid, "audit": self.audit})
-        # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
@@ -177,10 +150,8 @@ class JobGraphInstance(object):
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cleanup',
                                                   kwargs={"name": self.name})
-        # result.task.wait_for_terminated()
         self.winstance.send_event('.. job cleaned')
 
-        # print result.task.dump()
         return result.task
 
     def cancel(self):
@@ -197,14 +168,13 @@ class JobGraphInstance(object):
                                                   kwargs={"name": self.name, "jobid": self.jobid})
         self.winstance.send_event('.. job canceled')
         result.get()
-        # result.task.wait_for_terminated()
 
         self._status = 'CANCELLED'
 
     @staticmethod
     def register_jobid(name, jobid):
-        DB_JOBID.register(name, jobid)
-        DB_JOBID.release_lock()
+        DB_JOBID[name] = jobid
+        ctx.logger.info("JOBID registered: " + jobid)
 
 
 class JobGraphNode(object):

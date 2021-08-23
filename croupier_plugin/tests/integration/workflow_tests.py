@@ -341,6 +341,17 @@ class TestPlugin(unittest.TestCase):
     def test_four_scale(self, cfy_local):
         self.run_test(cfy_local)
 
+    # Agroclimate Zones Pilot Test with data mover
+    def load_grapevine_cycle_00_spain_inputs(self, *args, **kwargs):
+        return self.load_inputs('cycle_00_part2_spain_no_reservation_inputs.yaml')
+
+    @workflow_test(os.path.join('blueprints', 'cycle_00_part2_spain_no_reservation', 'blueprint.yaml'),
+                   copy_plugin_yaml=True,
+                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
+                   inputs='load_grapevine_cycle_00_spain_inputs')
+    def test_grapevine_cycle_00_spain(self, cfy_local):
+        self.run_test(cfy_local)
+
     # # It doesn't allow "simulate" property. Code is left for manual testing.
     # @workflow_test(os.path.join('blueprints', 'blueprint_openstack.yaml'),
     #                copy_plugin_yaml=True,
