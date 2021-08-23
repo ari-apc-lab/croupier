@@ -25,13 +25,12 @@ workflows.py - Holds the plugin workflows
 '''
 
 import sys
-import threading
 import time
+from datetime import datetime
 
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
 from croupier_plugin.job_requester import JobRequester
-
 
 LOOP_PERIOD = 1
 
@@ -346,6 +345,7 @@ class Monitor(object):
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
+        self.monitor_start_time = datetime.now()
 
     def update_status(self):
         """Gets all executing instances and update their state"""
@@ -376,7 +376,7 @@ class Monitor(object):
 
         # then look for the status of the instances through its name
         try:
-            states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
+            states, audits = self.jobs_requester.request(monitor_jobs, self.monitor_start_time, self.logger)
 
             # set job audit
             for jobid, audit in audits.iteritems():
@@ -483,4 +483,3 @@ def wait_tasks_to_finish(tasks_result_list):
     """Blocks until all tasks have finished"""
     for result in tasks_result_list:
         result.get()
-        # task.wait_for_terminated()
