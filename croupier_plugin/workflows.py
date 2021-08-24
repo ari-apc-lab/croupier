@@ -29,21 +29,22 @@ from builtins import str
 from builtins import object
 import sys
 import time
+from datetime import datetime
 
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
 from croupier_plugin.job_requester import JobRequester
 
-from uuid import uuid1 as uuid
-
 LOOP_PERIOD = 1
+
+
 DB_JOBID = {}
 
 
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
 
-    def __init__(self, parent, instance, pseudo_deployment_id):
+    def __init__(self, parent, instance):
         self._status = 'WAITING'
         self.parent_node = parent
         self.winstance = instance
@@ -51,7 +52,6 @@ class JobGraphInstance(object):
         self.completed = not self.parent_node.is_job  # True if is not a job
         self.failed = False
         self.audit = None
-        self.pseudo_deployment_id = pseudo_deployment_id
 
         if parent.is_job:
             self._status = 'WAITING'
@@ -90,12 +90,9 @@ class JobGraphInstance(object):
         """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
-
         self.winstance.send_event('Queuing job..')
-        result = self.winstance.execute_operation('croupier.interfaces.lifecycle.queue',
-                                                  kwargs={"name": self.name,
-                                                          "pseudo_deployment_id": self.pseudo_deployment_id})
-        # result.task.wait_for_terminated()
+        result = self.winstance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
+
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
@@ -103,8 +100,9 @@ class JobGraphInstance(object):
             self.winstance.send_event('.. job queued')
             init_state = 'PENDING'
         self.set_status(init_state)
-        self.jobid = DB_JOBID[self.pseudo_deployment_id][self.name]
-        ctx.logger.info("Jobid saved is: " + self.jobid)
+
+        self.jobid = DB_JOBID[self.name]
+        ctx.logger.debug("Saved jobid for job " + self.name + ": " + self.jobid)
         monitor.register_jobid(self.jobid, self.name)
         return result
 
@@ -117,7 +115,6 @@ class JobGraphInstance(object):
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
                                                   kwargs={"name": self.name, "jobid": self.jobid, "audit": self.audit})
-        # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
@@ -155,10 +152,8 @@ class JobGraphInstance(object):
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cleanup',
                                                   kwargs={"name": self.name})
-        # result.task.wait_for_terminated()
         self.winstance.send_event('.. job cleaned')
 
-        # print result.task.dump()
         return result.task
 
     def cancel(self):
@@ -175,19 +170,19 @@ class JobGraphInstance(object):
                                                   kwargs={"name": self.name, "jobid": self.jobid})
         self.winstance.send_event('.. job canceled')
         result.get()
-        # result.task.wait_for_terminated()
 
         self._status = 'CANCELLED'
 
     @staticmethod
-    def register_jobid(pseudo_deployment_id, name, jobid):
-        DB_JOBID[pseudo_deployment_id][name] = jobid
+    def register_jobid(name, jobid):
+        DB_JOBID[name] = jobid
+        ctx.logger.info("JOBID registered: " + jobid)
 
 
 class JobGraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
-    def __init__(self, node, job_instances_map, pseudo_deployment_id):
+    def __init__(self, node, job_instances_map):
         self.name = node.id
         self.type = node.type
         self.cfy_node = node
@@ -200,8 +195,7 @@ class JobGraphNode(object):
 
         self.instances = []
         for instance in node.instances:
-            graph_instance = JobGraphInstance(self,
-                                              instance, pseudo_deployment_id)
+            graph_instance = JobGraphInstance(self, instance)
             self.instances.append(graph_instance)
             if graph_instance.parent_node.is_job:
                 job_instances_map[graph_instance.name] = graph_instance
@@ -314,7 +308,7 @@ class JobGraphNode(object):
         self.status = 'CANCELED'
 
 
-def build_graph(nodes, pseudo_deployment_id ):
+def build_graph(nodes):
     """ Creates a new graph of nodes and instances with the job wrapper """
 
     job_instances_map = {}
@@ -323,11 +317,11 @@ def build_graph(nodes, pseudo_deployment_id ):
     nodes_map = {}
     root_nodes = []
     for node in nodes:
-        new_node = JobGraphNode(node, job_instances_map, pseudo_deployment_id)
+        new_node = JobGraphNode(node, job_instances_map)
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
-            next(node.relationships)
+            node.relationships.next()
         except StopIteration:
             root_nodes.append(new_node)
 
@@ -354,6 +348,7 @@ class Monitor(object):
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
+        self.monitor_start_time = datetime.now()
 
     def update_status(self):
         """Gets all executing instances and update their state"""
@@ -383,25 +378,26 @@ class Monitor(object):
             return
 
         # then look for the status of the instances through its name
-#        try:
-        states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
+        try:
+            states, audits = self.jobs_requester.request(monitor_jobs, self.monitor_start_time, self.logger)
 
-        # set job audit
-        for jobid, audit in audits.items():
-            self.job_instances_map_jobid[jobid].audit = audit
+            # set job audit
+            for jobid, audit in audits.items():
+                self.job_instances_map_jobid[jobid].audit = audit
 
-        # finally set job status
-        for jobid, state in states.items():
-            self.job_instances_map_jobid[jobid].set_status(state)
+            # finally set job status
+            for jobid, state in states.items():
+                self.job_instances_map_jobid[jobid].set_status(state)
 
-        self.continued_errors = 0
-#        except Exception as exp:
-#            if self.continued_errors >= Monitor.MAX_ERRORS:
-#                self.logger.error(str(exp))
-#                raise exp
-#            else:
-#                self.logger.warning(str(exp))
-#                self.continued_errors += 1
+            self.continued_errors = 0
+        except Exception as exp:
+            if self.continued_errors >= Monitor.MAX_ERRORS:
+                self.logger.error("Error when monitoring jobs: " + str(exp))
+                raise exp
+            else:
+                self.continued_errors += 1
+                count = str(self.continued_errors)+"/"+str(Monitor.MAX_ERRORS)
+                self.logger.warning("Error when monitoring jobs ("+count+"): " + str(exp))
 
         # We wait to slow down the loop
         sys.stdout.flush()  # necessary to output work properly with sleep
@@ -431,9 +427,8 @@ class Monitor(object):
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-    pseudo_deployment_id = uuid()
-    DB_JOBID[pseudo_deployment_id] = {}
-    root_nodes, job_instances_map = build_graph(ctx.nodes, pseudo_deployment_id)
+    DB_JOBID.clear()
+    root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
     # Execution of first job instances
@@ -491,4 +486,3 @@ def wait_tasks_to_finish(tasks_result_list):
     """Blocks until all tasks have finished"""
     for result in tasks_result_list:
         result.get()
-        # task.wait_for_terminated()

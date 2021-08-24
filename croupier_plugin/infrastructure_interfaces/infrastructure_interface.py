@@ -133,15 +133,16 @@ def get_prevailing_state(state1, state2):
 class InfrastructureInterface(object):
     infrastructure_interface = None
 
-    def __init__(self, infrastructure_interface):
+    def __init__(self, infrastructure_interface, monitor_start_time=None):
         self.infrastructure_interface = infrastructure_interface
+        self.monitor_start_time = monitor_start_time
         # self.audit_inserted = False
 
     @staticmethod
-    def factory(infrastructure_interface):
+    def factory(infrastructure_interface, monitor_start_time=None):
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
-            return Slurm(infrastructure_interface)
+            return Slurm(infrastructure_interface, monitor_start_time)
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
             return Torque(infrastructure_interface)
@@ -410,7 +411,7 @@ class InfrastructureInterface(object):
         """
         Get the states of the jobs names
         @type workdir: string
-        @param workdir: Working directory of the HPC
+        @param workdir: Working directory in the HPC
         @type credentials: dictionary
         @param credentials: SSH credentials to connect to the HPC
         @type job_ids: list

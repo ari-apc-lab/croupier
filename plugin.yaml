@@ -26,10 +26,11 @@
 plugins:
     croupier:
         executor: central_deployment_agent
+
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
-        source: https://github.com/ari-apc-lab/croupier/archive/permedcoe.zip
+        source: https://github.com/ari-apc-lab/croupier/archive/grapevine-python3.zip
         install_arguments: -r plugin-requirements.txt
         package_name: croupier
         package_version: "3.1.0"
@@ -185,6 +186,7 @@ node_types:
                             default: { get_property: [SELF, deployment] }
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
+                    max_retries: 0
                 stop:
                     implementation: croupier.croupier_plugin.tasks.revert_job
                     inputs:
@@ -201,6 +203,7 @@ node_types:
                             default: { get_property: [SELF, job_options] }
                         data_mover_options:
                             default: { get_property: [SELF, data_mover_options] }
+                    max_retries: 0
                 publish:
                     implementation: croupier.croupier_plugin.tasks.publish
                     inputs:
