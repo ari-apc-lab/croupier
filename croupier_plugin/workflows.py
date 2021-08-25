@@ -37,10 +37,6 @@ from croupier_plugin.job_requester import JobRequester
 
 LOOP_PERIOD = 1
 
-
-DB_JOBID = {}
-
-
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
 
@@ -55,7 +51,6 @@ class JobGraphInstance(object):
 
         if parent.is_job:
             self._status = 'WAITING'
-            self.jobid = ''
             # Get runtime properties
             runtime_properties = instance._node_instance.runtime_properties
             ctx.logger.info("runtime_properties:" + str(runtime_properties))
@@ -79,14 +74,14 @@ class JobGraphInstance(object):
 
             # build job name
             instance_components = instance.id.split('_')
-            self.name = runtime_properties["job_prefix"] + "_".join(instance_components[:-1])
-
+            # self.name = runtime_properties["job_prefix"] + "_".join(instance_components[:-1])
+            self.name = instance.id
         else:
             self._status = 'NONE'
             self.name = instance.id
             self.monitor_url = ""
 
-    def queue(self, monitor):
+    def queue(self):
         """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
@@ -101,9 +96,6 @@ class JobGraphInstance(object):
             init_state = 'PENDING'
         self.set_status(init_state)
 
-        self.jobid = DB_JOBID[self.name]
-        ctx.logger.debug("Saved jobid for job " + self.name + ": " + self.jobid)
-        monitor.register_jobid(self.jobid, self.name)
         return result
 
     def publish(self):
@@ -114,7 +106,7 @@ class JobGraphInstance(object):
         self.winstance.send_event('Publishing job outputs..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
-                                                  kwargs={"name": self.name, "jobid": self.jobid, "audit": self.audit})
+                                                  kwargs={"name": self.name, "audit": self.audit})
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
@@ -167,17 +159,11 @@ class JobGraphInstance(object):
         self.winstance.send_event('Cancelling job..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cancel',
-                                                  kwargs={"name": self.name, "jobid": self.jobid})
+                                                  kwargs={"name": self.name})
         self.winstance.send_event('.. job canceled')
         result.get()
 
         self._status = 'CANCELLED'
-
-    @staticmethod
-    def register_jobid(name, jobid, logger):
-        DB_JOBID[name] = jobid
-        logger.info("JOBID registered: " + jobid)
-
 
 class JobGraphNode(object):
     """ Wrap to add job functionalities to nodes """
@@ -223,7 +209,7 @@ class JobGraphNode(object):
 
         tasks_result_list = []
         for job_instance in self.instances:
-            tasks_result_list.append(job_instance.queue(monitor))
+            tasks_result_list.append(job_instance.queue())
 
         self.status = 'QUEUED'
         return tasks_result_list
@@ -344,7 +330,6 @@ class Monitor(object):
         self._execution_pool = {}
         self.timestamp = 0
         self.job_instances_map = job_instances_map
-        self.job_instances_map_jobid = {}
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
@@ -360,14 +345,14 @@ class Monitor(object):
                 for job_instance in job_node.instances:
                     if not job_instance.simulate:
                         if job_instance.host in monitor_jobs:
-                            monitor_jobs[job_instance.host]['jobids'].append(
-                                job_instance.jobid)
+                            monitor_jobs[job_instance.host]['names'].append(
+                                job_instance.name)
                         else:
                             monitor_jobs[job_instance.host] = {
                                 'config': job_instance.monitor_config,
                                 'type': job_instance.monitor_type,
                                 'workdir': job_instance.workdir,
-                                'jobids': [job_instance.jobid],
+                                'names': [job_instance.name],
                                 'period': job_instance.monitor_period
                             }
                     else:
@@ -382,12 +367,12 @@ class Monitor(object):
             states, audits = self.jobs_requester.request(monitor_jobs, self.monitor_start_time, self.logger)
 
             # set job audit
-            for jobid, audit in audits.items():
-                self.job_instances_map_jobid[jobid].audit = audit
+            for name, audit in audits.items():
+                self.job_instances_map[name].audit = audit
 
             # finally set job status
-            for jobid, state in states.items():
-                self.job_instances_map_jobid[jobid].set_status(state)
+            for name, state in states.items():
+                self.job_instances_map[name].set_status(state)
 
             self.continued_errors = 0
         except Exception as exp:
@@ -419,15 +404,10 @@ class Monitor(object):
         """ True if there are nodes executing """
         return self._execution_pool
 
-    def register_jobid(self, jobid, name):
-        """ Registers the jobid to an instance by name """
-        self.job_instances_map_jobid[jobid] = self.job_instances_map[name]
-
 
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-    DB_JOBID.clear()
     root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 

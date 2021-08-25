@@ -96,12 +96,12 @@ def _parse_states(raw_states, logger):
     return parsed
 
 
-def get_job_metrics(job_id, ssh_client, workdir, monitor_start_time_str, logger):
+def get_job_metrics(job_name, ssh_client, workdir, monitor_start_time_str, logger):
     # Get job execution audits for monitoring metrics
     audits = {}
     audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
-    audit_command = "sacct -j {job_id} -o {metrics} -p --noheader -X -S {start_time}" \
-        .format(job_id=job_id, metrics=audit_metrics, start_time=monitor_start_time_str)
+    audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X -S {start_time}" \
+        .format(job_name=job_name, metrics=audit_metrics, start_time=monitor_start_time_str)
 
     output, exit_code = ssh_client.execute_shell_command(
         audit_command,
@@ -275,11 +275,11 @@ class Slurm(InfrastructureInterface):
     #     return job_settings
 
     # Monitor
-    def get_states(self, workdir, credentials, job_ids, logger):
+    def get_states(self, workdir, credentials, job_names, logger):
 
         monitor_start_time_str = start_time_tostr(self.monitor_start_time)
 
-        call = "sacct -n -o JobIDRaw,State -X -P -j " + ','.join(job_ids) + " -S " + monitor_start_time_str
+        call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names) + " -S " + monitor_start_time_str
 
         client = SshClient(credentials)
 
@@ -295,12 +295,12 @@ class Slurm(InfrastructureInterface):
 
         # Get job execution audits for monitoring metrics
         audits = {}
-        for job_id in job_ids:
-            if job_id in states:
-                if states[job_id] != 'PENDING':
-                    audits[job_id] = get_job_metrics(job_id, client, workdir, monitor_start_time_str, logger)
+        for name in job_names:
+            if name in states:
+                if states[name] != 'PENDING':
+                    audits[name] = get_job_metrics(name, client, workdir, monitor_start_time_str, logger)
             else:
-                logger.warning("Could not parse the state of job_id: " + job_id + "Parsed dict:" + str(states))
+                logger.warning("Could not parse the state of job: " + name + "Parsed dict:" + str(states))
 
         client.close_connection()
 

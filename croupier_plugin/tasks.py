@@ -268,9 +268,9 @@ def start_monitoring_hpc(
                        "\",\n\t\"type\": \"" + infrastructure_interface +
                        "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
                        "user\": \"" + credentials['user'] + "\",\n\t\t\""
-                                                            "pass\": \"" + credentials['password'] + "\",\n\t\t\""
-                                                                                                     "tz\": \"" + country_tz + "\",\n\t\t\""
-                                                                                                                               "log\": \"debug\"\n\t}\n}")
+                       "pass\": \"" + credentials['password'] + "\",\n\t\t\""
+                       "tz\": \"" + country_tz + "\",\n\t\t\""
+                       "log\": \"debug\"\n\t}\n}")
             headers = {
                 'content-type': "application/json",
                 'cache-control': "no-cache",
@@ -280,9 +280,7 @@ def start_monitoring_hpc(
                 "POST", url, data=payload, headers=headers)
 
             if response.status_code != 201:
-                raise NonRecoverableError(
-                    "failed to start node monitor: " + str(response
-                                                           .status_code))
+                raise NonRecoverableError("failed to start node monitor: " + str(response.status_code))
         else:
             ctx.logger.warning('monitor simulated')
 
@@ -315,9 +313,9 @@ def stop_monitoring_hpc(
                        "\",\n\t\"type\": \"" + infrastructure_interface +
                        "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
                        "user\": \"" + credentials['user'] + "\",\n\t\t\""
-                                                            "pass\": \"" + credentials['password'] + "\",\n\t\t\""
-                                                                                                     "tz\": \"" + country_tz + "\",\n\t\t\""
-                                                                                                                               "log\": \"debug\"\n\t}\n}")
+                       "pass\": \"" + credentials['password'] + "\",\n\t\t\""
+                       "tz\": \"" + country_tz + "\",\n\t\t\""
+                       "log\": \"debug\"\n\t}\n}")
             headers = {
                 'content-type': "application/json",
                 'cache-control': "no-cache",
@@ -331,9 +329,7 @@ def stop_monitoring_hpc(
                     ctx.logger.warning(
                         'Already removed on the exporter orchestrator.')
                 else:
-                    raise NonRecoverableError(
-                        "failed to stop node monitor: " + str(response
-                                                              .status_code))
+                    raise NonRecoverableError("failed to stop node monitor: " + str(response.status_code))
         else:
             ctx.logger.warning('monitor simulated')
 
@@ -582,7 +578,6 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     ctx.instance.runtime_properties['job_name'] = name
     ctx.instance.runtime_properties['job_id'] = jobid
-    JobGraphInstance.register_jobid(name, jobid, ctx.logger)
     ctx.instance.update()
 
 
@@ -647,7 +642,6 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         ctx.logger.warning('Job was not stopped as it was not configured.')
 
     try:
-        jobid = kwargs['jobid']
         name = kwargs['name']
         is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
             type_hierarchy
@@ -665,7 +659,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
                     interface_type +
                     "' not supported.")
             is_stopped = wm.stop_job(client,
-                                     jobid,
+                                     name,
                                      job_options,
                                      is_singularity,
                                      ctx.logger,
@@ -871,7 +865,6 @@ def publish(publish_list, data_mover_options, **kwargs):
     try:
         name = kwargs['name']
         audit = kwargs['audit']
-        jobid = kwargs['jobid']
         published = True
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
@@ -893,7 +886,7 @@ def publish(publish_list, data_mover_options, **kwargs):
 
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
-                convert_cput(audit["cput"], job_id=jobid, workdir=workdir, ssh_client=client,  logger=ctx.logger)
+                convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client,  logger=ctx.logger)
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -902,7 +895,7 @@ def publish(publish_list, data_mover_options, **kwargs):
                     username = accounting_options["reporting_user"]
                 if "croupier_reporter_id" in hpc_interface.runtime_properties:
                     croupier_reporter_id = hpc_interface.runtime_properties['croupier_reporter_id']
-                    report_metrics_to_accounting(audit, job_id=jobid, username=username,
+                    report_metrics_to_accounting(audit, job_id=name, username=username,
                                                  croupier_reporter_id=croupier_reporter_id, logger=ctx.logger)
                 else:
                     ctx.logger.error(
