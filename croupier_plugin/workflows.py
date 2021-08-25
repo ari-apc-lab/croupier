@@ -174,9 +174,9 @@ class JobGraphInstance(object):
         self._status = 'CANCELLED'
 
     @staticmethod
-    def register_jobid(name, jobid):
+    def register_jobid(name, jobid, logger):
         DB_JOBID[name] = jobid
-        ctx.logger.info("JOBID registered: " + jobid)
+        logger.info("JOBID registered: " + jobid)
 
 
 class JobGraphNode(object):

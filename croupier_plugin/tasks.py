@@ -582,7 +582,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     ctx.instance.runtime_properties['job_name'] = name
     ctx.instance.runtime_properties['job_id'] = jobid
-    JobGraphInstance.register_jobid(name, jobid)
+    JobGraphInstance.register_jobid(name, jobid, ctx.logger)
     ctx.instance.update()
 
 
