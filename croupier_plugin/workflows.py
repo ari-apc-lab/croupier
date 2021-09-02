@@ -464,14 +464,24 @@ def install_vault(**kwargs):
     # rest_client = get_rest_client()
     # rest_client.executions.start(deployment_id, "install")
 
-    install(ctx, kwargs)
+    install(ctx)
 
     vault_config = {"token": "", "address": ""}
     for node in ctx.nodes:
         if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
-            vault_config = node.properties
+            vault_config = node.properties["vault_config"]
             break
-    revoke_token(vault_config, ctx.logger)
+    if vault_config["token"] and vault_config["address"]:
+        error = revoke_token(vault_config)
+        if error:
+            ctx.logger.error("Could not revoke vault token" +
+                             "\n Status code: " + str(error["error"]) +
+                             "\n Content: " + str(error["content"]))
+
+        else:
+            ctx.logger.info("Token successfully revoked")
+    else:
+        ctx.logger.warning("Could not find any tokens to revoke")
     ctx.logger.info("------------------Workflow Finished-----------------------")
 
 
