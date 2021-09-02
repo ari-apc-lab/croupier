@@ -33,7 +33,10 @@ from datetime import datetime
 
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
+from cloudify.plugins.workflows import install
+from cloudify.manager import get_rest_client
 from croupier_plugin.job_requester import JobRequester
+from croupier_plugin.vault.vault import get_secret, revoke_token
 
 LOOP_PERIOD = 1
 
@@ -450,9 +453,26 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
     if monitor.is_something_executing():
         cancel_all(monitor.get_executions_iterator())
 
-    ctx.logger.info(
-        "------------------Workflow Finished-----------------------")
+    ctx.logger.info("------------------Workflow Finished-----------------------")
     return
+
+
+@workflow
+def install_vault(**kwargs):
+
+    # deployment_id = ctx.nodes[0].properties['resource_config']['deployment']['id']
+    # rest_client = get_rest_client()
+    # rest_client.executions.start(deployment_id, "install")
+
+    install(ctx, kwargs)
+
+    vault_config = {"token": "", "address": ""}
+    for node in ctx.nodes:
+        if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
+            vault_config = node.properties
+            break
+    revoke_token(vault_config, ctx.logger)
+    ctx.logger.info("------------------Workflow Finished-----------------------")
 
 
 def cancel_all(executions):

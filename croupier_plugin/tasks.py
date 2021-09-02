@@ -46,6 +46,7 @@ from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
 from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
+from croupier_plugin.vault.vault import get_secret
 from croupier_plugin.accounting_client.model.user import (User)
 from croupier_plugin.accounting_client.accounting_client import (AccountingClient)
 from croupier_plugin.accounting_client.model.resource_consumption_record import (ResourceConsumptionRecord)
@@ -72,6 +73,25 @@ def joinThreads():
     for thread in forkedThreads:
         thread.join
     forkedThreads = []
+
+
+@operation
+def download_credentials_vault(vault_config, host, **kwargs):
+    vault_username = vault_config["username"]
+    vault_address = vault_config["address"]
+    vault_token = vault_config["token"]
+    secret_address = vault_username + "/" + host
+    secret = get_secret(vault_token, secret_address, vault_address)
+    if secret:
+        credentials = {
+            "host": host,
+            "password": secret["ssh_password"],
+            "private_key": secret["ssh_pkey"],
+            "user": secret["ssh_user"]
+        }
+        ctx.instance.runtime_properties["credentials"] = credentials
+    else:
+        ctx.logger.error("Could not get credentials from vault for hpc " + host)
 
 
 @operation

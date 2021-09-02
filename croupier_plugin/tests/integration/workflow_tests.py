@@ -436,6 +436,26 @@ class TestPlugin(unittest.TestCase):
     def test_eosc(self, cfy_local):
         self.run_test(cfy_local)
 
+    def set_inputs_vault(self, *args, **kwargs):
+        inputs_filename = os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', 'vault', 'inputs.yaml')
+        if not os.path.isfile(inputs_filename):
+            raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), inputs_filename)
+        inputs = {}
+        print("Using inputs file:" + inputs_filename)
+        with open(inputs_filename, 'r') as stream:
+            try:
+                inputs = yaml.full_load(stream)
+            except yaml.YAMLError as exc:
+                print(exc)
+        return inputs
+
+    @workflow_test(os.path.join('blueprints', 'vault', 'blueprint.yaml'),
+                   copy_plugin_yaml=True,
+                   resources_to_copy=[(os.path.join('blueprints', 'vault', 'inputs_def.yaml'), './')],
+                   inputs='set_inputs_vault')
+    def test_vault(self, cfy_local):
+        self.run_test(cfy_local)
+
 
 if __name__ == '__main__':
     unittest.main()

@@ -38,6 +38,16 @@ plugins:
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
+    install_vault:
+        mapping: croupier.croupier_plugin.workflows.install_vault
+        parameters:
+            vault_token:
+                description: Token to access the user's secrets. It will be revoked at the end of the workflow.
+            username:
+                description: username the vault secrets are stored under
+            vault_address:
+                description: Adress of the vault instance that is holding the secrets.
+
 
 node_types:
     croupier.nodes.InfrastructureInterface:
@@ -45,8 +55,14 @@ node_types:
         properties:
             config:
                 description: type, and optionally timezone
+            vault_config:
+                description: Information about the vault instance that contains the infrastructure's credentials. Address, token and username.
+            host:
+                description: Address through which the frontend of the infrastructure can be connected to.
+                type: string
             credentials:
                 description: SSH credentials
+                default: {}
             external_monitor_entrypoint:
                 description: Monitor entrypoint, port and orchestrator port
                 default: ""
@@ -98,6 +114,14 @@ node_types:
                     install_method: none
         interfaces:
             cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.download_credentials_vault
+                    inputs:
+                        vault_config:
+                            default: { get_property: [SELF, vault_config] }
+                        host:
+                            default: { get_property: [SELF, host] }
+
                 configure:
                     implementation: croupier.croupier_plugin.tasks.configure_execution
                     inputs:
