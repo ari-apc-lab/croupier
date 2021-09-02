@@ -40,14 +40,6 @@ workflows:
         mapping: croupier.croupier_plugin.workflows.run_jobs
     install_vault:
         mapping: croupier.croupier_plugin.workflows.install_vault
-        parameters:
-            vault_token:
-                description: Token to access the user's secrets. It will be revoked at the end of the workflow.
-            username:
-                description: username the vault secrets are stored under
-            vault_address:
-                description: Adress of the vault instance that is holding the secrets.
-
 
 node_types:
     croupier.nodes.InfrastructureInterface:

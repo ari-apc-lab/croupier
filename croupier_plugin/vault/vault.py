@@ -1,15 +1,18 @@
 from requests import get
 
 
-def get_secret(vault_token, secret_address, vault_address):
-    auth_header = {"x-vault-token": vault_token}
+def get_secret(vault_token, secret_address, vault_address, logger):
+    auth_header = {"X-Vault-Token": vault_token}
     endpoint = "http://" + vault_address + "/v1/" + secret_address
     secret_response = get(endpoint, headers=auth_header)
     json = secret_response.json()
-    if secret_response.ok and json["data"]:
+    if secret_response.ok and "data" in json and json["data"]:
         return json["data"]
     else:
-        return {}
+        return {
+            "error": secret_response.status_code,
+            "content": secret_response.json()
+        }
 
 
 def revoke_token(vault_config, logger):

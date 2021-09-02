@@ -80,18 +80,20 @@ def download_credentials_vault(vault_config, host, **kwargs):
     vault_username = vault_config["username"]
     vault_address = vault_config["address"]
     vault_token = vault_config["token"]
-    secret_address = vault_username + "/" + host
-    secret = get_secret(vault_token, secret_address, vault_address)
-    if secret:
+    secret_address = "hpc/" + vault_username + "/" + host
+    secret = get_secret(vault_token, secret_address, vault_address, ctx.logger)
+    if "error" not in secret:
         credentials = {
             "host": host,
-            "password": secret["ssh_password"],
-            "private_key": secret["ssh_pkey"],
-            "user": secret["ssh_user"]
+            "password": secret["password"] if "password" in secret else "",
+            "private_key": secret["pkey"] if "pkey" in secret else "",
+            "user": secret["user"]
         }
         ctx.instance.runtime_properties["credentials"] = credentials
     else:
-        ctx.logger.error("Could not get credentials from vault for hpc " + host)
+        ctx.logger.error("Could not get credentials from vault for hpc " + host +
+                         "\n Status code: " + str(secret["error"]) +
+                         "\n Content: " + str(secret["content"]))
 
 
 @operation
