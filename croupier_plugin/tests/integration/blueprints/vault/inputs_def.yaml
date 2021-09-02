@@ -68,7 +68,7 @@ inputs:
     default: ''
   vault_config:
     description: Data for the vault instance that contains the hoc credentials. Address, token and username
-    default:{}
+    default: {}
   host:
     description: Address of the HPC the jobs will be run on
     default: ""
