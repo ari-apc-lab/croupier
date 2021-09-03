@@ -31,7 +31,7 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/croupier_plugin/tests/integration/blueprints/vault/inputs_def.yaml
+    - inputs_def.yaml
 
 node_templates:
     cesga_hpc:
