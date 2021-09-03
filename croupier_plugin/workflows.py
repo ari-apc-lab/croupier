@@ -56,7 +56,6 @@ class JobGraphInstance(object):
             self._status = 'WAITING'
             # Get runtime properties
             runtime_properties = instance._node_instance.runtime_properties
-            ctx.logger.info("runtime_properties:" + str(runtime_properties))
             self.simulate = runtime_properties["simulate"]
             self.host = runtime_properties["credentials"]["host"]
             self.workdir = runtime_properties['workdir']
