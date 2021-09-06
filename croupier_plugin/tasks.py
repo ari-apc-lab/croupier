@@ -569,6 +569,10 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     ctx.instance.runtime_properties['job_name'] = name
     ctx.instance.runtime_properties['job_id'] = jobid
+    monitor_job(jobid,
+                ctx.instance.runtime_properties['hpc_exporter_entrypoint'],
+                ctx.deployment.id,
+                ctx.instance.runtime_properties["credentials"]["host"])
     ctx.instance.update()
 
 
@@ -690,6 +694,16 @@ def getSeconds(cput):
 def parseHours(cput):
     hours = getHours(cput) + getMinutes(cput) / 60.0 + getSeconds(cput) / 3600.0
     return hours
+
+
+def monitor_job(jobid, hpc_exporter_entrypoint, deployment_id, host):
+    url = "http://" + hpc_exporter_entrypoint + "/job"
+    payload = {
+        "monitoring_id": deployment_id,
+        "host": host,
+        "job_id": jobid
+    }
+    requests.post(url, json=payload)
 
 
 def registerOrchestratorInstanceInAccounting(ctx):
