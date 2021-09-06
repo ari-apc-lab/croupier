@@ -266,92 +266,78 @@ def cleanup_execution(
 def start_monitoring_hpc(
         config,
         credentials,
-        external_monitor_entrypoint,
-        external_monitor_port,
-        external_monitor_orchestrator_port,
+        hpc_exporter_entrypoint,
+        monitoring_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
-    """ Starts monitoring using the Monitor orchestrator """
-    external_monitor_entrypoint = None  # FIXME: external monitor disabled
-    if external_monitor_entrypoint:
-        ctx.logger.info('Starting infrastructure monitor..')
+    """ Starts monitoring using the HPC Exporter """
+    if hpc_exporter_entrypoint:
+        ctx.logger.info('Starting infrastructure monitor...')
 
         if not simulate:
             if 'credentials' in ctx.instance.runtime_properties:
                 credentials = ctx.instance.runtime_properties['credentials']
-            infrastructure_interface = config['infrastructure_interface']
-            country_tz = config['country_tz']
+            infrastructure_interface = config['infrastructure_interface'].lower()
+            monitor_period = monitoring_options["monitor_period"]
+            deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options else "no_label"
+            hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
+            only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
 
-            url = 'http://' + external_monitor_entrypoint + \
-                  external_monitor_orchestrator_port + '/exporters/add'
-
-            # FIXME: credentials doesn't have to have a password anymore
-            payload = ("{\n\t\"host\": \"" + credentials['host'] +
-                       "\",\n\t\"type\": \"" + infrastructure_interface +
-                       "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
-                       "user\": \"" + credentials['user'] + "\",\n\t\t\""
-                       "pass\": \"" + credentials['password'] + "\",\n\t\t\""
-                       "tz\": \"" + country_tz + "\",\n\t\t\""
-                       "log\": \"debug\"\n\t}\n}")
-            headers = {
-                'content-type': "application/json",
-                'cache-control': "no-cache",
+            payload = {
+                "host": credentials["host"],
+                "scheduler": infrastructure_interface,
+                "scrape_interval": monitor_period,
+                "deployment_label": deployment_label,
+                "monitoring_id": ctx.deployment.id,
+                "hpc_label": hpc_label,
+                "only_jobs": only_jobs,
+                "user": credentials["user"]
             }
 
-            response = requests.request(
-                "POST", url, data=payload, headers=headers)
+            if "password" in credentials and credentials["password"]:
+                payload["password"] = credentials["password"]
+            else:
+                payload["pkey"] = credentials["private_key"]
 
-            if response.status_code != 201:
-                raise NonRecoverableError("failed to start node monitor: " + str(response.status_code))
+            url = 'http://' + hpc_exporter_entrypoint + '/collector'
+
+            response = requests.request("POST", url, json=payload)
+
+            if not response.ok:
+                raise NonRecoverableError("Failed to start node monitor: {0}".format(response.status_code))
+            ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
         else:
             ctx.logger.warning('monitor simulated')
 
 
 @operation
 def stop_monitoring_hpc(
-        config,
         credentials,
-        external_monitor_entrypoint,
-        external_monitor_port,
-        external_monitor_orchestrator_port,
+        monitoring_options,
+        hpc_exporter_entrypoint,
         simulate,
         **kwargs):  # pylint: disable=W0613
-    """ Stops monitoring using the Monitor Orchestrator """
-    external_monitor_entrypoint = None  # FIXME: external monitor disabled
-    if external_monitor_entrypoint:
-        ctx.logger.info('Stoping infrastructure monitor..')
+    """ Removes the HPC Exporter's collector """
+    if hpc_exporter_entrypoint:
+        ctx.logger.info('Stopping infrastructure monitor...')
 
         if not simulate:
             if 'credentials' in ctx.instance.runtime_properties:
                 credentials = ctx.instance.runtime_properties['credentials']
-            infrastructure_interface = config['infrastructure_interface']
-            country_tz = config['country_tz']
 
-            url = 'http://' + external_monitor_entrypoint + \
-                  external_monitor_orchestrator_port + '/exporters/remove'
+            hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
+            url = 'http://' + hpc_exporter_entrypoint + '/collector'
 
-            # FIXME: credentials doesn't have to have a password anymore
-            payload = ("{\n\t\"host\": \"" + credentials['host'] +
-                       "\",\n\t\"type\": \"" + infrastructure_interface +
-                       "\",\n\t\"persistent\": false,\n\t\"args\": {\n\t\t\""
-                       "user\": \"" + credentials['user'] + "\",\n\t\t\""
-                       "pass\": \"" + credentials['password'] + "\",\n\t\t\""
-                       "tz\": \"" + country_tz + "\",\n\t\t\""
-                       "log\": \"debug\"\n\t}\n}")
-            headers = {
-                'content-type': "application/json",
-                'cache-control': "no-cache",
+            payload = {
+                "host": credentials["host"],
+                "monitoring_id": ctx.deployment.id,
             }
 
-            response = requests.request(
-                "POST", url, data=payload, headers=headers)
+            response = requests.request("DELETE", url, json=payload)
 
-            if response.status_code != 200:
-                if response.status_code == 409:
-                    ctx.logger.warning(
-                        'Already removed on the exporter orchestrator.')
-                else:
-                    raise NonRecoverableError("failed to stop node monitor: " + str(response.status_code))
+            if not response.ok:
+                raise NonRecoverableError("Failed to stop node monitor: {0}".format(response.status_code))
+            ctx.logger.info("Monitor stopped for HPC: {0} ({1})".format(credentials["host"], hpc_label))
         else:
             ctx.logger.warning('monitor simulated')
 
@@ -360,40 +346,23 @@ def stop_monitoring_hpc(
 def preconfigure_job(
         config,
         credentials,
-        external_monitor_entrypoint,
-        external_monitor_port,
-        external_monitor_type,
-        external_monitor_orchestrator_port,
+        hpc_exporter_entrypoint,
         job_prefix,
-        monitor_period,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Match the job with its credentials """
     ctx.logger.info('Preconfiguring job..')
 
     if 'credentials' not in ctx.target.instance.runtime_properties:
-        ctx.source.instance.runtime_properties['credentials'] = \
-            credentials
+        ctx.source.instance.runtime_properties['credentials'] = credentials
     else:
-        ctx.source.instance.runtime_properties['credentials'] = \
-            ctx.target.instance.runtime_properties['credentials']
+        ctx.source.instance.runtime_properties['credentials'] = ctx.target.instance.runtime_properties['credentials']
 
-    ctx.source.instance.runtime_properties['external_monitor_entrypoint'] = \
-        external_monitor_entrypoint
-    ctx.source.instance.runtime_properties['external_monitor_port'] = \
-        external_monitor_port
-    ctx.source.instance.runtime_properties['external_monitor_type'] = \
-        external_monitor_type
-    ctx.source.instance.runtime_properties['monitor_orchestrator_port'] = \
-        external_monitor_orchestrator_port
-    ctx.source.instance.runtime_properties['infrastructure_interface'] = \
-        config['infrastructure_interface']
+    ctx.source.instance.runtime_properties['hpc_exporter_entrypoint'] = hpc_exporter_entrypoint
+    ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
     ctx.source.instance.runtime_properties['simulate'] = simulate
     ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
-    ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
-
-    ctx.source.instance.runtime_properties['workdir'] = \
-        ctx.target.instance.runtime_properties['workdir']
+    ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 
 @operation

@@ -55,21 +55,9 @@ node_types:
             credentials:
                 description: SSH credentials
                 default: {}
-            external_monitor_entrypoint:
-                description: Monitor entrypoint, port and orchestrator port
+            hpc_exporter_entrypoint:
+                description: HPC Exporter entrypoint, including port
                 default: ""
-                type: string
-            external_monitor_port:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ":9090"
-                type: string
-            external_monitor_type:
-                description: Monitor type, e.g PROMETHEUS
-                default: "PROMETHEUS"
-                type: string
-            external_monitor_orchestrator_port:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ":8079"
                 type: string
             job_prefix:
                 description: Job name prefix for this HPC
@@ -150,27 +138,21 @@ node_types:
                             default: { get_property: [SELF, config] }
                         credentials:
                             default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint:
-                            default: { get_property: [SELF, external_monitor_entrypoint] }
-                        external_monitor_port:
-                            default: { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port:
-                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
+                        hpc_exporter_entrypoint:
+                            default: { get_property: [SELF, hpc_exporter_entrypoint] }
+                        monitoring_options:
+                            default: { fet_property: [SELF, monitoring_options]}
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:
                     implementation: croupier.croupier_plugin.tasks.stop_monitoring_hpc
                     inputs:
-                        config:
-                            default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint:
-                            default: { get_property: [SELF, external_monitor_entrypoint] }
-                        external_monitor_port:
-                            default: { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port:
-                            default: { get_property: [SELF, external_monitor_orchestrator_port] }
+                        host:
+                            default: { get_property: [SELF, host] }
+                        hpc_exporter_entrypoint:
+                            default: { get_property: [SELF, hpc_exporter_entrypoint] }
+                        monitoring_options:
+                            default: { fet_property: [SELF, monitoring_options]}
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -192,6 +174,8 @@ node_types:
             data_mover_options:
                 description: Data Mover options
                 default: {}
+            hpc_exporter_entrypoint:
+                default: ""
         interfaces:
             cloudify.interfaces.lifecycle:
                 start: # needs to be 'start' to have the wm credentials
@@ -219,6 +203,8 @@ node_types:
                             default: { get_property: [SELF, job_options] }
                         data_mover_options:
                             default: { get_property: [SELF, data_mover_options] }
+                        hpc_exporter_entrypoint:
+                            default: { get_property: [SELF, hpc_exporter_entrypoint] }
                     max_retries: 0
                 publish:
                     implementation: croupier.croupier_plugin.tasks.publish
@@ -268,18 +254,10 @@ relationships:
                             default: { get_property: [TARGET, config] }
                         credentials:
                             default: { get_property: [TARGET, credentials] }
-                        external_monitor_entrypoint:
-                            default: { get_property: [TARGET, external_monitor_entrypoint] }
-                        external_monitor_port:
-                            default: { get_property: [TARGET, external_monitor_port] }
-                        external_monitor_type:
-                            default: { get_property: [TARGET, external_monitor_type] }
-                        external_monitor_orchestrator_port:
-                            default: { get_property: [TARGET, external_monitor_orchestrator_port] }
+                        hpc_exporter_entrypoint:
+                            default: { get_property: [TARGET, hpc_exporter_entrypoint] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
-                        monitor_period:
-                            default: { get_property: [TARGET, monitor_period] }
                         simulate:
                             default: { get_property: [TARGET, simulate] }
     job_depends_on:
