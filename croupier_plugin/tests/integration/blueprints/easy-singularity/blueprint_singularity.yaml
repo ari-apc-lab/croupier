@@ -30,8 +30,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe-python3/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe-python3/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
 
 node_templates:
     cesga_hpc:

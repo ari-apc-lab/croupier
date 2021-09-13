@@ -28,7 +28,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/permedcoe/plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/plugin.yaml
     - inputs_def.yaml
 
 node_templates:
