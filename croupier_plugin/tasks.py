@@ -27,21 +27,21 @@ license information in the project root.
 tasks.py: Holds the plugin tasks
 '''
 from __future__ import print_function
+
+import os
+
+import configparser
 from future import standard_library
 standard_library.install_aliases()
 from builtins import str
 import socket
 import traceback
-from time import sleep
-import threading
 
 import requests
 from cloudify import ctx
 from cloudify.decorators import operation
 from cloudify.exceptions import NonRecoverableError
 
-from croupier_plugin.monitoring.monitoring import (PrometheusPublisher)
-from croupier_plugin.workflows import JobGraphInstance
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
@@ -57,30 +57,27 @@ from croupier_plugin.accounting_client.model.resource import (ResourceType)
 # from celery.contrib import rdb
 
 accounting_client = AccountingClient()
-monitoring_client = PrometheusPublisher()
-
-# Keep track of forked thread for monitoring reporting
-forkedThreads = list()
-
-
-def addThread(thread):
-    global forkedThreads
-    forkedThreads.append(thread)
-
-
-def joinThreads():
-    global forkedThreads
-    for thread in forkedThreads:
-        thread.join
-    forkedThreads = []
 
 
 @operation
 def download_credentials_vault(vault_config, host, **kwargs):
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+    config.read(config_file)
+    try:
+        vault_address = config.get('Vault', 'hpc_exporter_address')
+        if vault_address is None:
+            raise NonRecoverableError(
+                'Could not find Vault address in the croupier config file. No HPC Exporter will be activated')
+
+    except configparser.NoSectionError:
+        raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
+
+    if "username" not in vault_config or "token" not in vault_config:
+        raise NonRecoverableError("Vault config missing (username or token)")
     vault_username = vault_config["username"]
-    vault_address = vault_config["address"]
     vault_token = vault_config["token"]
-    secret_address = "hpc/" + vault_username + "/" + host
+    secret_address = "ssh/" + vault_username + "/" + host
     secret = get_secret(vault_token, secret_address, vault_address, ctx.logger)
     if "error" not in secret:
         credentials = {
@@ -231,9 +228,6 @@ def cleanup_execution(
         simulate,
         **kwargs):  # pylint: disable=W0613
 
-    # Wait for all forked threads to complete
-    joinThreads()
-
     """ Cleans execution working directory """
     if skip:
         return
@@ -264,79 +258,109 @@ def cleanup_execution(
 
 @operation
 def start_monitoring_hpc(
-        config,
         credentials,
-        hpc_exporter_entrypoint,
         monitoring_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Starts monitoring using the HPC Exporter """
-    if hpc_exporter_entrypoint:
-        ctx.logger.info('Starting infrastructure monitor...')
 
-        if not simulate:
-            if 'credentials' in ctx.instance.runtime_properties:
-                credentials = ctx.instance.runtime_properties['credentials']
-            infrastructure_interface = config['infrastructure_interface'].lower()
-            monitor_period = monitoring_options["monitor_period"]
-            deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options else "no_label"
-            hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
-            only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+    config.read(config_file)
+    try:
+        hpc_exporter_address = config.get('Monitoring', 'hpc_exporter_address')
+        if hpc_exporter_address is None:
+            ctx.logger.error(
+                'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
+            return
 
-            payload = {
-                "host": credentials["host"],
-                "scheduler": infrastructure_interface,
-                "scrape_interval": monitor_period,
-                "deployment_label": deployment_label,
-                "monitoring_id": ctx.deployment.id,
-                "hpc_label": hpc_label,
-                "only_jobs": only_jobs,
-                "user": credentials["user"]
-            }
+        activate_hpc_exporter = str_to_bool(config.get('Monitoring', 'activate_hpc_exporter'))
 
-            if "password" in credentials and credentials["password"]:
-                payload["password"] = credentials["password"]
-            else:
-                payload["pkey"] = credentials["private_key"]
+    except configparser.NoSectionError:
+        ctx.logger.error(
+            'Could not find Monitoring section in the croupier config file. No HPC Exporter will be activated')
+        return
+    except ValueError:
+        ctx.logger.error(
+            '"activate_hpc_exporter" flag was not properly set in the croupier config file.'
+            ' No HPC Exporter will be activated')
+        return
 
-            url = 'http://' + hpc_exporter_entrypoint + '/collector'
+    if not simulate and activate_hpc_exporter:
+        ctx.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address
+        ctx.logger.info('Creating Collector in HPC Exporter...')
+        if 'credentials' in ctx.instance.runtime_properties:
+            credentials = ctx.instance.runtime_properties['credentials']
+        infrastructure_interface = config['infrastructure_interface'].lower()
+        infrastructure_interface = "pbs" if infrastructure_interface is "torque" else infrastructure_interface
+        monitor_period = monitoring_options["monitor_period"]
+        deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options\
+            else ctx.deployment.name
+        hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
+        only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
 
-            response = requests.request("POST", url, json=payload)
+        if infrastructure_interface is not "slurm" and infrastructure_interface is not "pbs":
+            ctx.logger.warning("HPC Exporter doesn't support {0} interface. Collector will not be created"
+                               .format(config['infrastructure_interface']))
+            ctx.instance.runtime_properties["hpc_exporter_address"] = None
+            return
 
-            if not response.ok:
-                raise NonRecoverableError("Failed to start node monitor: {0}".format(response.status_code))
-            ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
+        payload = {
+            "host": credentials["host"],
+            "scheduler": infrastructure_interface,
+            "scrape_interval": monitor_period,
+            "deployment_label": deployment_label,
+            "monitoring_id": ctx.deployment.id,
+            "hpc_label": hpc_label,
+            "only_jobs": only_jobs,
+            "user": credentials["user"]
+        }
+
+        if "password" in credentials and credentials["password"]:
+            payload["password"] = credentials["password"]
         else:
-            ctx.logger.warning('monitor simulated')
+            payload["pkey"] = credentials["private_key"]
+
+        url = 'http://' + hpc_exporter_address + '/collector'
+
+        response = requests.request("POST", url, json=payload)
+
+        if not response.ok:
+            raise NonRecoverableError("Failed to start node monitor: {0}".format(response.status_code))
+        ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
+    elif simulate:
+        ctx.logger.warning('monitor simulated')
 
 
 @operation
 def stop_monitoring_hpc(
         credentials,
         monitoring_options,
-        hpc_exporter_entrypoint,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Removes the HPC Exporter's collector """
-    if hpc_exporter_entrypoint:
-        ctx.logger.info('Stopping infrastructure monitor...')
+
+    if "hpc_exporter_address" in ctx.instance.runtime_properties and \
+            ctx.instance.runtime_properties["hpc_exporter_address"]:
+        hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
+        ctx.logger.info('Removing collector from HPC Exporter...')
 
         if not simulate:
             if 'credentials' in ctx.instance.runtime_properties:
                 credentials = ctx.instance.runtime_properties['credentials']
 
             hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
-            url = 'http://' + hpc_exporter_entrypoint + '/collector'
+            url = 'http://' + hpc_exporter_address + '/collector'
 
             payload = {
                 "host": credentials["host"],
-                "monitoring_id": ctx.deployment.id,
+                "monitoring_id": ctx.deployment.id
             }
 
             response = requests.request("DELETE", url, json=payload)
 
             if not response.ok:
-                raise NonRecoverableError("Failed to stop node monitor: {0}".format(response.status_code))
+                ctx.logger.error("Failed to remove collector from HPC Exporter: {0}".format(response.status_code))
             ctx.logger.info("Monitor stopped for HPC: {0} ({1})".format(credentials["host"], hpc_label))
         else:
             ctx.logger.warning('monitor simulated')
@@ -727,64 +751,6 @@ def registerOrchestratorInstanceInAccounting(ctx):
                     format(err=err))
 
 
-def report_metrics_to_monitoring(audit, workflow_id, blueprint_id, deployment_id, username, server, logger):
-    try:
-        if username is None:
-            username = audit['job_owner']
-        if 'queued_time' in audit:
-            monitoring_client.publish_job_queued_time(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['queued_time'], logger)
-        if 'start_time' in audit:
-            monitoring_client.publish_job_execution_start_time(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['start_time'], logger)
-        if 'completion_time' in audit:
-            monitoring_client.publish_job_execution_completion_time(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['completion_time'], logger)
-        if 'exit_status' in audit:
-            monitoring_client.publish_job_execution_exit_status(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['exit_status'], logger)
-        if 'cput' in audit:
-            monitoring_client.publish_job_resources_used_cput(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit["cput"], logger)
-        if 'cpupercent' in audit:
-            monitoring_client.publish_job_resources_used_cpupercent(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['cpupercent'], logger)
-        if 'ncpus' in audit:
-            monitoring_client.publish_job_resources_used_ncpus(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['ncpus'], logger)
-        if 'vmem' in audit:
-            monitoring_client.publish_job_resources_used_vmem(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['vmem'], logger)
-        if 'mem' in audit:
-            monitoring_client.publish_job_resources_used_mem(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['mem'], logger)
-        if 'walltime' in audit:
-            monitoring_client.publish_job_resources_used_walltime(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['walltime'], logger)
-        if 'mpiprocs' in audit:
-            monitoring_client.publish_job_resources_requested_mpiprocs(
-                blueprint_id, deployment_id, audit['job_id'], audit['job_name'], username,
-                workflow_id, audit['queue'], server, audit['mpiprocs'], logger)
-
-        # Wait 60 seconds and delete metrics (to avoid continuous sampling)
-        sleep(monitoring_client.delete_after_period)
-        monitoring_client.delete_metrics(audit['job_id'])
-
-    except Exception as err:
-        logger.error(
-            'Statistics for job {job_id} could not be reported to Monitoring, raising an error: {err}'.
-                format(job_id=audit["job_id"], err=err))
-
 
 def convert_cput(cput, job_id, workdir, ssh_client, logger):
     processors_per_node = read_processors_per_node(job_id, workdir, ssh_client, logger)
@@ -908,31 +874,6 @@ def publish(publish_list, data_mover_options, **kwargs):
                         'Croupier instance not registered in Accounting'.
                             format(workflow_id=ctx.workflow_id))
 
-            # Report metrics to Monitoring component
-            if monitoring_client.report_to_monitoring:
-                username = None
-                infrastructure_host = None
-                if hpc_interface is not None and "monitoring_options" in hpc_interface.runtime_properties:
-                    monitoring_options = hpc_interface.runtime_properties["monitoring_options"]
-                    if "reporting_user" in monitoring_options:
-                        username = monitoring_options["reporting_user"]
-                    else:
-                        username = audit['job_owner']
-                if hpc_interface is not None and "infrastructure_host" in hpc_interface.runtime_properties:
-                    infrastructure_host = hpc_interface.runtime_properties["infrastructure_host"]
-                # Report metrics to monitoring in a non-blocking call
-                thread = threading.Thread(
-                    target=report_metrics_to_monitoring,
-                    args=(
-                        audit, ctx.workflow_id, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host, ctx.logger
-                    )
-                )
-                addThread(thread)
-                thread.start()
-
-                # report_metrics_to_monitoring(
-                #     audit, ctx.blueprint.id, ctx.deployment.id, username, infrastructure_host, logger=ctx.logger)
-
             for publish_item in publish_list:
                 if not published:
                     break
@@ -961,3 +902,12 @@ def publish(publish_list, data_mover_options, **kwargs):
         print(traceback.format_exc())
         ctx.logger.error(
             'Cannot publish: ' + exp.message)
+
+
+def str_to_bool(s):
+    if s.lower() == 'true':
+        return True
+    elif s.lower() == 'false':
+        return False
+    else:
+        raise ValueError

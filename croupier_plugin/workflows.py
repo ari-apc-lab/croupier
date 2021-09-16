@@ -457,7 +457,7 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
 
 
 @workflow
-def install_vault(**kwargs):
+def install_croupier(**kwargs):
 
     # deployment_id = ctx.nodes[0].properties['resource_config']['deployment']['id']
     # rest_client = get_rest_client()

@@ -38,8 +38,8 @@ plugins:
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
-    install_vault:
-        mapping: croupier.croupier_plugin.workflows.install_vault
+    croupier_install:
+        mapping: croupier.croupier_plugin.workflows.install_croupier
 
 node_types:
     croupier.nodes.InfrastructureInterface:
@@ -71,10 +71,6 @@ node_types:
                 description: Prefix of the working directory instead of blueprint name
                 default: ""
                 type: string
-            monitor_period:
-                description: Seconds to check job status.
-                default: 60
-                type: integer
             monitoring_options:
                 description: Monitoring options
                 default: {}
@@ -134,8 +130,6 @@ node_types:
                 start:
                     implementation: croupier.croupier_plugin.tasks.start_monitoring_hpc
                     inputs:
-                        config:
-                            default: { get_property: [SELF, config] }
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         hpc_exporter_entrypoint:

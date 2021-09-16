@@ -31,7 +31,7 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
-    - inputs_def.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/croupier_plugin/tests/integration/blueprints/vault/inputs_def.yaml
 
 node_templates:
     cesga_hpc:
@@ -39,7 +39,6 @@ node_templates:
         properties:
             config: { get_input: hpc_interface_config }
             credentials: { get_input: hpc_interface_credentials }
-            external_monitor_entrypoint: { get_input: monitor_entrypoint }
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
             monitor_period: 15
