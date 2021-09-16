@@ -23,7 +23,9 @@ license information in the project root.
 
 workflows.py - Holds the plugin workflows
 '''
+import os
 
+import configparser
 from builtins import next
 from builtins import str
 from builtins import object
@@ -60,19 +62,11 @@ class JobGraphInstance(object):
             self.host = runtime_properties["credentials"]["host"]
             self.workdir = runtime_properties['workdir']
 
-            # Decide how to monitor the job
-            if runtime_properties["external_monitor_entrypoint"]:
-                self.monitor_type = runtime_properties["external_monitor_type"]
-                self.monitor_config = {
-                    'url': ('http://' +
-                            runtime_properties["external_monitor_entrypoint"] +
-                            runtime_properties["external_monitor_port"])
-                }
-            else:  # internal monitoring
-                self.monitor_type = runtime_properties["infrastructure_interface"]
-                self.monitor_config = runtime_properties["credentials"]
-
-            self.monitor_period = int(runtime_properties["monitor_period"])
+            self.monitor_type = runtime_properties["infrastructure_interface"]
+            self.monitor_config = runtime_properties["credentials"]
+            monitoring_options = runtime_properties["monitoring_options"]
+            self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \
+                else 10
 
             # build job name
             instance_components = instance.id.split('_')
@@ -465,12 +459,24 @@ def install_croupier(**kwargs):
 
     install(ctx)
 
-    vault_config = {"token": "", "address": ""}
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+    config.read(config_file)
+    try:
+        vault_config = {"address": config.get('Vault', 'vault_address')}
+        if vault_config["address"] is None:
+            ctx.logger.error('Could not find vault_address in the Vault section of the croupier config file.'
+                             ' Did not revoke token')
+            return
+    except configparser.NoSectionError:
+        ctx.logger.error('Could not find the Vault section in the croupier config file. Did not recoke token')
+        return
+
     for node in ctx.nodes:
         if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
-            vault_config = node.properties["vault_config"]
+            vault_config["token"] = node.properties["vault_config"]["token"]
             break
-    if vault_config["token"] and vault_config["address"]:
+    if vault_config["token"]:
         error = revoke_token(vault_config)
         if error:
             ctx.logger.error("Could not revoke vault token" +
