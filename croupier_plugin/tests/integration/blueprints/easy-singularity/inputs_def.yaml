@@ -38,7 +38,7 @@ inputs:
       country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   hpc_interface_credentials:
-    description: HPC credentials
+    description: HPC ssh_config
     default: {}
   singularity_load_command:
     default: ''

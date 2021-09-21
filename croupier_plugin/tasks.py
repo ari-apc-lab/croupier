@@ -64,7 +64,7 @@ accounting_client = AccountingClient()
 
 
 @operation
-def download_credentials_vault(vault_config, host, **kwargs):
+def download_credentials_vault(ssh_config, vault_config, **kwargs):
     config = configparser.RawConfigParser()
     config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
     config.read(config_file)
@@ -78,20 +78,22 @@ def download_credentials_vault(vault_config, host, **kwargs):
 
     if "username" not in vault_config or "token" not in vault_config:
         raise NonRecoverableError("Vault config missing (username or token)")
+
+    host = ssh_config['host']
     vault_username = vault_config["username"]
     vault_token = vault_config["token"]
     secret_address = "ssh/" + vault_username + "/" + host
     secret = get_secret(vault_token, secret_address, vault_address, ctx.logger)
     if "error" not in secret:
-        credentials = {
-            "host": host,
-            "password": secret["ssh_password"] if "ssh_password" in secret else "",
-            "private_key": secret["ssh_pkey"] if "ssh_pkey" in secret else "",
-            "user": secret["ssh_user"]
-        }
-        ctx.instance.runtime_properties["credentials"] = credentials
+
+        ssh_config["host"] = host,
+        ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else "",
+        ssh_config["private_key"] = secret["ssh_pkey"] if "ssh_pkey" in secret else "",
+        ssh_config["user"] = secret["ssh_user"]
+
+        ctx.instance.runtime_properties["ssh_config"] = ssh_config
     else:
-        ctx.logger.error("Could not get credentials from vault for hpc " + host +
+        ctx.logger.error("Could not get ssh_config from vault for hpc " + host +
                          "\n Status code: " + str(secret["error"]) +
                          "\n Content: " + str(secret["content"]))
 
@@ -99,7 +101,7 @@ def download_credentials_vault(vault_config, host, **kwargs):
 @operation
 def preconfigure_interface(
         config,
-        credentials,
+        ssh_config,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Get interface config from infrastructure """
@@ -109,7 +111,7 @@ def preconfigure_interface(
         credentials_modified = False
 
         if 'ip' in ctx.target.instance.runtime_properties:
-            credentials['host'] = \
+            ssh_config['host'] = \
                 ctx.target.instance.runtime_properties['ip']
             credentials_modified = True
 
@@ -122,18 +124,18 @@ def preconfigure_interface(
                     with open(node.properties['private_key_path'], 'r') \
                             as keyfile:
                         private_key = keyfile.read()
-                        credentials['private_key'] = private_key
+                        ssh_config['private_key'] = private_key
                         credentials_modified = True
             elif node.type == 'cloudify.openstack.nodes.FloatingIP':
                 # take public ip from openstack
                 if 'floating_ip_address' in instance.runtime_properties:
-                    credentials['host'] = \
+                    ssh_config['host'] = \
                         instance.runtime_properties['floating_ip_address']
                     credentials_modified = True
 
         if credentials_modified:
-            ctx.source.instance.runtime_properties['credentials'] = \
-                credentials
+            ctx.source.instance.runtime_properties['ssh_config'] = \
+                ssh_config
 
         if 'networks' in ctx.source.instance.runtime_properties:
             ctx.source.instance.runtime_properties['networks'] = \
@@ -148,7 +150,7 @@ def preconfigure_interface(
 @operation
 def configure_execution(
         config,
-        credentials,
+        ssh_config,
         base_dir,
         workdir_prefix,
         monitoring_options,
@@ -173,10 +175,10 @@ def configure_execution(
                 interface_type +
                 "' not supported.")
 
-        if 'credentials' in ctx.instance.runtime_properties:
-            credentials = ctx.instance.runtime_properties['credentials']
+        if 'ssh_config' in ctx.instance.runtime_properties:
+            ssh_config = ctx.instance.runtime_properties['ssh_config']
         try:
-            client = SshClient(credentials)
+            client = SshClient(ssh_config)
         except Exception as exp:
             raise NonRecoverableError(
                 "Failed trying to connect to infrastructure interface: " + str(exp))
@@ -213,7 +215,7 @@ def configure_execution(
         # Registering accounting and monitoring options
         ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
         ctx.instance.runtime_properties['accounting_options'] = accounting_options
-        ctx.instance.runtime_properties['infrastructure_host'] = credentials['host']
+        ctx.instance.runtime_properties['infrastructure_host'] = ssh_config['host']
 
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
@@ -226,7 +228,7 @@ def configure_execution(
 @operation
 def cleanup_execution(
         config,
-        credentials,
+        ssh_config,
         skip,
         simulate,
         **kwargs):  # pylint: disable=W0613
@@ -246,9 +248,9 @@ def cleanup_execution(
                 interface_type +
                 "' not supported.")
 
-        if 'credentials' in ctx.instance.runtime_properties:
-            credentials = ctx.instance.runtime_properties['credentials']
-        client = SshClient(credentials)
+        if 'ssh_config' in ctx.instance.runtime_properties:
+            ssh_config = ctx.instance.runtime_properties['ssh_config']
+        client = SshClient(ssh_config)
         client.execute_shell_command(
             'rm -r ' + workdir,
             wait_result=True)
@@ -262,7 +264,7 @@ def cleanup_execution(
 @operation
 def start_monitoring_hpc(
         config_infra,
-        credentials,
+        ssh_config,
         monitoring_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
@@ -293,8 +295,8 @@ def start_monitoring_hpc(
     if not simulate and activate_hpc_exporter:
         ctx.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address
         ctx.logger.info('Creating Collector in HPC Exporter...')
-        if 'credentials' in ctx.instance.runtime_properties:
-            credentials = ctx.instance.runtime_properties['credentials']
+        if 'ssh_config' in ctx.instance.runtime_properties:
+            ssh_config = ctx.instance.runtime_properties['ssh_config']
         infrastructure_interface = config_infra['infrastructure_interface'].lower()
         infrastructure_interface = "pbs" if infrastructure_interface is "torque" else infrastructure_interface
         monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
@@ -313,20 +315,20 @@ def start_monitoring_hpc(
             return
 
         payload = {
-            "host": credentials["host"],
+            "host": ssh_config["host"],
             "scheduler": infrastructure_interface,
             "scrape_interval": monitor_period,
             "deployment_label": deployment_label,
             "monitoring_id": ctx.deployment.id,
             "hpc_label": hpc_label,
             "only_jobs": only_jobs,
-            "user": credentials["user"]
+            "user": ssh_config["user"]
         }
 
-        if "password" in credentials and credentials["password"]:
-            payload["password"] = credentials["password"]
+        if "password" in ssh_config and ssh_config["password"]:
+            payload["password"] = ssh_config["password"]
         else:
-            payload["pkey"] = credentials["private_key"]
+            payload["pkey"] = ssh_config["private_key"]
 
         url = 'http://' + hpc_exporter_address + '/collector'
 
@@ -334,14 +336,14 @@ def start_monitoring_hpc(
 
         if not response.ok:
             raise NonRecoverableError("Failed to start node monitor: {0}".format(response.status_code))
-        ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
+        ctx.logger.info("Monitor started for HPC: {0} ({1})".format(ssh_config["host"], hpc_label))
     elif simulate:
         ctx.logger.warning('monitor simulated')
 
 
 @operation
 def stop_monitoring_hpc(
-        host,
+        ssh_config,
         monitoring_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
@@ -353,9 +355,7 @@ def stop_monitoring_hpc(
         ctx.logger.info('Removing collector from HPC Exporter...')
 
         if not simulate:
-            if 'credentials' in ctx.instance.runtime_properties:
-                credentials = ctx.instance.runtime_properties['credentials']
-
+            host = ssh_config['host']
             hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
             url = 'http://' + hpc_exporter_address + '/collector'
 
@@ -376,18 +376,18 @@ def stop_monitoring_hpc(
 @operation
 def preconfigure_job(
         config,
-        credentials,
+        ssh_config,
         job_prefix,
         monitoring_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
-    """ Match the job with its credentials """
+    """ Match the job with its ssh_config """
     ctx.logger.info('Preconfiguring job..')
 
-    if 'credentials' not in ctx.target.instance.runtime_properties:
-        ctx.source.instance.runtime_properties['credentials'] = credentials
+    if 'ssh_config' not in ctx.target.instance.runtime_properties:
+        ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
     else:
-        ctx.source.instance.runtime_properties['credentials'] = ctx.target.instance.runtime_properties['credentials']
+        ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
     ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
     ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
     ctx.source.instance.runtime_properties['simulate'] = simulate
@@ -401,7 +401,7 @@ def bootstrap_job(
         deployment,
         skip_cleanup,
         **kwarsgs):  # pylint: disable=W0613
-    """Bootstrap a job with a script that receives SSH credentials as input"""
+    """Bootstrap a job with a script that receives SSH ssh_config as input"""
     if not deployment:
         return
 
@@ -410,7 +410,7 @@ def bootstrap_job(
 
     if not simulate and 'bootstrap' in deployment:
         inputs = deployment['inputs'] if 'inputs' in deployment else []
-        credentials = ctx.instance.runtime_properties['credentials']
+        ssh_config = ctx.instance.runtime_properties['ssh_config']
         workdir = ctx.instance.runtime_properties['workdir']
         name = "bootstrap_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
@@ -418,7 +418,7 @@ def bootstrap_job(
         if deploy_job(
                 deployment['bootstrap'],
                 inputs,
-                credentials,
+                ssh_config,
                 interface_type,
                 workdir,
                 name,
@@ -437,7 +437,7 @@ def bootstrap_job(
 
 @operation
 def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
-    """Revert a job using a script that receives SSH credentials as input"""
+    """Revert a job using a script that receives SSH ssh_config as input"""
     if not deployment:
         return
 
@@ -447,7 +447,7 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
 
         if not simulate and 'revert' in deployment:
             inputs = deployment['inputs'] if 'inputs' in deployment else []
-            credentials = ctx.instance.runtime_properties['credentials']
+            ssh_config = ctx.instance.runtime_properties['ssh_config']
             workdir = ctx.instance.runtime_properties['workdir']
             name = "revert_" + ctx.instance.id + ".sh"
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
@@ -455,7 +455,7 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
             if deploy_job(
                     deployment['revert'],
                     inputs,
-                    credentials,
+                    ssh_config,
                     interface_type,
                     workdir,
                     name,
@@ -477,13 +477,13 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
 
 def deploy_job(script,
                inputs,
-               credentials,
+               ssh_config,
                interface_type,
                workdir,
                name,
                logger,
                skip_cleanup):  # pylint: disable=W0613
-    """ Exec a deployment job script that receives SSH credentials as input """
+    """ Exec a deployment job script that receives SSH ssh_config as input """
 
     wm = InfrastructureInterface.factory(interface_type)
     if not wm:
@@ -494,7 +494,7 @@ def deploy_job(script,
 
     # Execute the script and manage the output
     success = False
-    client = SshClient(credentials)
+    client = SshClient(ssh_config)
     if wm._create_shell_script(client,
                                name,
                                ctx.get_resource(script),
@@ -557,7 +557,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        client = SshClient(ctx.instance.runtime_properties['credentials'])
+        client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
         wm = InfrastructureInterface.factory(interface_type)
         if not wm:
@@ -606,7 +606,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         monitor_job(jobid,
                     hpc_exporter_address,
                     ctx.deployment.id,
-                    ctx.instance.runtime_properties['credentials']['host'])
+                    ctx.instance.runtime_properties['ssh_config']['host'])
     ctx.instance.update()
 
 
@@ -629,7 +629,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
                 type_hierarchy
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-            client = SshClient(ctx.instance.runtime_properties['credentials'])
+            client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
             wm = InfrastructureInterface.factory(interface_type)
             if not wm:
@@ -678,7 +678,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-            client = SshClient(ctx.instance.runtime_properties['credentials'])
+            client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
             wm = InfrastructureInterface.factory(interface_type)
             if not wm:
@@ -778,7 +778,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
         workflow_parameters = audit['workflow_parameters']
 
         if username is None:
-            username = ctx.instance.runtime_properties['credentials']['user']
+            username = ctx.instance.runtime_properties['ssh_config']['user']
         try:
             user = accounting_client.get_user_by_name(username)
         except Exception as err:
@@ -792,7 +792,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
                         format(username=username, err=err))
 
         # Register HPC CPU total
-        server = ctx.instance.runtime_properties['credentials']['host']
+        server = ctx.instance.runtime_properties['ssh_config']['host']
         infra = accounting_client.get_infrastructure_by_server(server)
         if infra is None:
             raise Exception('Infrastructure not registered in Accounting for server {}'.format(server))
@@ -863,7 +863,7 @@ def publish(publish_list, data_mover_options, **kwargs):
                         ctx.logger.error("Error using data mover: {}".format(exp.message))
 
             workdir = ctx.instance.runtime_properties['workdir']
-            client = SshClient(ctx.instance.runtime_properties['credentials'])
+            client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \

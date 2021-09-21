@@ -36,11 +36,12 @@ node_templates:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config: { get_input: hpc_interface_config }
-            credentials: { get_input: hpc_interface_credentials }
-            external_monitor_entrypoint: { get_input: monitor_entrypoint }
+            vault_config: { get_input: vault_config }
+            host: { get_input: cesga_host}
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
-            monitor_period: 15
+            monitoring_options:
+                monitor_period: 15
             skip_cleanup: true
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "bernoulli"

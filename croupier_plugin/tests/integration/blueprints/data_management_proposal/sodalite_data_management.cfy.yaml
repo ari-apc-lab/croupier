@@ -14,7 +14,7 @@ sodalite_data_access_interface:
       - Filesystem
       - RSync
   relationships:
-    - type: credentials
+    - type: ssh_config
       target: sodalite_credentials_ssh
 
 sodalite_credentials_ssh:

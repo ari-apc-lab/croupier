@@ -34,6 +34,156 @@ plugins:
         package_name: croupier
         package_version: "3.1.0"
 
+data_types:
+
+    croupier.datatypes.vault_config:
+        properties:
+            username:
+                description: Username under which the ssh ssh_config are saved in vault
+                type: string
+                required: true
+            token:
+                description: Vault token with access to the user's ssh ssh_config.
+                type: string
+                required: true
+
+    croupier.datatypes.wm_config:
+        properties:
+            timezone:
+                description: Timezone the WM is located in
+                type: string
+                required: false
+            type:
+                description: Scheduler type.
+                type: string
+                required: true
+
+    croupier.datatypes.ssh_config:
+        properties:
+            user:
+                type: string
+                required: false
+                default: ''
+            host:
+                type: string
+                required: true
+            port:
+                type: integer
+                required: false
+                default: 22
+            private_key:
+                type: string
+                required: false
+                default: ''
+            password:
+                type: string
+                required: false
+                default: ''
+            private_key_password:
+                type: string
+                required: false
+                default: ''
+            tunnel:
+                type: string
+                required: false
+                default: ''
+            login_shell:
+                type: string
+                required: false
+                default: ''
+
+    croupier.datatypes.monitoring_options:
+        properties:
+            monitor_period:
+                description: How often to scrape the WM for metrics
+                type: integer
+                required: false
+                default: 15
+            deployment_label:
+                description: Deployment label to apply to the metrics to identify the deployment.
+                type: string
+                required: false
+            hpc_label:
+                description: HPC label to apply to the metrics to identify the HPC WM
+                type: string
+                required: false
+            only_jobs:
+                description: Set to true to not monitor the infrastructure metrics (queues/partitions)
+                type: boolean
+                required: false
+                default: false
+
+    croupier.datatypes.accounting_options:
+        properties:
+            timezone:
+                description: Timezone the WM is located in
+                type: string
+                required: false
+            type:
+                description: Scheduler type.
+                type: string
+                required: true
+
+    croupier.datatypes.job_deployment_config:
+        properties:
+            inputs:
+                default: []
+                required: false
+            bootstrap:
+                default: ''
+                required: false
+                type: string
+            revert:
+                default: ''
+                required: false
+                type: string
+
+    croupier.datatypes.data_mover_options:
+        properties:
+            cloud_user:
+                type: string
+                required: false
+            workspace:
+                type: string
+                required: false
+            create_ws:
+                type: string
+                required: false
+            ws_lifetime:
+                type: string
+                required: false
+            grid_userkey:
+                type: string
+                required: false
+            grid_usercert:
+                type: string
+                required: false
+            grid_certpass:
+                type: string
+                required: false
+            download:
+                type: croupier.datatypes.data_mover.nodes
+                required: false
+            upload:
+                type: croupier.datatypes.data_mover.nodes
+                required: false
+            hpc_target:
+                type: string
+                required: false
+            cloud_target:
+                type: string
+                required: false
+
+
+    croupier.datatypes.data_mover.nodes:
+        properties:
+            source:
+                type: string
+                required: true
+            target:
+                type: string
+                required: true
+
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
@@ -46,13 +196,13 @@ node_types:
         properties:
             config:
                 description: type, and optionally timezone
+                type: croupier.datatypes.wm_config
             vault_config:
-                description: Information about the vault instance that contains the infrastructure's credentials. Address, token and username.
-            host:
-                description: Address through which the frontend of the infrastructure can be connected to.
-                type: string
-            credentials:
-                description: SSH credentials
+                description: Information about the vault instance that contains the infrastructure's ssh_config. Token and username.
+                type: croupier.datatypes.vault_config
+            ssh_config:
+                description: SSH configuration
+                type: croupier.datatypes.ssh_config
                 default: {}
             job_prefix:
                 description: Job name prefix for this HPC
@@ -69,9 +219,11 @@ node_types:
             monitoring_options:
                 description: Monitoring options
                 default: {}
+                type: croupier.datatypes.monitoring_options
             accounting_options:
                 description: Accounting options
                 default: {}
+                type: croupier.datatypes.accounting_options
             simulate:
                 description: Set to true to simulate job without sending it
                 type: boolean
@@ -98,8 +250,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
                         base_dir:
                             default: { get_property: [SELF, base_dir] }
                         workdir_prefix:
@@ -115,8 +267,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
                         skip:
                             default: { get_property: [SELF, skip_cleanup] }
                         simulate:
@@ -127,8 +279,8 @@ node_types:
                     inputs:
                         config_infra:
                             default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
                         monitoring_options:
                             default: { fet_property: [SELF, monitoring_options]}
                         simulate:
@@ -149,6 +301,7 @@ node_types:
             deployment:
                 description: Deployment script and inputs
                 default: {}
+                type: croupier.datatypes.job_deployment_config
             job_options:
                 description: Job main command and options
             publish:
@@ -161,9 +314,10 @@ node_types:
             data_mover_options:
                 description: Data Mover options
                 default: {}
+                type: croupier.datatypes.data_mover_options
         interfaces:
             cloudify.interfaces.lifecycle:
-                start: # needs to be 'start' to have the wm credentials
+                start: # needs to be 'start' to have the wm ssh_config
                     implementation: croupier.croupier_plugin.tasks.bootstrap_job
                     inputs:
                         deployment:
@@ -222,8 +376,8 @@ relationships:
                     inputs:
                         config:
                             default: { get_property: [SOURCE, config] }
-                        credentials:
-                            default: { get_property: [SOURCE, credentials] }
+                        ssh_config:
+                            default: { get_property: [SOURCE, ssh_config] }
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
     job_managed_by_interface:
@@ -235,8 +389,8 @@ relationships:
                     inputs:
                         config:
                             default: { get_property: [TARGET, config] }
-                        credentials:
-                            default: { get_property: [TARGET, credentials] }
+                        ssh_config:
+                            default: { get_property: [TARGET, ssh_config] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
                         monitoring_options:

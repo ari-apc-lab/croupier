@@ -15,7 +15,7 @@ cesga_data_access_interface:
       - Filesystem
       - RSync
   relationships:
-    - type: credentials
+    - type: ssh_config
       target: cesga_credentials_ssh
 
 cesga_credentials_ssh:

@@ -40,7 +40,7 @@ inputs:
   partition_name:
     default: default
   vault_config:
-    description: Data for the vault instance that contains the hpc credentials. Address, token and username
+    description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
     default: {}
   host:
     description: Address of the HPC the jobs will be run on

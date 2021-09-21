@@ -38,7 +38,7 @@ inputs:
       country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   sodalite_hpc_interface_credentials:
-    description: HPC credentials
+    description: HPC ssh_config
     default: { }
 
   ################### CESGA HPC Infrastructre ##################
@@ -51,7 +51,7 @@ inputs:
       country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   cesga_hpc_interface_credentials:
-    description: HPC credentials
+    description: HPC ssh_config
     default: {}
 
 

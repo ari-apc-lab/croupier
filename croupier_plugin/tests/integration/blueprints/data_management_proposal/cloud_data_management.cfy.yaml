@@ -13,7 +13,7 @@ cloud_data_access_interface:
     supported_protocols:
       - HTTP
   relationships:
-    - type: credentials
+    - type: ssh_config
       target: cloud_credentials_ssh
 
 cloud_credentials_ssh:

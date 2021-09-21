@@ -59,11 +59,11 @@ class JobGraphInstance(object):
             # Get runtime properties
             runtime_properties = instance._node_instance.runtime_properties
             self.simulate = runtime_properties["simulate"]
-            self.host = runtime_properties["credentials"]["host"]
+            self.host = runtime_properties["ssh_config"]["host"]
             self.workdir = runtime_properties['workdir']
 
             self.monitor_type = runtime_properties["infrastructure_interface"]
-            self.monitor_config = runtime_properties["credentials"]
+            self.monitor_config = runtime_properties["ssh_config"]
             monitoring_options = runtime_properties["monitoring_options"]
             self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \
                 else 10

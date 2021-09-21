@@ -413,7 +413,7 @@ class InfrastructureInterface(object):
         @type workdir: string
         @param workdir: Working directory in the HPC
         @type credentials: dictionary
-        @param credentials: SSH credentials to connect to the HPC
+        @param credentials: SSH ssh_config to connect to the HPC
         @type job_names: list
         @param job_names: list of the job names to retrieve their states
         @rtype dict
