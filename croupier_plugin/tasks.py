@@ -26,17 +26,10 @@ license information in the project root.
 
 tasks.py: Holds the plugin tasks
 '''
-from __future__ import print_function
-from future import standard_library
-standard_library.install_aliases()
-from builtins import str
-from __future__ import print_function
-
 import os
 
 import configparser
 from future import standard_library
-standard_library.install_aliases()
 from builtins import str
 import socket
 import traceback
@@ -58,6 +51,7 @@ from croupier_plugin.accounting_client.model.resource_consumption import (Resour
 from croupier_plugin.accounting_client.model.reporter import (Reporter, ReporterType)
 from croupier_plugin.accounting_client.model.resource import (ResourceType)
 
+standard_library.install_aliases()
 # from celery.contrib import rdb
 
 accounting_client = AccountingClient()
@@ -68,34 +62,35 @@ def download_credentials_vault(ssh_config, vault_config, **kwargs):
     config = configparser.RawConfigParser()
     config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
     config.read(config_file)
-    try:
-        vault_address = config.get('Vault', 'vault_address')
-        if vault_address is None:
-            raise NonRecoverableError('Could not find Vault address in the croupier config file.')
+    if ssh_config['get_credentials_from_vault']:
+        try:
+            vault_address = config.get('Vault', 'vault_address')
+            if vault_address is None:
+                raise NonRecoverableError('Could not find Vault address in the croupier config file.')
 
-    except configparser.NoSectionError:
-        raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
+        except configparser.NoSectionError:
+            raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
 
-    if "username" not in vault_config or "token" not in vault_config:
-        raise NonRecoverableError("Vault config missing (username or token)")
+        if "username" not in vault_config or "token" not in vault_config:
+            raise NonRecoverableError("Vault config missing (username or token)")
 
-    host = ssh_config['host']
-    vault_username = vault_config["username"]
-    vault_token = vault_config["token"]
-    secret_address = "ssh/" + vault_username + "/" + host
-    secret = get_secret(vault_token, secret_address, vault_address, ctx.logger)
-    if "error" not in secret:
+        host = ssh_config['host']
+        vault_username = vault_config["username"]
+        vault_token = vault_config["token"]
+        secret_address = "ssh/" + vault_username + "/" + host
+        secret = get_secret(vault_token, secret_address, vault_address, ctx.logger)
+        if "error" not in secret:
 
-        ssh_config["host"] = host,
-        ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else "",
-        ssh_config["private_key"] = secret["ssh_pkey"] if "ssh_pkey" in secret else "",
-        ssh_config["user"] = secret["ssh_user"]
+            ssh_config["host"] = host,
+            ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else "",
+            ssh_config["private_key"] = secret["ssh_pkey"] if "ssh_pkey" in secret else "",
+            ssh_config["user"] = secret["ssh_user"]
 
-        ctx.instance.runtime_properties["ssh_config"] = ssh_config
-    else:
-        ctx.logger.error("Could not get ssh_config from vault for hpc " + host +
-                         "\n Status code: " + str(secret["error"]) +
-                         "\n Content: " + str(secret["content"]))
+            ctx.instance.runtime_properties["ssh_config"] = ssh_config
+        else:
+            ctx.logger.error("Could not get ssh_config from vault for hpc " + host +
+                             "\n Status code: " + str(secret["error"]) +
+                             "\n Content: " + str(secret["content"]))
 
 
 @operation

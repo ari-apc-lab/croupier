@@ -71,6 +71,10 @@ data_types:
                 type: integer
                 required: false
                 default: 22
+            get_credentials_from_vault:
+                type: boolean
+                required: false
+                default: false
             private_key:
                 type: string
                 required: false
