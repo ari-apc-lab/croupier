@@ -233,7 +233,7 @@ class Torque(InfrastructureInterface):
     @staticmethod
     def _get_states_detailed(workdir, credentials, job_names, logger):
         """
-        Get job states by job names
+        Get job states by job ids
 
         This function uses `qstat` command to query Torque.
         Please don't launch this call very friquently. Polling it
@@ -298,7 +298,6 @@ class Torque(InfrastructureInterface):
         jobs = {}
         audits = {}
         for job in Torque._tokenize_qstat_detailed(StringIO(qstat_output)):
-            # ignore job['Job_Id'], use identification by name
             name = job.get('Job_Name', '')
             state_code = job.get('job_state', None)
             audit = {}

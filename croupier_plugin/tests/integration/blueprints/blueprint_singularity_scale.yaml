@@ -54,15 +54,7 @@ node_templates:
                     - { get_input: mpi_load_command }
                     - { get_input: singularity_load_command }
                 partition: { get_input: partition_name }
-                image:
-                    {
-                        concat:
-                            [
-                                { get_input: singularity_image_storage },
-                                "/",
-                                { get_input: singularity_image_filename },
-                            ],
-                    }
+                image: { concat:[{ get_input: singularity_image_storage }, "/", { get_input: singularity_image_filename }]}
                 volumes:
                     - { get_input: scratch_voulume_mount_point }
                     - { get_input: singularity_mount_point }
@@ -73,8 +65,8 @@ node_templates:
                 max_time: "00:01:00"
                 scale: 2
             deployment:
-                bootstrap: "scripts/singularity_bootstrap_example.sh"
-                revert: "scripts/singularity_revert_example.sh"
+                bootstrap: "scripts/singularity_bootstrap.sh"
+                revert: "scripts/singularity_revert.sh"
                 inputs:
                     - { get_input: singularity_image_storage }
                     - { get_input: singularity_image_filename }

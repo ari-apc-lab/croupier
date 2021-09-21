@@ -46,7 +46,7 @@ setup(
               'croupier_plugin.accounting_client',
               'croupier_plugin.accounting_client.model',
               'croupier_plugin.data_mover',
-              'croupier_plugin.monitoring',
+              'croupier_plugin.vault'
               ],
     package_data={'croupier_plugin.infrastructure_interfaces': ['*.sh'],
                   'croupier_plugin': ['*.cfg']},

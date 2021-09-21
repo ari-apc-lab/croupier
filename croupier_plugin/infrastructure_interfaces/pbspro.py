@@ -247,7 +247,7 @@ class Pbspro(InfrastructureInterface):
             return {}
 
         # get detailed information about jobs
-        call = read_environment + "qstat -x -w -f {}".format(' '.join(map(str, job_ids)))
+        call = read_environment + "qstat -x -f {}".format(' '.join(map(str, job_ids)))
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -261,7 +261,7 @@ class Pbspro(InfrastructureInterface):
                 "cannot parse state response for job ids=[{}]".format(
                     ','.join(map(str, job_ids))))
             logger.warning(
-                "{err}\n`qstat -f` output to parse:\n\\[\n{text}\n\\]".format(
+                "{err}\n`qstat -x -f` output to parse:\n\\[\n{text}\n\\]".format(
                     err=str(e), text=output))
             # TODO: think whether error ignoring is better
             #       for the correct lifecycle
@@ -284,7 +284,7 @@ class Pbspro(InfrastructureInterface):
         jobs = {}
         audits = {}
         for job in Pbspro._tokenize_qstat_detailed(StringIO(qstat_output)):
-            name = job.get('Job_Name', '')
+            name = job.get("Job_Id", None)
             state_code = job.get('job_state', None)
             audit = {}
             if name and state_code:

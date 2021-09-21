@@ -23,7 +23,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# singularity_bootstrap_example.sh
+# singularity_bootstrap.sh
 
 $4 # load singularity
 

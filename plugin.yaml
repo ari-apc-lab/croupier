@@ -29,7 +29,7 @@ plugins:
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
-        source: https://github.com/ari-apc-lab/croupier/archive/permedcoe.zip
+        source: https://github.com/ari-apc-lab/croupier/archive/grapevine-python3.zip
         install_arguments: -r plugin-requirements.txt
         package_name: croupier
         package_version: "3.1.0"
@@ -37,6 +37,8 @@ plugins:
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
+    croupier_install:
+        mapping: croupier.croupier_plugin.workflows.install_croupier
 
 node_types:
     croupier.nodes.InfrastructureInterface:
@@ -44,24 +46,14 @@ node_types:
         properties:
             config:
                 description: type, and optionally timezone
+            vault_config:
+                description: Information about the vault instance that contains the infrastructure's credentials. Address, token and username.
+            host:
+                description: Address through which the frontend of the infrastructure can be connected to.
+                type: string
             credentials:
                 description: SSH credentials
-            external_monitor_entrypoint:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ""
-                type: string
-            external_monitor_port:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ":9090"
-                type: string
-            external_monitor_type:
-                description: Monitor type, e.g PROMETHEUS
-                default: "PROMETHEUS"
-                type: string
-            external_monitor_orchestrator_port:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ":8079"
-                type: string
+                default: {}
             job_prefix:
                 description: Job name prefix for this HPC
                 default: "croupier"
@@ -74,10 +66,6 @@ node_types:
                 description: Prefix of the working directory instead of blueprint name
                 default: ""
                 type: string
-            monitor_period:
-                description: Seconds to check job status.
-                default: 60
-                type: integer
             monitoring_options:
                 description: Monitoring options
                 default: {}
@@ -97,6 +85,14 @@ node_types:
                     install_method: none
         interfaces:
             cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.download_credentials_vault
+                    inputs:
+                        vault_config:
+                            default: { get_property: [SELF, vault_config] }
+                        host:
+                            default: { get_property: [SELF, host] }
+
                 configure:
                     implementation: croupier.croupier_plugin.tasks.configure_execution
                     inputs:
@@ -111,7 +107,7 @@ node_types:
                         monitoring_options:
                             default: { get_property: [SELF, monitoring_options] }
                         accounting_options:
-                            default: { get_property: [ SELF, accounting_options ] }
+                            default: { get_property: [SELF, accounting_options] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 delete:
@@ -129,55 +125,21 @@ node_types:
                 start:
                     implementation: croupier.croupier_plugin.tasks.start_monitoring_hpc
                     inputs:
-                        config:
+                        config_infra:
                             default: { get_property: [SELF, config] }
                         credentials:
                             default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
-                        external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                        monitoring_options:
+                            default: { fet_property: [SELF, monitoring_options]}
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:
                     implementation: croupier.croupier_plugin.tasks.stop_monitoring_hpc
                     inputs:
-                        config:
-                            default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
-                        external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                        host:
+                            default: { get_property: [SELF, host] }
+                        monitoring_options:
+                            default: { fet_property: [SELF, monitoring_options]}
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -209,6 +171,7 @@ node_types:
                             default: { get_property: [SELF, deployment] }
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
+                    max_retries: 0
                 stop:
                     implementation: croupier.croupier_plugin.tasks.revert_job
                     inputs:
@@ -225,6 +188,7 @@ node_types:
                             default: { get_property: [SELF, job_options] }
                         data_mover_options:
                             default: { get_property: [SELF, data_mover_options] }
+                    max_retries: 0
                 publish:
                     implementation: croupier.croupier_plugin.tasks.publish
                     inputs:
@@ -273,37 +237,10 @@ relationships:
                             default: { get_property: [TARGET, config] }
                         credentials:
                             default: { get_property: [TARGET, credentials] }
-                        external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_entrypoint],
-                                }
-                        external_monitor_port:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_port],
-                                }
-                        external_monitor_type:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_type],
-                                }
-                        external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            TARGET,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
-                        monitor_period:
-                            default: { get_property: [TARGET, monitor_period] }
+                        monitoring_options:
+                            default: { get_property: [TARGET, monitoring_options] }
                         simulate:
                             default: { get_property: [TARGET, simulate] }
     job_depends_on:
