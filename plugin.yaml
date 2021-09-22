@@ -119,14 +119,9 @@ data_types:
 
     croupier.datatypes.accounting_options:
         properties:
-            timezone:
-                description: Timezone the WM is located in
+            reporting_user:
                 type: string
                 required: false
-            type:
-                description: Scheduler type.
-                type: string
-                required: true
 
     croupier.datatypes.job_deployment_config:
         properties:
