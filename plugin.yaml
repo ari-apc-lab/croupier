@@ -313,6 +313,7 @@ node_types:
             data_mover_options:
                 description: Data Mover options
                 default: {}
+                required: false
                 type: croupier.datatypes.data_mover_options
         interfaces:
             cloudify.interfaces.lifecycle:
