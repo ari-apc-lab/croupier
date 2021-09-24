@@ -41,11 +41,13 @@ data_types:
             username:
                 description: Username under which the ssh ssh_config are saved in vault
                 type: string
-                required: true
+                required: false
+                default: ''
             token:
                 description: Vault token with access to the user's ssh ssh_config.
                 type: string
-                required: true
+                required: false
+                default: ''
 
     croupier.datatypes.wm_config:
         properties:
@@ -178,10 +180,12 @@ data_types:
         properties:
             source:
                 type: string
-                required: true
+                required: false
+                default: ''
             target:
                 type: string
-                required: true
+                required: false
+                default: ''
 
 workflows:
     run_jobs:
