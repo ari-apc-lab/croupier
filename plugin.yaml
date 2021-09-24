@@ -245,8 +245,8 @@ node_types:
                     inputs:
                         vault_config:
                             default: { get_property: [SELF, vault_config] }
-                        host:
-                            default: { get_property: [SELF, host] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
 
                 configure:
                     implementation: croupier.croupier_plugin.tasks.configure_execution
@@ -291,8 +291,8 @@ node_types:
                 stop:
                     implementation: croupier.croupier_plugin.tasks.stop_monitoring_hpc
                     inputs:
-                        host:
-                            default: { get_property: [SELF, host] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
                         monitoring_options:
                             default: { fet_property: [SELF, monitoring_options]}
                         simulate:

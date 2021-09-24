@@ -81,7 +81,6 @@ def download_credentials_vault(ssh_config, vault_config, **kwargs):
         secret = get_secret(vault_token, secret_address, vault_address, ctx.logger)
         if "error" not in secret:
 
-            ssh_config["host"] = host,
             ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else "",
             ssh_config["private_key"] = secret["ssh_pkey"] if "ssh_pkey" in secret else "",
             ssh_config["user"] = secret["ssh_user"]
