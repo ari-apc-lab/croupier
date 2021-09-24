@@ -67,6 +67,7 @@ def download_credentials_vault(ssh_config, vault_config, **kwargs):
             vault_address = config.get('Vault', 'vault_address')
             if vault_address is None:
                 raise NonRecoverableError('Could not find Vault address in the croupier config file.')
+            vault_address = vault_address if vault_address.startswith('http') else 'http://' + vault_address
 
         except configparser.NoSectionError:
             raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
@@ -77,19 +78,19 @@ def download_credentials_vault(ssh_config, vault_config, **kwargs):
         host = ssh_config['host']
         vault_username = vault_config["username"]
         vault_token = vault_config["token"]
-        secret_address = "ssh/" + vault_username + "/" + host
-        secret = get_secret(vault_token, secret_address, vault_address, ctx.logger)
+        secret_endpoint = vault_address + "/v1/ssh/" + vault_username + "/" + host
+        ctx.logger.info("Downloading secret from " + secret_endpoint)
+        secret = get_secret(vault_token, secret_endpoint)
         if "error" not in secret:
 
-            ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else "",
-            ssh_config["private_key"] = secret["ssh_pkey"] if "ssh_pkey" in secret else "",
+            ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else ""
+            ssh_config["private_key"] = secret["ssh_pkey"] if "ssh_pkey" in secret else ""
             ssh_config["user"] = secret["ssh_user"]
-
             ctx.instance.runtime_properties["ssh_config"] = ssh_config
         else:
-            ctx.logger.error("Could not get ssh_config from vault for hpc " + host +
-                             "\n Status code: " + str(secret["error"]) +
-                             "\n Content: " + str(secret["content"]))
+            raise NonRecoverableError("Could not get ssh_config from vault for hpc " + host +
+                                      "\n Status code: " + str(secret["error"]) +
+                                      "\n Content: " + str(secret["content"]))
 
 
 @operation
@@ -287,6 +288,8 @@ def start_monitoring_hpc(
         return
 
     if not simulate and activate_hpc_exporter:
+        hpc_exporter_address = hpc_exporter_address if hpc_exporter_address.startswith("http")\
+            else "http://" + hpc_exporter_address
         ctx.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address
         ctx.logger.info('Creating Collector in HPC Exporter...')
         if 'ssh_config' in ctx.instance.runtime_properties:
@@ -316,20 +319,20 @@ def start_monitoring_hpc(
             "monitoring_id": ctx.deployment.id,
             "hpc_label": hpc_label,
             "only_jobs": only_jobs,
-            "user": ssh_config["user"]
+            "ssh_user": ssh_config["user"]
         }
 
         if "password" in ssh_config and ssh_config["password"]:
-            payload["password"] = ssh_config["password"]
+            payload["ssh_password"] = ssh_config["password"]
         else:
-            payload["pkey"] = ssh_config["private_key"]
+            payload["ssh_pkey"] = ssh_config["private_key"]
 
-        url = 'http://' + hpc_exporter_address + '/collector'
-
+        url = hpc_exporter_address + '/collector'
+        ctx.logger.info("Creating collector in " + str(url))
         response = requests.request("POST", url, json=payload)
 
         if not response.ok:
-            raise NonRecoverableError("Failed to start node monitor: {0}".format(response.status_code))
+            raise NonRecoverableError("Failed to start node monitor: {0}: {1}".format(response.status_code, response.content))
         ctx.logger.info("Monitor started for HPC: {0} ({1})".format(ssh_config["host"], hpc_label))
     elif simulate:
         ctx.logger.warning('monitor simulated')
@@ -402,7 +405,7 @@ def bootstrap_job(
     ctx.logger.info('Bootstraping job..')
     simulate = ctx.instance.runtime_properties['simulate']
 
-    if not simulate and 'bootstrap' in deployment:
+    if not simulate and 'bootstrap' in deployment and deployment['bootstrap']:
         inputs = deployment['inputs'] if 'inputs' in deployment else []
         ssh_config = ctx.instance.runtime_properties['ssh_config']
         workdir = ctx.instance.runtime_properties['workdir']
@@ -423,7 +426,7 @@ def bootstrap_job(
             ctx.logger.error('Job not bootstraped')
             raise NonRecoverableError("Bootstrap failed")
     else:
-        if 'bootstrap' in deployment:
+        if 'bootstrap' in deployment and deployment['bootstrap']:
             ctx.logger.warning('..bootstrap simulated')
         else:
             ctx.logger.info('..nothing to bootstrap')
@@ -439,7 +442,7 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
     try:
         simulate = ctx.instance.runtime_properties['simulate']
 
-        if not simulate and 'revert' in deployment:
+        if not simulate and 'revert' in deployment and deployment["revert"]:
             inputs = deployment['inputs'] if 'inputs' in deployment else []
             ssh_config = ctx.instance.runtime_properties['ssh_config']
             workdir = ctx.instance.runtime_properties['workdir']
@@ -460,7 +463,7 @@ def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
                 ctx.logger.error('Job not reverted')
                 raise NonRecoverableError("Revert failed")
         else:
-            if 'revert' in deployment:
+            if 'revert' in deployment and deployment["revert"]:
                 ctx.logger.warning('..revert simulated')
             else:
                 ctx.logger.info('..nothing to revert')
@@ -725,7 +728,7 @@ def parseHours(cput):
 
 
 def monitor_job(jobid, hpc_exporter_entrypoint, deployment_id, host):
-    url = "http://" + hpc_exporter_entrypoint + "/job"
+    url = hpc_exporter_entrypoint + "/job"
     payload = {
         "monitoring_id": deployment_id,
         "host": host,

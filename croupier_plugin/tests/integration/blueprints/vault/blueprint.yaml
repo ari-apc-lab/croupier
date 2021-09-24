@@ -28,7 +28,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://www.getcloudify.org/spec/cloudify/5.1.4/types.yaml
-    - plugin:croupier
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
     hpc_base_dir:
@@ -44,7 +44,7 @@ inputs:
         default: default
         type: string
     vault_config:
-        description: Data for the vault instance that contains the hpc credentials. Address, token and username
+        description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
         default:
             username: ''
             token: ''

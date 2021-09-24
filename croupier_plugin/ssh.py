@@ -61,13 +61,13 @@ class SshClient(object):
     """Represents a ssh client"""
     _client = None
 
-    def __init__(self, credentials):
+    def __init__(self, ssh_config):
         # Build a tunnel if necessary
         self._tunnel = None
-        self._host = credentials['host']
-        self._port = int(credentials['port']) if 'port' in credentials else 22
-        if 'tunnel' in credentials and credentials['tunnel']:
-            self._tunnel = SshForward(credentials)
+        self._host = ssh_config['host']
+        self._port = int(ssh_config['port']) if 'port' in ssh_config else 22
+        if 'tunnel' in ssh_config and ssh_config['tunnel']:
+            self._tunnel = SshForward(ssh_config)
             self._host = "localhost"
             self._port = self._tunnel.port()
 
@@ -76,16 +76,16 @@ class SshClient(object):
 
         # Build the private key if provided
         private_key = None
-        if 'private_key' in credentials and credentials['private_key']:
-            key_data = credentials['private_key']
+        if 'private_key' in ssh_config and ssh_config['private_key']:
+            key_data = ssh_config['private_key']
             if not isinstance(key_data, str):
                 key_data = str(key_data, "utf-8")
             key_file = io.StringIO()
             key_file.write(key_data)
             key_file.seek(0)
-            if 'private_key_password' in credentials and \
-                    credentials['private_key_password'] != "":
-                private_key_password = credentials['private_key_password']
+            if 'private_key_password' in ssh_config and \
+                    ssh_config['private_key_password'] != "":
+                private_key_password = ssh_config['private_key_password']
             else:
                 private_key_password = None
             private_key = RSAKey.from_private_key(
@@ -100,17 +100,17 @@ class SshClient(object):
         # @NOTE: think of SSHClient.invoke_shell()
         #        instead of SSHClient.exec_command()
         self._login_shell = False
-        if 'login_shell' in credentials:
-            self._login_shell = credentials['login_shell']
+        if 'login_shell' in ssh_config:
+            self._login_shell = ssh_config['login_shell']
 
         retries = 5
-        passwd = credentials['password'] if 'password' in credentials else None
+        passwd = ssh_config['password'] if 'password' in ssh_config else None
         while True:
             try:
                 self._client.connect(
                     self._host,
                     port=self._port,
-                    username=credentials['user'],
+                    username=ssh_config['user'],
                     pkey=private_key,
                     password=passwd,
                     look_for_keys=False
