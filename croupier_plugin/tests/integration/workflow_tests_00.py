@@ -765,5 +765,51 @@ class TestPlugin(unittest.TestCase):
             logging.warning('[WARNING] Login could not be tested')
 
 
+    def load_vault_inputs(self, *args, **kwargs):
+        if not os.path.isfile(os.path.join('croupier_plugin',
+                                       'tests',
+                                       'integration',
+                                       'blueprints',
+                                       'vault',
+                                       'inputs.yaml')):
+            raise IOError(
+                errno.ENOENT, os.strerror(errno.ENOENT),  'inputs.yaml')
+        inputs = {}
+        print("Using inputs file:",  'inputs.yaml')
+        with open(os.path.join('croupier_plugin',
+                               'tests',
+                               'integration',
+                               'blueprints',
+                               'vault',
+                               'inputs.yaml'),
+                  'r') as stream:
+            try:
+                inputs = yaml.full_load(stream)
+            except yaml.YAMLError as exc:
+                print(exc)
+
+        return inputs
+
+    @workflow_test(os.path.join('blueprints', 'vault', 'blueprint.yaml'),
+                   copy_plugin_yaml=True,
+                   inputs='load_vault_inputs')
+    def test_vault(self, cfy_local):
+        """ EOSC Blueprint """
+        cfy_local.execute('install_croupier', task_retries=0)
+        cfy_local.execute('run_jobs', task_retries=0)
+        cfy_local.execute('uninstall', task_retries=0)
+
+        # extract single node instance
+        instance = cfy_local.storage.get_node_instances()[0]
+
+        # due to a cfy bug sometimes login keyword is not ready in the tests
+        if 'login' in instance.runtime_properties:
+            # assert runtime properties is properly set in node instance
+            self.assertEqual(instance.runtime_properties['login'],
+                             True)
+        else:
+            logging.warning('[WARNING] Login could not be tested')
+
+
 if __name__ == '__main__':
     unittest.main()

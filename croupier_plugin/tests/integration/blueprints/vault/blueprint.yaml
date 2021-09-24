@@ -27,11 +27,40 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-    # to speed things up, it is possible downloading this file,
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/resources/types/cfy_types.yaml
-    # relative import of plugin.yaml that resides in the blueprint directory
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/croupier_plugin/tests/integration/blueprints/vault/inputs_def.yaml
+    - http://www.getcloudify.org/spec/cloudify/5.1.4/types.yaml
+    - plugin:croupier
+
+inputs:
+    hpc_base_dir:
+        description: HPC working directory
+        default: $HOME
+        type: string
+    hpc_interface_config:
+        description: timezone and HPC interface
+        default:
+            country_tz: Europe/Madrid
+            infrastructure_interface: SLURM
+    partition_name:
+        default: default
+        type: string
+    vault_config:
+        description: Data for the vault instance that contains the hpc credentials. Address, token and username
+        default:
+            username: ''
+            token: ''
+        type: croupier.datatypes.vault_config
+    ssh_config:
+        default:
+            host: ''
+            user: ''
+        type: croupier.datatypes.ssh_config
+    job_prefix:
+        type: string
+        default: atos
+    monitoring_options:
+        type: croupier.datatypes.monitoring_options
+        description: Monitoring options
+        default: {}
 
 node_templates:
     cesga_hpc:
@@ -41,10 +70,9 @@ node_templates:
             job_prefix: { get_input: job_prefix }
             base_dir: { get_input: "hpc_base_dir" }
             skip_cleanup: true
-            #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single"
             vault_config: { get_input: vault_config }
-            host: { get_input: host }
+            ssh_config: { get_input: ssh_config }
             monitoring_options: { get_input: monitoring_options }
     easy_job:
         type: croupier.nodes.Job
