@@ -308,7 +308,6 @@ class TestPlugin(unittest.TestCase):
 
     @workflow_test(os.path.join('blueprints', 'vault', 'blueprint.yaml'),
                    copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'vault', 'inputs_def.yaml'), './')],
                    inputs='set_inputs_vault')
     def test_vault(self, cfy_local):
         self.run_test_vault(cfy_local)
