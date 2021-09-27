@@ -354,7 +354,7 @@ def stop_monitoring_hpc(
         if not simulate:
             host = ssh_config['host']
             hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
-            url = 'http://' + hpc_exporter_address + '/collector'
+            url = hpc_exporter_address + '/collector'
 
             payload = {
                 "host": host,
