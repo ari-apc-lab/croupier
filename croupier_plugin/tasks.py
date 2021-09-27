@@ -33,6 +33,7 @@ from future import standard_library
 from builtins import str
 import socket
 import traceback
+from uuid import uuid4
 
 import requests
 from cloudify import ctx
@@ -255,6 +256,40 @@ def cleanup_execution(
     else:
         ctx.logger.warning('clean up simulated.')
 
+@operation
+def configure_monitor(address, **kwargs):
+    if not address:
+        ctx.logger.info(
+            "No HPC Exporter address provided. Using address set in croupier installation's config file")
+        config = configparser.RawConfigParser()
+        config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+        config.read(config_file)
+        try:
+            address = config.get('Monitoring', 'hpc_exporter_address')
+            if address is None:
+                ctx.logger.error(
+                    'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
+                return
+        except configparser.NoSectionError:
+            ctx.logger.error(
+                'Could not find Monitoring section in the croupier config file. No HPC Exporter will be activated')
+            return
+        unique_id = str(uuid4())
+        monitoring_id = ctx.deployment.id + unique_id
+        ctx.logger.info("Monitoring_id generated: " + monitoring_id)
+        ctx.instance.runtime_properties["monitoring_id"] = monitoring_id
+
+        ctx.instance.runtime_properties["hpc_exporter_address"] = address if address.startswith("http") \
+            else "http://" + address
+
+
+@operation
+def preconfigure_interface_monitor(**kwargs):
+    ctx.source.instance.runtime_properties["monitoring_id"] = \
+        ctx.target.instance.runtime_properties["monitoring_id"]
+    ctx.source.instance.runtime_properties["hpc_exporter_address"] = \
+        ctx.target.instance.runtime_properties["hpc_exporter_address"]
+
 
 @operation
 def start_monitoring_hpc(
@@ -265,32 +300,10 @@ def start_monitoring_hpc(
         **kwargs):  # pylint: disable=W0613
     """ Starts monitoring using the HPC Exporter """
 
-    config = configparser.RawConfigParser()
-    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
-    config.read(config_file)
-    try:
-        hpc_exporter_address = config.get('Monitoring', 'hpc_exporter_address')
-        if hpc_exporter_address is None:
-            ctx.logger.error(
-                'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
-            return
-
-        activate_hpc_exporter = str_to_bool(config.get('Monitoring', 'activate_hpc_exporter'))
-
-    except configparser.NoSectionError:
-        ctx.logger.error(
-            'Could not find Monitoring section in the croupier config file. No HPC Exporter will be activated')
-        return
-    except ValueError:
-        ctx.logger.error(
-            '"activate_hpc_exporter" flag was not properly set in the croupier config file.'
-            ' No HPC Exporter will be activated')
-        return
-
-    if not simulate and activate_hpc_exporter:
-        hpc_exporter_address = hpc_exporter_address if hpc_exporter_address.startswith("http")\
-            else "http://" + hpc_exporter_address
-        ctx.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address
+    if not simulate and "hpc_exporter_address" in ctx.instance.runtime_properties and \
+            ctx.instance.runtime_properties["hpc_exporter_address"]:
+        monitoring_id = ctx.instance.runtime_properties["monitoring_id"]
+        hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
         ctx.logger.info('Creating Collector in HPC Exporter...')
         if 'ssh_config' in ctx.instance.runtime_properties:
             ssh_config = ctx.instance.runtime_properties['ssh_config']
@@ -298,10 +311,8 @@ def start_monitoring_hpc(
         infrastructure_interface = "pbs" if infrastructure_interface is "torque" else infrastructure_interface
         monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
 
-        # ctx.deployment has no "name" property.
-        # If cloudify ever implements it, then the default value must be changed to ctx.deployment.name
         deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options\
-            else "no_label"
+            else ctx.deployment.id
         hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
         only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
 
@@ -316,7 +327,7 @@ def start_monitoring_hpc(
             "scheduler": infrastructure_interface,
             "scrape_interval": monitor_period,
             "deployment_label": deployment_label,
-            "monitoring_id": ctx.deployment.id,
+            "monitoring_id": monitoring_id,
             "hpc_label": hpc_label,
             "only_jobs": only_jobs,
             "ssh_user": ssh_config["user"]
@@ -353,19 +364,19 @@ def stop_monitoring_hpc(
 
         if not simulate:
             host = ssh_config['host']
-            hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
+            monitoring_id = ctx.instance.runtime_properties["monitoring_id"]
             url = hpc_exporter_address + '/collector'
 
             payload = {
                 "host": host,
-                "monitoring_id": ctx.deployment.id
+                "monitoring_id": monitoring_id
             }
 
             response = requests.request("DELETE", url, json=payload)
 
             if not response.ok:
                 ctx.logger.error("Failed to remove collector from HPC Exporter: {0}".format(response.status_code))
-            ctx.logger.info("Monitor stopped for HPC: {0} ({1})".format(host, hpc_label))
+            ctx.logger.info("Monitor stopped for HPC: {0}".format(host))
         else:
             ctx.logger.warning('monitor simulated')
 
@@ -390,8 +401,12 @@ def preconfigure_job(
     ctx.source.instance.runtime_properties['simulate'] = simulate
     ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
     ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
-    ctx.source.instance.runtime_properties['hpc_exporter_address'] = ctx.target.instance.runtime_properties['hpc_exporter_address']
-
+    if 'hpc_exporter_address' in ctx.target.instance.runtime_properties and \
+            ctx.target.instance.runtime_properties['hpc_exporter_address']:
+        ctx.source.instance.runtime_properties['hpc_exporter_address'] = \
+            ctx.target.instance.runtime_properties['hpc_exporter_address']
+        ctx.source.instance.runtime_properties['monitoring_id'] = \
+            ctx.target.instance.runtime_properties['monitoring_id']
 
 @operation
 def bootstrap_job(
@@ -602,7 +617,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     if hpc_exporter_address:
         monitor_job(jobid,
                     hpc_exporter_address,
-                    ctx.deployment.id,
+                    ctx.instance.runtime_properties['monitoring_id'],
                     ctx.instance.runtime_properties['ssh_config']['host'])
     ctx.instance.update()
 

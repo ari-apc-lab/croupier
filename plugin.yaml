@@ -370,6 +370,21 @@ node_types:
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job
 
+    croupier.nodes.HPCExporter:
+        derived_from: cloudify.nodes.Root
+        properties:
+            address:
+                type: string
+                required: false
+                default: ''
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.configure_monitor
+                    inputs:
+                        address:
+                            default: { get_property: [SELF,address] }
+
 relationships:
     interface_contained_in:
         derived_from: cloudify.relationships.contained_in
@@ -384,6 +399,12 @@ relationships:
                             default: { get_property: [SOURCE, ssh_config] }
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
+    interface_monitored_by:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_interface_monitor
     job_managed_by_interface:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
