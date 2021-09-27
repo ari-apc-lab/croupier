@@ -463,8 +463,8 @@ def install_croupier(**kwargs):
     config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
     config.read(config_file)
     try:
-        vault_config = {"address": config.get('Vault', 'vault_address')}
-        if vault_config["address"] is None:
+        vault_address = config.get('Vault', 'vault_address')
+        if vault_address is None:
             ctx.logger.error('Could not find vault_address in the Vault section of the croupier config file.'
                              ' Did not revoke token')
             return
@@ -472,6 +472,8 @@ def install_croupier(**kwargs):
         ctx.logger.error('Could not find the Vault section in the croupier config file. Did not recoke token')
         return
 
+    vault_address = vault_address if vault_address.startswith("http") else "http://" + vault_address
+    vault_config = {"address": vault_address}
     for node in ctx.nodes:
         if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
             vault_config["token"] = node.properties["vault_config"]["token"]
