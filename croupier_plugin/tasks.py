@@ -343,10 +343,14 @@ def start_monitoring_hpc(
         response = requests.request("POST", url, json=payload)
 
         if not response.ok:
-            raise NonRecoverableError("Failed to start node monitor: {0}: {1}".format(response.status_code, response.content))
+            ctx.logger.error("Failed to start node monitor: {0}: {1}".format(response.status_code, response.content))
+            return
         ctx.logger.info("Monitor started for HPC: {0} ({1})".format(ssh_config["host"], hpc_label))
     elif simulate:
         ctx.logger.warning('monitor simulated')
+    else:
+        ctx.logger.warning("No HPC Exporter selected for node {0}. Won't create a collector in any HPC Exporter for it."
+                           .format(ctx.node.name))
 
 
 @operation
@@ -376,9 +380,12 @@ def stop_monitoring_hpc(
 
             if not response.ok:
                 ctx.logger.error("Failed to remove collector from HPC Exporter: {0}".format(response.status_code))
+                return
             ctx.logger.info("Monitor stopped for HPC: {0}".format(host))
         else:
-            ctx.logger.warning('monitor simulated')
+            ctx.logger.warning('monitor removal simulated')
+    else:
+        ctx.logger.info("No collector to delete for node {0}".format(ctx.node.name))
 
 
 @operation
