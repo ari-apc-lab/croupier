@@ -21,7 +21,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# blueprint_four.yaml
+# blueprint_four_scale.yaml
 
 tosca_definitions_version: cloudify_dsl_1_3
 
@@ -30,62 +30,59 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - plugin.yaml
-    - inputs_def.yaml
+
+inputs:
+    vault_config:
+        default:
+            token: ''
+            username: ''
 
 node_templates:
-    hpc_interface:
+    cesga_interface:
         type: croupier.nodes.InfrastructureInterface
         properties:
-            config: { get_input: hpc_interface_config }
-            credentials: { get_input: hpc_interface_credentials }
-            external_monitor_entrypoint: { get_input: monitor_entrypoint }
-            job_prefix: { get_input: job_prefix }
-            base_dir: { get_input: "hpc_base_dir" }
-            monitor_period: 15
+            config:
+                country_tz: Europe/Madrid
+                infrastructure_interface: SLURM
+            ssh_config:
+                host: ft2.cesga.es
+                get_credentials_from_vault: true
+            vault_config: { get_input: vault_config }
+            job_prefix: atos
+            base_dir: "$HOME"
+            monitoring_options:
+                monitor_period: 15
             skip_cleanup: true
-            simulate: True # COMMENT to test against a real HPC
-            workdir_prefix: "four_singularity"
+            #simulate: True  # COMMENT to test against a real HPC
+            workdir_prefix: "four_scale"
 
     first_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                partition: { get_input: partition_name }
-                commands: ["touch fourth_example_1.test"]
+                partition: cola_corta
+                commands: ["touch job1_$SCALE_INDEX.test"]
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
+                scale: 4
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
               target: hpc_interface
 
     second_parallel_job:
-        type: croupier.nodes.SingularityJob
+        type: croupier.nodes.Job
         properties:
             job_options:
-                pre:
-                    - { get_input: mpi_load_command }
-                    - { get_input: singularity_load_command }
-                partition: { get_input: partition_name }
-                image: { concat: [{ get_input: singularity_image_storage }, "/", { get_input: singularity_image_filename }] }
-                volumes:
-                    - { get_input: scratch_voulume_mount_point }
-                    - { get_input: singularity_mount_point }
-                commands: ["touch fourth_example_2.test"]
+                partition: cola_corta
+                commands: ["touch job2_$SCALE_INDEX.test"]
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-            deployment:
-                bootstrap: "scripts/singularity_bootstrap.sh"
-                revert: "scripts/singularity_revert.sh"
-                inputs:
-                    - { get_input: singularity_image_storage }
-                    - { get_input: singularity_image_filename }
-                    - { get_input: singularity_image_uri }
-                    - { get_input: singularity_load_command }
+                scale: 2
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -94,30 +91,23 @@ node_templates:
               target: first_job
 
     third_parallel_job:
-        type: croupier.nodes.SingularityJob
+        type: croupier.nodes.Job
         properties:
             job_options:
-                pre:
-                    - { get_input: mpi_load_command }
-                    - { get_input: singularity_load_command }
-                partition: { get_input: partition_name }
-                image: { concat: [{ get_input: singularity_image_storage }, "/", { get_input: singularity_image_filename }]}
-                volumes:
-                    - { get_input: scratch_voulume_mount_point }
-                    - { get_input: singularity_mount_point }
-                commands: ["touch fourth_example_3.test"]
+                script: "touch.script"
+                arguments:
+                    - "job3_\\$SCALE_INDEX.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
+                partition: cola_corta
+                scale: 2
             deployment:
-                bootstrap: "scripts/singularity_bootstrap.sh"
-                revert: "scripts/singularity_revert.sh"
+                bootstrap: "scripts/create_script.sh"
+                revert: "scripts/delete_script.sh"
                 inputs:
-                    - { get_input: singularity_image_storage }
-                    - { get_input: singularity_image_filename }
-                    - { get_input: singularity_image_uri }
-                    - { get_input: singularity_load_command }
+                    - "script_"
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -131,11 +121,13 @@ node_templates:
             job_options:
                 script: "touch.script"
                 arguments:
-                    - "fourth_example_4.test"
+                    - "job4_\\$SCALE_INDEX.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
+                partition: cola_corta
+                scale: 4
             deployment:
                 bootstrap: "scripts/create_script.sh"
                 revert: "scripts/delete_script.sh"

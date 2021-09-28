@@ -17,53 +17,65 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Javier Carnero
+# @author: Jesus Gorronogoitia
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: javier.carnero@atos.net
+#          e-mail: jesus.gorronogoitia@atos.net
 #
-# blueprint_scale.yaml
+# blueprint_single.yaml
+
 
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-    # to speed things up, it is possible downloading this file,
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    # relative import of plugin.yaml that resides in the blueprint directory
+    - http://www.getcloudify.org/spec/cloudify/5.1.4/types.yaml
     - plugin.yaml
-    - inputs_def.yaml
+
+inputs:
+    vault_config:
+        description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
+        default:
+            username: ''
+            token: ''
+        type: croupier.datatypes.vault_config
 
 node_templates:
-    hpc_interface:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
-            config: { get_input: hpc_interface_config }
-            credentials: { get_input: hpc_interface_credentials }
-            external_monitor_entrypoint: { get_input: monitor_entrypoint }
-            job_prefix: { get_input: job_prefix }
-            base_dir: { get_input: "hpc_base_dir" }
-            monitor_period: 15
-            skip_cleanup: true
-            simulate: True # COMMENT to test against a real HPC
-            workdir_prefix: "scale"
-
-    single_job:
+            config:
+                country_tz: Europe/Madrid
+                infrastructure_interface: SLURM
+            ssh_config:
+                host: ft2.cesga.es
+                get_credentials_from_vault: true
+            vault_config: { get_input: vault_config }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: false
+            #simulate: True  # COMMENT to test against a real HPC
+            workdir_prefix: "hpc-exporter"
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+    easy_job:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                    - "touch test_$SCALE_INDEX.test"
-                scale: 2
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
-                max_time: "00:01:00"
+                - "touch test_file"
+                max_time: '00:05:00'
                 partition: { get_input: partition_name }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc_interface
+              target: cesga_hpc
 
 outputs:
     single_job_name:
-        description: single job name in the HPC
-        value: { get_attribute: [single_job, job_name] }
+        description: easy job calculation
+        value: { get_attribute: [easy_job, job_name] }

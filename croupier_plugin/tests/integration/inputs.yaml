@@ -24,46 +24,10 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.gorronogoitia@atos.net
 #
-# four_inputs_def.yaml
+# inputs_def.yaml
 
 
 inputs:
-  ################### HPC Infrastructre ##################
-  hpc_base_dir:
-    description: HPC working directory
-    default: $HOME
-  hpc_interface_config:
-    description: timezone and HPC interface
-    default:
-      country_tz: Europe/Madrid
-      infrastructure_interface: SLURM
-  hpc_interface_credentials:
-    description: HPC ssh_config
-    default: {}
-  partition_name:
-    default: default
-
-  ################### Data Mover ##################
-  data_mover_options:
-    description: Data Mover options
-    default: {}
-
-  ################### Monitoring ##################
-  monitoring_options:
-    description: Monitoring options
-    default: {}
-
-  ################### Accounting ##################
-  accounting_options:
-    description: Accounting options
-    default: {}
-
-  #################### Other ####################
-  instance_id:
-    default: test-jcarnero
-
-  job_prefix:
-    default: atos
-
-  monitor_entrypoint:
-    default: ''
+  vault_config:
+    token: ''
+    username: ''

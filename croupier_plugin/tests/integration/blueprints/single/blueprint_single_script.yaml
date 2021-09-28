@@ -21,48 +21,65 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: javier.carnero@atos.net
 #
-# blueprint_single.yaml
+# blueprint_single_script.yaml
 
 
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
+    # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine_production/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine_production/croupier_plugin/tests/integration/blueprints/inputs_def.yaml
+    # relative import of plugin.yaml that resides in the blueprint directory
+    - plugin.yaml
+
+inputs:
+    vault_config:
+        description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
+        default:
+            username: ''
+            token: ''
+        type: croupier.datatypes.vault_config
 
 node_templates:
-    cesga_hpc:
+    hpc_interface:
         type: croupier.nodes.InfrastructureInterface
         properties:
-            config: { get_input: hpc_interface_config }
-            credentials: { get_input: hpc_interface_credentials }
-            external_monitor_entrypoint: { get_input: monitor_entrypoint }
-            job_prefix: { get_input: job_prefix }
-            base_dir: { get_input: "hpc_base_dir" }
-            monitor_period: 15
-            skip_cleanup: true
+            config:
+                country_tz: Europe/Madrid
+                infrastructure_interface: SLURM
+            ssh_config:
+                host: ft2.cesga.es
+                get_credentials_from_vault: true
+            vault_config: { get_input: vault_config }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: false
             #simulate: True  # COMMENT to test against a real HPC
-            workdir_prefix: "single"
+            workdir_prefix: "single_script"
 
     single_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                commands:
-                - "touch test_$1.output"
+                script: "touch.script"
                 arguments:
-                - script
+                - "single.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: { get_input: partition_name }
-                queue: batch
+                partition: cola_corta
+            deployment:
+                bootstrap: 'scripts/create_script.sh'
+                revert: 'scripts/delete_script.sh'
+                inputs:
+                    - 'single'
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_hpc
+              target: hpc_interface
 
 outputs:
     single_job_name:
