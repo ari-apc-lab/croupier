@@ -39,7 +39,7 @@ inputs:
       country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   hpc_interface_credentials:
-    description: HPC credentials
+    description: HPC ssh_config
     default: {}
   mpi_load_command:
     default: ''
@@ -88,7 +88,7 @@ inputs:
     default:
       infrastructure_interface: SHELL
   cloud_interface_credentials:
-    description: Cloud credentials
+    description: Cloud ssh_config
     default: {}
   openstack_config:
     default: {}

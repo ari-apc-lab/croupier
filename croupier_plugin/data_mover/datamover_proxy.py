@@ -1,17 +1,19 @@
+from __future__ import absolute_import
+from builtins import object
 import traceback
 
-from data_mover import (DataMover, GridFTPServer)
+from .data_mover import (DataMover, GridFTPServer)
 from cloudify import ctx
 
 
-class DataMoverProxy:
+class DataMoverProxy(object):
     my_servers = {}
     logger = None
 
     def __init__(self, data_mover_options, logger):
         # Read data_mover_options
-        self.hpc_user_id = ctx.instance.runtime_properties['credentials']['user']
-        self.hpc_user_ssh_credentials = ctx.instance.runtime_properties['credentials']['private_key']
+        self.hpc_user_id = ctx.instance.runtime_properties['ssh_config']['user']
+        self.hpc_user_ssh_credentials = ctx.instance.runtime_properties['ssh_config']['private_key']
         if 'cloud_user' in data_mover_options:
             self.cloud_user = data_mover_options['cloud_user']
         if 'workspace' in data_mover_options:

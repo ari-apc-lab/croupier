@@ -23,20 +23,24 @@ license information in the project root.
 
 workflows.py - Holds the plugin workflows
 '''
+import os
 
+import configparser
+from builtins import next
+from builtins import str
+from builtins import object
 import sys
 import time
 from datetime import datetime
 
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
+from cloudify.plugins.workflows import install
+from cloudify.manager import get_rest_client
 from croupier_plugin.job_requester import JobRequester
+from croupier_plugin.vault.vault import get_secret, revoke_token
 
 LOOP_PERIOD = 1
-
-
-DB_JOBID = {}
-
 
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
@@ -52,38 +56,28 @@ class JobGraphInstance(object):
 
         if parent.is_job:
             self._status = 'WAITING'
-            self.jobid = ''
             # Get runtime properties
             runtime_properties = instance._node_instance.runtime_properties
-            ctx.logger.info("runtime_properties:" + str(runtime_properties))
             self.simulate = runtime_properties["simulate"]
-            self.host = runtime_properties["credentials"]["host"]
+            self.host = runtime_properties["ssh_config"]["host"]
             self.workdir = runtime_properties['workdir']
 
-            # Decide how to monitor the job
-            if runtime_properties["external_monitor_entrypoint"]:
-                self.monitor_type = runtime_properties["external_monitor_type"]
-                self.monitor_config = {
-                    'url': ('http://' +
-                            runtime_properties["external_monitor_entrypoint"] +
-                            runtime_properties["external_monitor_port"])
-                }
-            else:  # internal monitoring
-                self.monitor_type = runtime_properties["infrastructure_interface"]
-                self.monitor_config = runtime_properties["credentials"]
-
-            self.monitor_period = int(runtime_properties["monitor_period"])
+            self.monitor_type = runtime_properties["infrastructure_interface"]
+            self.monitor_config = runtime_properties["ssh_config"]
+            monitoring_options = runtime_properties["monitoring_options"]
+            self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \
+                else 10
 
             # build job name
             instance_components = instance.id.split('_')
-            self.name = runtime_properties["job_prefix"] + "_".join(instance_components[:-1])
-
+            # self.name = runtime_properties["job_prefix"] + "_".join(instance_components[:-1])
+            self.name = instance.id
         else:
             self._status = 'NONE'
             self.name = instance.id
             self.monitor_url = ""
 
-    def queue(self, monitor):
+    def queue(self):
         """ Sends the job's instance to the infrastructure queue """
         if not self.parent_node.is_job:
             return
@@ -98,9 +92,6 @@ class JobGraphInstance(object):
             init_state = 'PENDING'
         self.set_status(init_state)
 
-        self.jobid = DB_JOBID[self.name]
-        ctx.logger.debug("Saved jobid for job " + self.name + ": " + self.jobid)
-        monitor.register_jobid(self.jobid, self.name)
         return result
 
     def publish(self):
@@ -111,7 +102,7 @@ class JobGraphInstance(object):
         self.winstance.send_event('Publishing job outputs..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.publish',
-                                                  kwargs={"name": self.name, "jobid": self.jobid, "audit": self.audit})
+                                                  kwargs={"name": self.name, "audit": self.audit})
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.winstance.send_event('..outputs sent for publication')
@@ -164,17 +155,11 @@ class JobGraphInstance(object):
         self.winstance.send_event('Cancelling job..')
         result = self.winstance.execute_operation('croupier.interfaces.'
                                                   'lifecycle.cancel',
-                                                  kwargs={"name": self.name, "jobid": self.jobid})
+                                                  kwargs={"name": self.name})
         self.winstance.send_event('.. job canceled')
         result.get()
 
         self._status = 'CANCELLED'
-
-    @staticmethod
-    def register_jobid(name, jobid):
-        DB_JOBID[name] = jobid
-        ctx.logger.info("JOBID registered: " + jobid)
-
 
 class JobGraphNode(object):
     """ Wrap to add job functionalities to nodes """
@@ -220,7 +205,7 @@ class JobGraphNode(object):
 
         tasks_result_list = []
         for job_instance in self.instances:
-            tasks_result_list.append(job_instance.queue(monitor))
+            tasks_result_list.append(job_instance.queue())
 
         self.status = 'QUEUED'
         return tasks_result_list
@@ -318,12 +303,12 @@ def build_graph(nodes):
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
-            node.relationships.next()
+            next(node.relationships)
         except StopIteration:
             root_nodes.append(new_node)
 
     # then set relationships
-    for _, child in nodes_map.iteritems():
+    for _, child in nodes_map.items():
         for relationship in child.cfy_node.relationships:
             parent = nodes_map[relationship.target_node.id]
             parent.add_child(child)
@@ -341,7 +326,6 @@ class Monitor(object):
         self._execution_pool = {}
         self.timestamp = 0
         self.job_instances_map = job_instances_map
-        self.job_instances_map_jobid = {}
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
@@ -357,14 +341,14 @@ class Monitor(object):
                 for job_instance in job_node.instances:
                     if not job_instance.simulate:
                         if job_instance.host in monitor_jobs:
-                            monitor_jobs[job_instance.host]['jobids'].append(
-                                job_instance.jobid)
+                            monitor_jobs[job_instance.host]['names'].append(
+                                job_instance.name)
                         else:
                             monitor_jobs[job_instance.host] = {
                                 'config': job_instance.monitor_config,
                                 'type': job_instance.monitor_type,
                                 'workdir': job_instance.workdir,
-                                'jobids': [job_instance.jobid],
+                                'names': [job_instance.name],
                                 'period': job_instance.monitor_period
                             }
                     else:
@@ -379,12 +363,12 @@ class Monitor(object):
             states, audits = self.jobs_requester.request(monitor_jobs, self.monitor_start_time, self.logger)
 
             # set job audit
-            for jobid, audit in audits.iteritems():
-                self.job_instances_map_jobid[jobid].audit = audit
+            for name, audit in audits.items():
+                self.job_instances_map[name].audit = audit
 
             # finally set job status
-            for jobid, state in states.iteritems():
-                self.job_instances_map_jobid[jobid].set_status(state)
+            for name, state in states.items():
+                self.job_instances_map[name].set_status(state)
 
             self.continued_errors = 0
         except Exception as exp:
@@ -402,7 +386,7 @@ class Monitor(object):
 
     def get_executions_iterator(self):
         """ Executing nodes iterator """
-        return self._execution_pool.iteritems()
+        return self._execution_pool.items()
 
     def add_node(self, node):
         """ Adds a node to the execution pool """
@@ -416,15 +400,10 @@ class Monitor(object):
         """ True if there are nodes executing """
         return self._execution_pool
 
-    def register_jobid(self, jobid, name):
-        """ Registers the jobid to an instance by name """
-        self.job_instances_map_jobid[jobid] = self.job_instances_map[name]
-
 
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-    DB_JOBID.clear()
     root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
@@ -467,9 +446,50 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
     if monitor.is_something_executing():
         cancel_all(monitor.get_executions_iterator())
 
-    ctx.logger.info(
-        "------------------Workflow Finished-----------------------")
+    ctx.logger.info("------------------Workflow Finished-----------------------")
     return
+
+
+@workflow
+def install_croupier(**kwargs):
+
+    # deployment_id = ctx.nodes[0].properties['resource_config']['deployment']['id']
+    # rest_client = get_rest_client()
+    # rest_client.executions.start(deployment_id, "install")
+
+    install(ctx)
+
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+    config.read(config_file)
+    try:
+        vault_address = config.get('Vault', 'vault_address')
+        if vault_address is None:
+            ctx.logger.error('Could not find vault_address in the Vault section of the croupier config file.'
+                             ' Did not revoke token')
+            return
+    except configparser.NoSectionError:
+        ctx.logger.error('Could not find the Vault section in the croupier config file. Did not recoke token')
+        return
+
+    vault_address = vault_address if vault_address.startswith("http") else "http://" + vault_address
+    vault_config = {"address": vault_address}
+    for node in ctx.nodes:
+        if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
+            vault_config["token"] = node.properties["vault_config"]["token"]
+            break
+    if vault_config["token"]:
+        error = revoke_token(vault_config)
+        if error:
+            ctx.logger.error("Could not revoke vault token" +
+                             "\n Status code: " + str(error["error"]) +
+                             "\n Content: " + str(error["content"]))
+
+        else:
+            ctx.logger.info("Token successfully revoked")
+    else:
+        ctx.logger.warning("Could not find any tokens to revoke")
+    ctx.logger.info("------------------Workflow Finished-----------------------")
 
 
 def cancel_all(executions):

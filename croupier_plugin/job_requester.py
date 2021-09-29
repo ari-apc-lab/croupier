@@ -25,6 +25,7 @@ job_requester.py: Holds the functions that requests jobs information
 '''
 
 
+from builtins import object
 import time
 from threading import Lock
 
@@ -46,7 +47,7 @@ class JobRequester(object):
             states = {}
             audits = {}
 
-            for host, settings in monitor_jobs.iteritems():
+            for host, settings in monitor_jobs.items():
                 # Only get info when it is safe
                 if host in self._last_time:
                     seconds_to_wait = settings['period'] - \
@@ -60,21 +61,22 @@ class JobRequester(object):
                     partial_states = self._get_prometheus(
                         host,
                         settings['config'],
-                        settings['jobids'])
+                        settings['names'])
                 else:  # internal
                     wm = InfrastructureInterface.factory(settings['type'], monitor_start_time)
                     if wm:
                         partial_states, audits = wm.get_states(
                             settings['workdir'],
                             settings['config'],
-                            settings['jobids'],
+                            settings['names'],
                             logger
                         )
+                        print(partial_states)
                     else:
                         partial_states = self._no_states(
                             host,
                             settings['type'],
-                            settings['jobids'],
+                            settings['names'],
                             logger)
                 states.update(partial_states)
 

@@ -23,26 +23,32 @@ license information in the project root.
 
 accounting_client.py: provides API client for Accounting component
 """
+from __future__ import print_function
+from __future__ import absolute_import
+from future import standard_library
+standard_library.install_aliases()
+from builtins import str
+from builtins import object
 import json
 from datetime import datetime
 from enum import Enum
-import ConfigParser
+import configparser
 import os
 
 import requests
 from requests import HTTPError
 
-from model.base import AccountingBase
-from model.user import User
-from model.reporter import Reporter
-from model.provider import Provider
-from model.infrastructure import Infrastructure
-from model.resource import Resource
-from model.resource_fee import ResourceFee
-from model.resource_amount import ResourceAmount
-from model.discount import Discount
-from model.resource_consumption_record import ResourceConsumptionRecord
-from model.resource_consumption import ResourceConsumption
+from .model.base import AccountingBase
+from .model.user import User
+from .model.reporter import Reporter
+from .model.provider import Provider
+from .model.infrastructure import Infrastructure
+from .model.resource import Resource
+from .model.resource_fee import ResourceFee
+from .model.resource_amount import ResourceAmount
+from .model.discount import Discount
+from .model.resource_consumption_record import ResourceConsumptionRecord
+from .model.resource_consumption import ResourceConsumption
 
 def str_to_bool(s):
     if s.lower() == 'true':
@@ -81,13 +87,13 @@ class AccountingEncoder(json.JSONEncoder):
         return fields
 
 
-class AccountingClient:
+class AccountingClient(object):
     endpoint = "http://0.0.0.0:5000/api/"
     report_to_accounting = False
 
     def __init__(self, endpoint="http://0.0.0.0:5000/api/"):
         # Configure Accounting endpoint from configuration file
-        config = ConfigParser.RawConfigParser()
+        config = configparser.RawConfigParser()
         config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/../Croupier.cfg'
         print('Reading Accounting configuration from file {file}'.format(
             file=config_file))
@@ -101,7 +107,7 @@ class AccountingClient:
             report_to_accounting = config.get('Accounting', 'report_to_accounting')
             if report_to_accounting is not None:
                 self.report_to_accounting = str_to_bool(report_to_accounting)
-        except ConfigParser.NoSectionError:
+        except configparser.NoSectionError:
             pass
 
     # Users API client

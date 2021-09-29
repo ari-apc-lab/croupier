@@ -46,7 +46,7 @@ setup(
               'croupier_plugin.accounting_client',
               'croupier_plugin.accounting_client.model',
               'croupier_plugin.data_mover',
-              'croupier_plugin.monitoring',
+              'croupier_plugin.vault'
               ],
     package_data={'croupier_plugin.infrastructure_interfaces': ['*.sh'],
                   'croupier_plugin': ['*.cfg']},
@@ -54,10 +54,11 @@ setup(
     zip_safe=False,
     install_requires=[
         # Necessary dependency for developing plugins, do not remove!
-        "cloudify-common>=5.0.5",
+        "cloudify-common==5.1.4",
         "paramiko==2.7.2",
-        "pyyaml",
-        "wget"
+        "pyyaml==5.3.1",
+        "wget",
+        "future==0.18.2"
     ],
-    license='LICENSE'
+    license='Apache APLv2.0'
 )

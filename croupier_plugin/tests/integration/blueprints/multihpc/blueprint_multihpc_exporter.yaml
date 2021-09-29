@@ -1,0 +1,125 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint_single_two_hpcs.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    - plugin.yaml
+
+inputs:
+    vault_config:
+        default:
+            token: ''
+            username: ''
+
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    cesga_hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                country_tz: Europe/Madrid
+                infrastructure_interface: SLURM
+            ssh_config:
+                host: ft2.cesga.es
+                get_credentials_from_vault: true
+            vault_config: { get_input: vault_config }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "multihpc"
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+
+    sodalite_hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                country_tz: Europe/Madrid
+                infrastructure_interface: TORQUE
+            ssh_config:
+                host: sodalite-fe.hlrs.de
+                get_credentials_from_vault: true
+            vault_config: { get_input: vault_config }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "multihpc"
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+
+    cesga_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "touch test_$1.output"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                partition: cola_corta
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+
+    sodalite_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "touch test_$1.output"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: sodalite_hpc
+
+outputs:
+    cesga_job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [cesga_job, job_name] }
+    sodalite_job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [ sodalite_job, job_name ] }

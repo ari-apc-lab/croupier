@@ -1,4 +1,5 @@
-from base import AccountingBase
+from __future__ import absolute_import
+from .base import AccountingBase
 
 
 class ResourceConsumptionRecord (AccountingBase):

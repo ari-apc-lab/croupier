@@ -54,7 +54,7 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         return "pkill -f " + name
 
 # Monitor
-    def get_states(self, workdir, credentials, job_ids, logger):
+    def get_states(self, workdir, credentials, job_names, logger):
         call = "cat croupier-monitor.data"
 
         client = SshClient(credentials)
@@ -85,20 +85,14 @@ class Shell(infrastructure_interface.InfrastructureInterface):
 
     def _parse_exit_codes(self, exit_code):
         if exit_code == '0':  # exited normally
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.COMPLETED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.COMPLETED]
         elif exit_code == '1':  # general error
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.FAILED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.FAILED]
         elif exit_code == '126':  # cannot execute
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.REVOKED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.REVOKED]
         elif exit_code == '127':  # not found
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.BOOTFAIL]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.BOOTFAIL]
         elif exit_code == '130':  # terminated by ctrl+c
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.CANCELLED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.CANCELLED]
         else:
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.FAILED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.FAILED]

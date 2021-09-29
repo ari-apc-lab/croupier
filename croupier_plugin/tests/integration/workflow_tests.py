@@ -36,44 +36,36 @@ import yaml
 from cloudify.test_utils import workflow_test
 
 
+def load_inputs(*args, **kwargs):
+    """ Parse inputs yaml file """
+    if args[0]:
+        folder = args[0]
+        path = os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', folder, 'inputs.yaml')
+    else:
+        path = os.path.join('croupier_plugin', 'tests', 'integration', 'inputs.yaml')
+
+    # Check whether a inputs_file file is available
+    if not os.path.isfile(path):
+        raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), path)
+    inputs = {}
+    print("Using inputs file:" + path)
+    with open(path, 'r') as stream:
+        try:
+            inputs = yaml.full_load(stream)
+        except yaml.YAMLError as exc:
+            print(exc)
+    return inputs
+
+
 class TestPlugin(unittest.TestCase):
     """ Test workflows class """
 
-    def set_inputs(self, *args, **kwargs):  # pylint: disable=W0613
-        """ Parse inputs yaml file """
-        # Check whether a local inputs file is available
-        inputs_file = 'blueprint-inputs.yaml'
-        if os.path.isfile(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', 'local-blueprint-inputs'
-                                                                                            '.yaml')):
-            inputs_file = 'local-blueprint-inputs.yaml'
-        inputs = {}
-        print("Using inputs file:", inputs_file)
-        with open(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', inputs_file), 'r') as stream:
-            try:
-                inputs = yaml.full_load(stream)
-            except yaml.YAMLError as exc:
-                print (exc)
-
-        return inputs
-
-    def load_inputs(self, inputs_file, *args, **kwargs):
-        """ Parse inputs yaml file """
-        # Check whether a inputs_file file is available
-        if not os.path.isfile(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', inputs_file)):
-            raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), inputs_file)
-        inputs = {}
-        print ("Using inputs file:" + inputs_file)
-        with open(os.path.join('croupier_plugin', 'tests', 'integration', 'inputs', inputs_file), 'r') as stream:
-            try:
-                inputs = yaml.full_load(stream)
-            except yaml.YAMLError as exc:
-                print (exc)
-
-        return inputs
-
     # Run every test
-    def run_test(self, cfy_local):
-        cfy_local.execute('install', task_retries=0)
+    def run_test(self, cfy_local, revoke_vault_token=False):
+        if revoke_vault_token:
+            cfy_local.execute('croupier_install', task_retries=0)
+        else:
+            cfy_local.execute('install', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
 
@@ -87,335 +79,154 @@ class TestPlugin(unittest.TestCase):
         else:
             logging.warning('[WARNING] Login could not be tested')
 
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- Bernoulli ----------------------------------
+    # -------------------------------------------------------------------------------
     @workflow_test(
-        os.path.join('blueprints', 'blueprint_met_00.yaml'),
+        os.path.join('blueprints', 'bernoulli', 'blueprint_bernoulli.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'precip_00.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'wind_00.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'temp_00.sh'), 'scripts')],
-        inputs='set_inputs')
-    def test_agroapps_zerozero(self, cfy_local):
+        resources_to_copy=[
+            (os.path.join('blueprints', 'bernoulli', 'scripts', 'create_bernoulli_script.sh'), 'scripts'),
+            (os.path.join('blueprints', 'bernoulli', 'scripts', 'delete_bernoulli_script.sh'), 'scripts')
+        ],
+        inputs='load_inputs')
+    def test_bernoulli(self, cfy_local):
         self.run_test(cfy_local)
 
+    # -------------------------------------------------------------------------------
+    # ----------------------------------- Single ------------------------------------
+    # -------------------------------------------------------------------------------
     @workflow_test(
-        os.path.join('blueprints', 'blueprint_single.yaml'),
+        os.path.join('blueprints', 'single', 'blueprint.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='set_inputs')
-    def test_single(self, cfy_local):
-        """ Single BATCH Job Blueprint """
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
         self.run_test(cfy_local)
 
-    # Singularity easy job in CESGA HPC
-    def load_cesga_hpc_singularity_easy_inputs(self, *args, **kwargs):
-        return self.load_inputs('easy-singularity-blueprint-inputs.yaml')
-
+    # -------------------------------------------------------------------------------
+    # ------------------------------- Single Script ---------------------------------
+    # -------------------------------------------------------------------------------
     @workflow_test(
-        os.path.join('blueprints', 'blueprint_singularity.yaml'),
+        os.path.join('blueprints', 'single', 'blueprint_single_script.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'single', 'scripts', 'create_script.sh'), 'scripts'),
+            (os.path.join('blueprints', 'single', 'scripts', 'delete_script.sh'), 'scripts')
+        ],
         copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts')],
-        inputs='load_cesga_hpc_singularity_easy_inputs')
-    def test_singularity_easy(self, cfy_local):
-        """ Singularity Job Blueprint """
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
         self.run_test(cfy_local)
 
+    # -------------------------------------------------------------------------------
+    # ------------------------------ Single Scale -----------------------------------
+    # -------------------------------------------------------------------------------
     @workflow_test(
-        os.path.join('blueprints', 'blueprint_met_12.yaml'),
+        os.path.join('blueprints', 'single', 'blueprint_scale.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'precip_12.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'wind_12.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'temp_12.sh'), 'scripts'),],
-        inputs='set_inputs')
-    def test_agroapps_twelve(self, cfy_local):
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
         self.run_test(cfy_local)
 
-    # Agroapps test in CESGA HPC
+    # ------------------------------------------------------------------------------
+    # ------------------------------------ Four ------------------------------------
+    # ------------------------------------------------------------------------------
     @workflow_test(
-        os.path.join('blueprints', 'blueprint_agroapps_test_GFS_00.yaml'),
+        os.path.join('blueprints', 'four', 'blueprint_four.yaml'),
         copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='set_inputs')
-    def test_cesga_agroapps(self, cfy_local):
-        """ CESGA Agroapps Job Blueprint """
-        self.run_test(cfy_local)
-
-    # Easy test in CESGA HPC
-    def load_cesga_hpc_inputs(self, *args, **kwargs):
-        return self.load_inputs('cesga-blueprint-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_easy.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='load_cesga_hpc_inputs')
-    def test_easy_job(self, cfy_local):
-        """ Single BATCH Job Blueprint """
-        self.run_test(cfy_local)
-
-    # Single test in Sodalite HPC
-    def load_sodalite_hpc_inputs(self, *args, **kwargs):
-        return self.load_inputs('blueprint-sodalite-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_single.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='load_sodalite_hpc_inputs')
-    def test_single_sodalite(self, cfy_local):
-        """ Single BATCH Job Blueprint """
-        self.run_test(cfy_local)
-
-
-    # Bernoulli test in Sodalite HPC
-    # def load_sodalite_hpc_inputs(self, *args, **kwargs):
-    #     return self.load_inputs('blueprint-sodalite-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_bernoulli.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'create_bernoulli_script.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'delete_bernoulli_script.sh'), 'scripts')],
-        inputs='load_sodalite_hpc_inputs')
-    def test_bernoulli_sodalite(self, cfy_local):
-        """ Single BATCH Job Blueprint """
-        self.run_test(cfy_local)
-
-    # Single test in Hawk HPC
-    def load_hawk_hpc_inputs(self, *args, **kwargs):
-        return self.load_inputs('blueprint-hawk-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_single_hawk.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='load_hawk_hpc_inputs')
-    def test_single_hawk(self, cfy_local):
-        self.run_test(cfy_local)
-
-    # HPC Data Mover test
-    def load_hpc_data_mover_inputs(self, *args, **kwargs):
-        return self.load_inputs('blueprint-hpc-datamover-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_single_hpc_datamover.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='load_hpc_data_mover_inputs')
-    def test_hpc_datamover(self, cfy_local):
-        self.run_test(cfy_local)
-
-    # Agroclimatic Zones Pilot Test
-    def load_agroclimate_zones_inputs(self, *args, **kwargs):
-        return self.load_inputs('blueprint-agroclimate-zones-pilot-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')],
-        inputs='load_agroclimate_zones_inputs')
-    def test_agroclimate_zones_pilot(self, cfy_local):
-        self.run_test(cfy_local)
-
-    # Agroclimate Zones Pilot Test in Vulcan
-    def load_agroclimate_zones_inputs_vulcan(self, *args, **kwargs):
-        return self.load_inputs('blueprint-vulcan-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot_vulcan.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='load_agroclimate_zones_inputs_vulcan')
-    def test_agroclimate_zones_pilot_vulcan(self, cfy_local):
-        self.run_test(cfy_local)
-
-
-    # Agroclimate Zones Pilot Test in Vulcan with data mover
-    def load_agroclimate_zones_data_mover_inputs_vulcan(self, *args, **kwargs):
-        return self.load_inputs('blueprint-vulcan-agroclimatic-datamover-inputs.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot_data_mover_vulcan.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')],
-        inputs='load_agroclimate_zones_data_mover_inputs_vulcan')
-    def test_agroclimate_zones_pilot_data_mover_vulcan(self, cfy_local):
-        self.run_test(cfy_local)
-
-
-    # Agroclimate Zones Pilot Test with data mover
-    def load_agroclimate_zones_data_mover_inputs(self, *args, **kwargs):
-        return self.load_inputs('blueprint-inputs-agroclimaticzones-datamover.yaml')
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_agroclimate_zones_pilot_datamover.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'config_bootstrap.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'config_revert.sh'), 'scripts')],
-        inputs='load_agroclimate_zones_data_mover_inputs')
-    def test_agroclimate_zones_pilot_datamover(self, cfy_local):
-        self.run_test(cfy_local)
-
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_single_script.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
-        inputs='set_inputs')
-    def test_single_script(self, cfy_local):
-        self.run_test(cfy_local)
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_publish.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='set_inputs')
-    def test_publish(self, cfy_local):
-        self.run_test(cfy_local)
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_scale.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-        inputs='set_inputs')
-    def test_scale(self, cfy_local):
-        self.run_test(cfy_local)
-
-    @workflow_test(
-        os.path.join('blueprints', 'blueprint_singularity.yaml'),
-        copy_plugin_yaml=True,
-        resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                           (os.path.join('blueprints', 'scripts', 'singularity_bootstrap_example.sh'), 'scripts'),
-                           (os.path.join('blueprints', 'scripts', 'singularity_revert_example.sh'), 'scripts')],
-        inputs='set_inputs')
-    def test_singularity(self, cfy_local):
-        self.run_test(cfy_local)
-
-    @workflow_test(os.path.join('blueprints', 'blueprint_singularity_scale.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                                      (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
-                                      (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts')],
-                   inputs='set_inputs')
-    def test_singularity_scale(self, cfy_local):
-        self.run_test(cfy_local)
-
-    @workflow_test(os.path.join('blueprints', 'blueprint_four.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                                      (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
-                                      (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
-                   inputs='set_inputs')
+        resources_to_copy=[
+            (os.path.join('blueprints', 'four', 'scripts', 'create_script.sh'), 'scripts'),
+            (os.path.join('blueprints', 'four', 'scripts', 'delete_script.sh'), 'scripts')
+        ],
+        inputs='load_inputs')
     def test_four(self, cfy_local):
         self.run_test(cfy_local)
 
-    @workflow_test(os.path.join('blueprints', 'blueprint_four_singularity.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                                      (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
-                                      (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts'),
-                                      (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
-                                      (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
-                   inputs='set_inputs')
-    def test_four_singularity(self, cfy_local):
-        """ Four Jobs Blueprint """
+    # ------------------------------------------------------------------------------
+    # --------------------------------- Four Scale ---------------------------------
+    # ------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'four', 'blueprint_four_scale.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[
+            (os.path.join('blueprints', 'four', 'scripts', 'create_script.sh'), 'scripts'),
+            (os.path.join('blueprints', 'four', 'scripts', 'delete_script.sh'), 'scripts')
+        ],
+        inputs='load_inputs')
+    def test_four(self, cfy_local):
         self.run_test(cfy_local)
 
-    @workflow_test(os.path.join('blueprints', 'blueprint_four_scale.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                                      (os.path.join('blueprints', 'scripts', 'create_script.sh'), 'scripts'),
-                                      (os.path.join('blueprints', 'scripts', 'delete_script.sh'), 'scripts')],
-                   inputs='set_inputs')
-    def test_four_scale(self, cfy_local):
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- MultiHPC -----------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'multihpc', 'blueprint_multihpc.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
         self.run_test(cfy_local)
 
-    # Agroclimate Zones Pilot Test with data mover
-    def load_grapevine_cycle_00_spain_inputs(self, *args, **kwargs):
-        return self.load_inputs('cycle_00_part2_spain_no_reservation_inputs.yaml')
-
-    @workflow_test(os.path.join('blueprints', 'cycle_00_part2_spain_no_reservation', 'blueprint.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './')],
-                   inputs='load_grapevine_cycle_00_spain_inputs')
-    def test_grapevine_cycle_00_spain(self, cfy_local):
+    # -------------------------------------------------------------------------------
+    # ----------------------------- MultiHPC Exporter -------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'multihpc', 'blueprint_multihpc_exporter.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
         self.run_test(cfy_local)
 
-    # # It doesn't allow "simulate" property. Code is left for manual testing.
-    # @workflow_test(os.path.join('blueprints', 'blueprint_openstack.yaml'),
-    #                copy_plugin_yaml=True,
-    #                resources_to_copy=[(os.path.join('blueprints',
-    #                                                 'inputs_def.yaml'),
-    #                                    './')],
-    #                inputs='set_inputs')
-    # def test_openstack(self, cfy_local):
-    #     """ Openstack Blueprint """
-    #     cfy_local.execute('install', task_retries=5)
-    #     cfy_local.execute('run_jobs', task_retries=0)
-    #     cfy_local.execute('uninstall', task_retries=0)
+    # -------------------------------------------------------------------------------
+    # ------------------------------- HPC Exporter ----------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'hpc-exporter', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
+        self.run_test(cfy_local)
 
-    #     # extract single node instance
-    #     instance = cfy_local.storage.get_node_instances()[0]
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- Publish ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'publish', 'blueprint_publish.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
+        self.run_test(cfy_local)
 
-    #     # due to a cfy bug sometimes login keyword is not ready in the tests
-    #     if 'login' in instance.runtime_properties:
-    #         # assert runtime properties is properly set in node instance
-    #         self.assertEqual(instance.runtime_properties['login'],
-    #                          True)
-    #     else:
-    #         logging.warning('[WARNING] Login could not be tested')
+    # -------------------------------------------------------------------------------
+    # ------------------------------- Singularity -----------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'singularity', 'blueprint_singularity.yaml'),
+        copy_plugin_yaml=True,
+        resources_to_copy=[(os.path.join('blueprints', 'singularity', 'scripts', 'singularity_bootstrap.sh'),
+                            'scripts'),
+                           (os.path.join('blueprints', 'singularity', 'scripts', 'singularity_revert.sh'),
+                            'scripts')],
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
+        self.run_test(cfy_local)
 
-    # # It doesn't allow "simulate" property. Code is left for manual testing.
-    # @workflow_test(os.path.join('blueprints',
-    #                             'blueprint_hpc_openstack.yaml'),
-    #                copy_plugin_yaml=True,
-    #                resources_to_copy=[(os.path.join('blueprints',
-    #                                                 'inputs_def.yaml'),
-    #                                    './'),
-    #                                   (os.path.join('blueprints', 'scripts',
-    #                                                 'singularity_' +
-    #                                                 'bootstrap_example.sh'),
-    #                                    'scripts'),
-    #                                   (os.path.join('blueprints', 'scripts',
-    #                                                 'singularity_' +
-    #                                                 'revert_example.sh'),
-    #                                    'scripts')],
-    #                inputs='set_inputs')
-    # def test_hpc_openstack(self, cfy_local):
-    #     """ Openstack Blueprint """
-    #     cfy_local.execute('install', task_retries=5)
-    #     cfy_local.execute('run_jobs', task_retries=0)
-    #     cfy_local.execute('uninstall', task_retries=0)
+    # -------------------------------------------------------------------------------
+    # -------------------------------- Openstack ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'openstack', 'blueprint_openstack.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
+        self.run_test(cfy_local)
 
-    #     # extract single node instance
-    #     instance = cfy_local.storage.get_node_instances()[0]
-
-    #     # due to a cfy bug sometimes login keyword is not ready in the tests
-    #     if 'login' in instance.runtime_properties:
-    #         # assert runtime properties is properly set in node instance
-    #         self.assertEqual(instance.runtime_properties['login'],
-    #                          True)
-    #     else:
-    #         logging.warning('[WARNING] Login could not be tested')
-
-    @workflow_test(os.path.join('blueprints', 'blueprint_eosc.yaml'),
-                   copy_plugin_yaml=True,
-                   resources_to_copy=[(os.path.join('blueprints', 'inputs_def.yaml'), './'),
-                                      (os.path.join('blueprints', 'scripts', 'singularity_bootstrap.sh'), 'scripts'),
-                                      (os.path.join('blueprints', 'scripts', 'singularity_revert.sh'), 'scripts')],
-                   inputs='set_inputs')
-    def test_eosc(self, cfy_local):
+    # -------------------------------------------------------------------------------
+    # ------------------------------ Openstack HPC ----------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'openstack', 'blueprint_hpc_openstack.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_easy(self, cfy_local):
         self.run_test(cfy_local)
 
 
