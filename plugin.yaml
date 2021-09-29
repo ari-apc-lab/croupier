@@ -175,7 +175,6 @@ data_types:
                 type: string
                 required: false
 
-
     croupier.datatypes.data_mover.nodes:
         properties:
             source:
@@ -186,9 +185,6 @@ data_types:
                 type: string
                 required: false
                 default: ''
-
-    croupier.datatypes.publish:
-        type: list
 
     croupier.datatypes.dataset:
         properties:
