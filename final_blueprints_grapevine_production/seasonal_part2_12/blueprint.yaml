@@ -76,7 +76,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '00:10:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: SEAS2_%d%m_12
+                recurrent_reservation: true
                 queue: batch
             skip_cleanup: True
         relationships:
@@ -97,7 +98,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '00:45:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: SEAS2_%d%m_12
+                recurrent_reservation: true
                 queue: batch
             skip_cleanup: True
         relationships:
@@ -120,7 +122,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '00:25:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: SEAS2_%d%m_12
+                recurrent_reservation: true
                 queue: batch
             skip_cleanup: True
         relationships:
@@ -143,7 +146,8 @@ node_templates:
                 tasks_per_node: 24
                 max_time: '01:00:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: SEAS2_%d%m_12
+                recurrent_reservation: true
                 queue: batch
             skip_cleanup: True
         relationships:
@@ -166,7 +170,8 @@ node_templates:
                 tasks_per_node: 24
                 max_time: '00:45:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: SEAS2_%d%m_12
+                recurrent_reservation: true
                 queue: batch
             skip_cleanup: True
         relationships:

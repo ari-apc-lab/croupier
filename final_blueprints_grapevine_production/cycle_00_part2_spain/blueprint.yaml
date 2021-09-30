@@ -78,7 +78,8 @@ node_templates:
                 max_time: '00:10:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -99,7 +100,8 @@ node_templates:
                 max_time: '00:10:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -120,7 +122,8 @@ node_templates:
                 max_time: '00:10:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -146,7 +149,8 @@ node_templates:
                 max_time: '00:30:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -172,7 +176,8 @@ node_templates:
                 max_time: '00:10:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -195,7 +200,8 @@ node_templates:
                 max_time: '01:15:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -222,7 +228,8 @@ node_templates:
                 max_time: '00:15:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -248,7 +255,8 @@ node_templates:
                 max_time: '00:45:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -278,7 +286,8 @@ node_templates:
                 max_time: '03:00:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -305,7 +314,8 @@ node_templates:
                 max_time: '04:30:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -332,7 +342,8 @@ node_templates:
                 max_time: '00:45:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -355,7 +366,8 @@ node_templates:
                 max_time: '00:45:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -378,7 +390,8 @@ node_templates:
                 max_time: '00:45:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -401,7 +414,8 @@ node_templates:
                 max_time: '00:45:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
@@ -424,7 +438,8 @@ node_templates:
                 max_time: '00:10:00'
                 partition: thinnodes
                 queue: batch
-                reservation: { get_input: reservation_id }
+                reservation: GV_R%d%m_00_S
+                recurrent_reservation: true
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface

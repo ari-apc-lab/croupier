@@ -78,7 +78,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '01:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -100,7 +101,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '00:45:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -122,7 +124,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '01:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -144,7 +147,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '01:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -166,7 +170,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '01:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -188,7 +193,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -220,7 +226,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -252,7 +259,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -286,7 +294,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -318,7 +327,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -350,7 +360,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -382,7 +393,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True
@@ -416,7 +428,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '04:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
                 # qos: shared
                 queue: batch
             skip_cleanup: True

@@ -77,7 +77,8 @@ node_templates:
                 tasks_per_node: 24
                 max_time: '02:30:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: SEAS4_%d%m_18
+                recurrent_reservation: true
                 queue: batch
             skip_cleanup: True
         relationships:
@@ -98,7 +99,8 @@ node_templates:
                 tasks_per_node: 1
                 max_time: '01:00:00'
                 partition: thinnodes
-                reservation: { get_input: reservation_id }
+                reservation: SEAS4_%d%m_18
+                recurrent_reservation: true
                 queue: batch
             skip_cleanup: True
         relationships:
