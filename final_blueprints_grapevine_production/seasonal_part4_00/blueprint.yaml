@@ -40,8 +40,14 @@ inputs:
         required: false
 
 node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
     cesga_interface:
         type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
         properties:
             config:
                 infrastructure_interface: SLURM
@@ -121,6 +127,14 @@ node_templates:
               target: cesga_interface
             - type: job_depends_on
               target: post_prep_00
+
+
+deployment_settings:
+    default_schedules:
+        main:
+            workflow: run_jobs
+            since: '2021-10-01 00:00'
+            recurrence: '1d'
 
 
 outputs:
