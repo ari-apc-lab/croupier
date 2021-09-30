@@ -55,6 +55,7 @@ def convert_to_seconds(cput):
     hours = getHours(cput) * 3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
     return hours
 
+
 class Torque(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
 
@@ -62,7 +63,8 @@ class Torque(InfrastructureInterface):
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = {'data': ''}
         if script:
             _prefix = '#PBS'

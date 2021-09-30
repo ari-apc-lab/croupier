@@ -24,7 +24,7 @@ license information in the project root.
 slurm.py: Holds the slurm functions
 '''
 from builtins import str
-import datetime
+import datetime, pytz
 import time
 
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
@@ -133,7 +133,8 @@ class Slurm(InfrastructureInterface):
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = ''
         if script:
             _prefix = '#SBATCH'
@@ -149,6 +150,9 @@ class Slurm(InfrastructureInterface):
         # Check if exists and has content
         def _check_job_settings_key(key):
             return key in job_settings and str(job_settings[key]).strip()
+
+        def _recurrent_reservation_id(reservation_recurrence_format):
+            return datetime.datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_recurrence_format)
 
         if script and not _check_job_settings_key('max_time'):
             return {'error': "Job must define the 'max_time' property"}
@@ -184,12 +188,14 @@ class Slurm(InfrastructureInterface):
                          str(job_settings['memory']) + _suffix
 
         if _check_job_settings_key('reservation'):
-            _settings += _prefix + ' --reservation=' + \
-                         str(job_settings['reservation']) + _suffix
+            reservation_id = job_settings['reservation']
+            if _check_job_settings_key('recurrent_reservation') and job_settings['recurrent_reservation']:
+                recurrent_reservation_format = job_settings['reservation_id']
+                reservation_id = _recurrent_reservation_id(recurrent_reservation_format)
+            _settings += _prefix + ' --reservation=' + str(reservation_id) + _suffix
 
         if _check_job_settings_key('qos'):
-            _settings += _prefix + ' --qos=' + \
-                         str(job_settings['qos']) + _suffix
+            _settings += _prefix + ' --qos=' + str(job_settings['qos']) + _suffix
 
         if _check_job_settings_key('mail_user'):
             _settings += _prefix + ' --mail-user=' + \

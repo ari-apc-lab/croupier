@@ -55,6 +55,11 @@ data_types:
                 description: Scheduler type.
                 type: string
                 required: true
+            country_tz:
+                description: Timezone
+                type: string
+                required: false
+                default: 'GMT'
 
     croupier.datatypes.ssh_config:
         properties:

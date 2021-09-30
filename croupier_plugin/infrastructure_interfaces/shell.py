@@ -35,7 +35,8 @@ class Shell(infrastructure_interface.InfrastructureInterface):
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = ''
 
         # add executable and arguments

@@ -403,6 +403,7 @@ def preconfigure_job(
         ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
     ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
     ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
+    ctx.source.instance.runtime_properties['timezone'] = config['country_tz']
     ctx.source.instance.runtime_properties['simulate'] = simulate
     ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
     ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
@@ -598,7 +599,8 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                 is_singularity,
                 ctx.logger,
                 workdir=workdir,
-                context=context_vars)
+                context=context_vars,
+                timezone=ctx.instance.runtime_properties['timezone'])
         except Exception as ex:
             ctx.logger.error('Job could not be submitted because error ' + ex.message)
             raise ex

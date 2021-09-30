@@ -47,7 +47,8 @@ class Pbspro(InfrastructureInterface):
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = {'data': ''}
         if script:
             _prefix = '#PBS'

@@ -2,3 +2,4 @@ setuptools~=47.3.1
 future~=0.18.2
 PyYAML~=5.3.1
 requests~=2.24.0
+pytz

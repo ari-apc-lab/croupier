@@ -161,7 +161,8 @@ class InfrastructureInterface(object):
                    is_singularity,
                    logger,
                    workdir=None,
-                   context=None):
+                   context=None,
+                   timezone=None):
         """
         Sends a job to the HPC
 
@@ -180,6 +181,8 @@ class InfrastructureInterface(object):
         @rtype string
         @param context: Dictionary containing context env vars
         @rtype dictionary of strings
+        @param timezone: Timezone of the HPC the job is being submitted to
+        @rtype string
         @return Slurm's job id sent. None if an error arise.
         """
         if not SshClient.check_ssh_client(ssh_client, logger):
@@ -230,7 +233,7 @@ class InfrastructureInterface(object):
             settings = job_settings
 
         # build the call to submit the job
-        response = self._build_job_submission_call(name, settings, ssh_client, workdir, logger)
+        response = self._build_job_submission_call(name, settings, timezone=timezone)
 
         if 'error' in response:
             logger.error(
@@ -353,7 +356,8 @@ class InfrastructureInterface(object):
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         """
         Generates specific manager data accouding to job_settings
 
@@ -513,7 +517,7 @@ class InfrastructureInterface(object):
 
         return script
 
-    def _build_job_submission_call(self, name, job_settings, ssh_client, workdir, logger):
+    def _build_job_submission_call(self, name, job_settings, timezone):
         """
         Generates submission command line as a string
 
@@ -548,7 +552,8 @@ class InfrastructureInterface(object):
 
         response = self._parse_job_settings(
             name,
-            job_settings)
+            job_settings,
+            timezone=timezone)
 
         # TODO Add extra audit support
         # if not self.audit_inserted:
