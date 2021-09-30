@@ -96,7 +96,6 @@ def download_credentials_vault(ssh_config, vault_config, **kwargs):
 
 @operation
 def preconfigure_interface(
-        config,
         ssh_config,
         simulate,
         **kwargs):  # pylint: disable=W0613
@@ -356,7 +355,6 @@ def start_monitoring_hpc(
 @operation
 def stop_monitoring_hpc(
         ssh_config,
-        monitoring_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Removes the HPC Exporter's collector """
@@ -414,6 +412,7 @@ def preconfigure_job(
             ctx.target.instance.runtime_properties['hpc_exporter_address']
         ctx.source.instance.runtime_properties['monitoring_id'] = \
             ctx.target.instance.runtime_properties['monitoring_id']
+
 
 @operation
 def bootstrap_job(

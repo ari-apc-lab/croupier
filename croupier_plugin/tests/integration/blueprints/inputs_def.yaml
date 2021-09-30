@@ -36,7 +36,6 @@ inputs:
   hpc_interface_config:
     description: timezone and HPC interface
     default:
-      country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   hpc_interface_credentials:
     description: HPC ssh_config

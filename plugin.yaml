@@ -51,11 +51,7 @@ data_types:
 
     croupier.datatypes.wm_config:
         properties:
-            timezone:
-                description: Timezone the WM is located in
-                type: string
-                required: false
-            type:
+            infrastructure_interface:
                 description: Scheduler type.
                 type: string
                 required: true
@@ -219,7 +215,7 @@ node_types:
         derived_from: cloudify.nodes.Compute
         properties:
             config:
-                description: type, and optionally timezone
+                description: type
                 type: croupier.datatypes.wm_config
             vault_config:
                 description: Information about the vault instance that contains the infrastructure's ssh_config. Token and username.
@@ -314,8 +310,6 @@ node_types:
                     inputs:
                         ssh_config:
                             default: { get_property: [SELF, ssh_config] }
-                        monitoring_options:
-                            default: { fet_property: [SELF, monitoring_options]}
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -414,8 +408,6 @@ relationships:
                 preconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface
                     inputs:
-                        config:
-                            default: { get_property: [SOURCE, config] }
                         ssh_config:
                             default: { get_property: [SOURCE, ssh_config] }
                         simulate:

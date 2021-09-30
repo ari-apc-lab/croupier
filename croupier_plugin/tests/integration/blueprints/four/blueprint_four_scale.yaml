@@ -42,7 +42,6 @@ node_templates:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                country_tz: Europe/Madrid
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
