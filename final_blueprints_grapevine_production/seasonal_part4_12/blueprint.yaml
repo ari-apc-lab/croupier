@@ -110,27 +110,6 @@ node_templates:
               target: unipost_12
 
 
-    output_transfer_reservation_delete_12_seasonal:
-        type: croupier.nodes.Job
-        properties:
-            job_options:
-                script: "reservation_delete_script.script"
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
-                max_time: '00:05:00'
-                partition: cola-corta
-                queue: batch
-            deployment:
-                bootstrap: "scripts/create_script_delete_reservation.sh"
-            skip_cleanup: True
-        relationships:
-            - type: job_managed_by_interface
-              target: cesga_interface
-            - type: job_depends_on
-              target: post_prep_12
-
-
 deployment_settings:
     default_schedules:
         main:

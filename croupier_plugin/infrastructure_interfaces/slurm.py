@@ -151,9 +151,6 @@ class Slurm(InfrastructureInterface):
         def _check_job_settings_key(key):
             return key in job_settings and str(job_settings[key]).strip()
 
-        def _recurrent_reservation_id(reservation_recurrence_format):
-            return datetime.datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_recurrence_format)
-
         if script and not _check_job_settings_key('max_time'):
             return {'error': "Job must define the 'max_time' property"}
 
@@ -189,9 +186,6 @@ class Slurm(InfrastructureInterface):
 
         if _check_job_settings_key('reservation'):
             reservation_id = job_settings['reservation']
-            if _check_job_settings_key('recurrent_reservation') and job_settings['recurrent_reservation']:
-                recurrent_reservation_format = job_settings['reservation_id']
-                reservation_id = _recurrent_reservation_id(recurrent_reservation_format)
             _settings += _prefix + ' --reservation=' + str(reservation_id) + _suffix
 
         if _check_job_settings_key('qos'):
@@ -311,3 +305,13 @@ class Slurm(InfrastructureInterface):
         client.close_connection()
 
         return states, audits
+
+    def delete_reservation(self, client, reservation_id, deletion_path):
+        call = 'sudo {0} {1}'.format(deletion_path, reservation_id)
+        output, exit_code = client.execute_shell_command(
+            call,
+            wait_result=True)
+        if exit_code == 0:
+            return True
+        else:
+            return False

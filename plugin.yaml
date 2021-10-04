@@ -60,6 +60,11 @@ data_types:
                 type: string
                 required: false
                 default: 'GMT'
+            reservation_deletion_path:
+                description: Path where the executable to delete a reservation is located
+                type: string
+                required: false
+                default: '/opt/cesga/sistemas/reservas/sresdelete'
 
     croupier.datatypes.ssh_config:
         properties:
@@ -386,6 +391,8 @@ node_types:
                     inputs:
                         job_options:
                             default: { get_property: [SELF, job_options] }
+                delete_reservation:
+                    implementation: croupier.croupier_plugin.tasks.delete_reservation
 
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job

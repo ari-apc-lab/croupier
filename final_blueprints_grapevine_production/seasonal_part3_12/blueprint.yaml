@@ -86,26 +86,6 @@ node_templates:
               target: cesga_interface
 
 
-    reservation_delete_seas3_12:
-        type: croupier.nodes.Job
-        properties:
-            job_options:
-                script: "reservation_delete_script.script"
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
-                max_time: '00:01:00'
-                partition: cola-corta
-                queue: batch
-            deployment:
-                bootstrap: "scripts/create_script_delete_reservation.sh"
-            skip_cleanup: True
-        relationships:
-            - type: job_managed_by_interface
-              target: cesga_interface
-            - type: job_depends_on
-              target: wrf_seas_12
-
 
 
 deployment_settings:

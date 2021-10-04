@@ -36,11 +36,11 @@ from datetime import datetime
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
 from cloudify.plugins.workflows import install
-from cloudify.manager import get_rest_client
 from croupier_plugin.job_requester import JobRequester
-from croupier_plugin.vault.vault import get_secret, revoke_token
+from croupier_plugin.vault.vault import revoke_token
 
 LOOP_PERIOD = 1
+
 
 class JobGraphInstance(object):
     """ Wrap to add job functionalities to node instances """
@@ -93,6 +93,14 @@ class JobGraphInstance(object):
         self.set_status(init_state)
 
         return result
+
+    def delete_reservation(self):
+        """ Sends the job's instance to the infrastructure queue """
+        if not self.parent_node.is_job or not ('reservation' in self.winstance._node_instance.runtime_properties):
+            return
+        self.winstance.send_event('Deleting reservation..')
+        result = self.winstance.execute_operation('croupier.interfaces.lifecycle.delete_reservation')
+        result.get()
 
     def publish(self):
         """ Publish the job's instance outputs """
@@ -400,6 +408,11 @@ class Monitor(object):
         """ True if there are nodes executing """
         return self._execution_pool
 
+def delete_reservations (job_instances_map):
+    for instance_name in job_instances_map:
+        instance = job_instances_map[instance_name]
+        instance.delete_reservation()
+
 
 @workflow
 def run_jobs(**kwargs):  # pylint: disable=W0613
@@ -445,6 +458,8 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
 
     if monitor.is_something_executing():
         cancel_all(monitor.get_executions_iterator())
+
+    delete_reservations(job_instances_map)
 
     ctx.logger.info("------------------Workflow Finished-----------------------")
     return

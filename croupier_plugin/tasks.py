@@ -34,6 +34,8 @@ from builtins import str
 import socket
 import traceback
 from uuid import uuid4
+from datetime import datetime
+import pytz
 
 import requests
 from cloudify import ctx
@@ -403,6 +405,7 @@ def preconfigure_job(
         ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
     ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
     ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
+    ctx.source.instance.runtime_properties['reservation_deletion_path'] = config['reservation_deletion_path']
     ctx.source.instance.runtime_properties['timezone'] = config['country_tz']
     ctx.source.instance.runtime_properties['simulate'] = simulate
     ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
@@ -555,8 +558,14 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     simulate = ctx.instance.runtime_properties['simulate']
 
     name = kwargs['name']
-    is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
-        type_hierarchy
+    is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.type_hierarchy
+
+    if 'reservation' in job_options and 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
+        reservation_id = job_options['reservation']
+        if 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
+            timezone = ctx.instance.runtime_properties['timezone']
+            job_options['reservation'] = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
+        ctx.instance.runtime_properties['reservation'] = reservation_id
 
     if not simulate:
         # Do data download (from Cloud to HPC) if requested
@@ -599,8 +608,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                 is_singularity,
                 ctx.logger,
                 workdir=workdir,
-                context=context_vars,
-                timezone=ctx.instance.runtime_properties['timezone'])
+                context=context_vars)
         except Exception as ex:
             ctx.logger.error('Job could not be submitted because error ' + ex.message)
             raise ex
@@ -628,6 +636,42 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                     ctx.instance.runtime_properties['monitoring_id'],
                     ctx.instance.runtime_properties['ssh_config']['host'])
     ctx.instance.update()
+
+
+@operation
+def delete_reservation():
+    if not ('reservation' in ctx.instance.runtime_properties) and not\
+            ('reservation_deletion_path' in ctx.instance.runtime_properties):
+        return
+    reservation_id = ctx.instance.runtime_properties['reservation']
+    interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+    client = SshClient(ctx.instance.runtime_properties['ssh_config'])
+    deletion_path = ctx.instance.runtime_properties['reservation_deletion_path']
+    wm = InfrastructureInterface.factory(interface_type)
+    if not wm:
+        client.close_connection()
+        raise NonRecoverableError(
+            "Infrastructure Interface '" +
+            interface_type +
+            "' not supported.")
+
+    ctx.logger.info('Submitting the job ...')
+
+    try:
+        ok = wm.delete_reservation(
+            client,
+            reservation_id,
+            deletion_path)
+    except Exception as ex:
+        ctx.logger.error('Reservation could not be deleted because: ' + ex.message)
+        raise ex
+    client.close_connection()
+
+    if ok:
+        ctx.logger.info('Reservation with ID {0} deleted successfully'.format(reservation_id))
+    else:
+        ctx.logger.warning('Reservation with ID {0} could not be deleted, it might have been already been deleted'
+                           .format(reservation_id))
 
 
 @operation

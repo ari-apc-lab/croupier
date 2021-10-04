@@ -427,6 +427,18 @@ class InfrastructureInterface(object):
 
     #   ##################################################
 
+    def delete_reservation(self, ssh_client, reservation_id, deletion_path):
+        """
+        Deletes a reservation
+        @type ssh_client: SshClient
+        @param ssh_client: ssh client connected to an HPC login node
+        @type reservation_id: string
+        @param reservation_id: ID of the reservation to delete
+        @type deletion_path: string
+        @param deletion_path: Path where the executable that deletes reservations resides in the HPC
+        """
+        raise NotImplementedError("'delete_reservation' not implemented for this interface.")
+
     def _build_script(self, name, job_settings, workdir, ssh_client, logger, container=False):
         """
         Creates a script to run batch jobs

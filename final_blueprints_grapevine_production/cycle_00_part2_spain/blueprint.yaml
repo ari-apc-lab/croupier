@@ -454,30 +454,6 @@ node_templates:
               target: postfour_00_spain
 
 
-
-    output_transfer_reservation_delete_00_spain:
-        type: croupier.nodes.Job
-        properties:
-            job_options:
-                script: "reservation_delete_script.script"
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
-                max_time: '00:05:00'
-                partition: cola-corta
-                queue: batch
-            deployment:
-                bootstrap: "scripts/create_script_delete_reservation.sh"
-            skip_cleanup: True
-        relationships:
-            - type: job_managed_by_interface
-              target: cesga_hpc
-            - type: job_depends_on
-              target: postfive_00_spain
-
-
-
-
 deployment_settings:
     default_schedules:
         main:
