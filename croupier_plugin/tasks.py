@@ -33,7 +33,6 @@ from future import standard_library
 from builtins import str
 import socket
 import traceback
-from uuid import uuid4
 from datetime import datetime
 import pytz
 
@@ -275,8 +274,7 @@ def configure_monitor(address, **kwargs):
             ctx.logger.error(
                 'Could not find Monitoring section in the croupier config file. No HPC Exporter will be activated')
             return
-        unique_id = str(uuid4())
-        monitoring_id = ctx.deployment.id + unique_id
+        monitoring_id = ctx.deployment.name + ctx.deployment.id
         ctx.logger.info("Monitoring_id generated: " + monitoring_id)
         ctx.instance.runtime_properties["monitoring_id"] = monitoring_id
 

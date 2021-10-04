@@ -508,6 +508,4 @@ outputs:
     twentithird_job_name:
         description: first job nameP
         value: { get_attribute: [postfive_00_spain, job_name] }
-    transfer_job_name:
-        description: first job name
-        value: { get_attribute: [output_transfer_reservation_delete_00_spain, job_name] }
+
