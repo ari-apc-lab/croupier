@@ -214,6 +214,40 @@ data_types:
             name:
                 type: string
 
+    croupier.datatypes.ecmwf_query:
+        properties:
+            area:
+                type: string
+                required: true
+            params:
+                type: string
+                required: true
+            date:
+                type: string
+                required: false
+            time:
+                type: string
+                required: false
+            collection:
+                type: string
+                required: false
+            members:
+                type: string
+                required: false
+            ensemble:
+                type: string
+                required: false
+            input:
+                type: string
+                required: false
+            keep_input:
+                type: string
+                required: false
+            algorithm:
+                type: string
+                required: false
+
+
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs

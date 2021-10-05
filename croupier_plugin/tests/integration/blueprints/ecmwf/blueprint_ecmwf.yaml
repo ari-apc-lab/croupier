@@ -19,9 +19,9 @@
 #
 # @author: Jesus Ramos Rivas
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: jesus.ramos.external@atos.net
+#          e-mail: jesus.2.ramos@atos.net
 #
-# blueprint_single.yaml
+# blueprint_ecmwf.yaml
 
 
 tosca_definitions_version: cloudify_dsl_1_3
@@ -31,21 +31,35 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/plugin.yaml
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/croupier_plugin/tests/integration/blueprints/ecmwf/inputs_ecmwf_def.yaml
+
+inputs:
+    vault_config:
+        type: croupier.datatypes.vault_config
+    ecmwf_query:
+        type: croupier.datatypes.ecmwf_query
+    ecmwf_ssh_credentials:
+        type: croupier.datatypes.ssh_config
+    keycloak_credentials:
+        default:
+            username: ''
+            password: ''
 
 node_templates:
     hpc-vulcan:
         type: croupier.nodes.InfrastructureInterface
         properties:
-            config: { get_input: hpc_interface_config }
-            credentials: { get_input: hpc_interface_credentials }
-            external_monitor_entrypoint: { get_input: monitor_entrypoint }
-            job_prefix: { get_input: job_prefix }
-            base_dir: { get_input: "hpc_base_dir" }
-            monitor_period: 15
+            config:
+                infrastructure_interface: TORQUE
+            ssh_config:
+                get_credentials_from_vault: true
+                host: hawk.hlrs.de
+            vault_config: { get_input: vault_config }
+            job_prefix: ecmwf
+            base_dir: "$HOME"
+            monitoring_options:
+                monitor_period: 15
             skip_cleanup: true
-#            simulate: True  # COMMENT to test against a real HPC
-            workdir_prefix: "single"
+            workdir_prefix: "ecmwf"
 
     job1:
         type: croupier.nodes.Job

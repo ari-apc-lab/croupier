@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,9 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 workflows.py - Holds the plugin workflows
-'''
-import abc
-from abc import ABC
+"""
 import os
 
 import configparser
@@ -106,7 +104,6 @@ class JobGraphInstance(TaskGraphInstance):
 
         self.name = self.runtime_properties["job_prefix"] + self.instance.id
 
-
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
 
@@ -124,7 +121,7 @@ class JobGraphInstance(TaskGraphInstance):
     def delete_reservation(self):
         """ Sends the job's instance to the infrastructure queue """
         self.update_properties()
-        if not 'reservation' in self.runtime_properties:
+        if 'reservation' not in self.runtime_properties:
             return
         self.instance.send_event('Deleting reservation..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete_reservation')
@@ -154,8 +151,7 @@ class JobGraphInstance(TaskGraphInstance):
         """ Cleans job's aux files """
 
         self.instance.send_event('Cleaning job..')
-        result = self.instance.execute_operation('croupier.interfaces.'
-                                                 'lifecycle.cleanup',
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.cleanup',
                                                  kwargs={"name": self.name})
 
         self.instance.send_event('.. job cleaned')
@@ -427,7 +423,8 @@ class Monitor(object):
         """ True if there are nodes executing """
         return self._execution_pool
 
-def delete_reservations (job_instances_map):
+
+def delete_reservations(job_instances_map):
     for instance_name in job_instances_map:
         instance = job_instances_map[instance_name]
         instance.delete_reservation()
@@ -529,7 +526,7 @@ def install_croupier(**kwargs):
                              ' Did not revoke token')
             return
     except configparser.NoSectionError:
-        ctx.logger.error('Could not find the Vault section in the croupier config file. Did not recoke token')
+        ctx.logger.error('Could not find the Vault section in the croupier config file. Did not revoke token')
         return
 
     vault_address = vault_address if vault_address.startswith("http") else "http://" + vault_address
