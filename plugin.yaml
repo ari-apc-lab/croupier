@@ -36,19 +36,6 @@ plugins:
 
 data_types:
 
-    croupier.datatypes.vault_config:
-        properties:
-            username:
-                description: Username under which the ssh ssh_config are saved in vault
-                type: string
-                required: false
-                default: ''
-            token:
-                description: Vault token with access to the user's ssh ssh_config.
-                type: string
-                required: false
-                default: ''
-
     croupier.datatypes.wm_config:
         properties:
             infrastructure_interface:
@@ -79,10 +66,6 @@ data_types:
                 type: integer
                 required: false
                 default: 22
-            get_credentials_from_vault:
-                type: boolean
-                required: false
-                default: false
             private_key:
                 type: string
                 required: false
@@ -225,28 +208,49 @@ data_types:
             date:
                 type: string
                 required: false
+                default: ""
             time:
                 type: string
                 required: false
+                default: ""
             collection:
                 type: string
                 required: false
+                default: ""
             members:
                 type: string
                 required: false
+                default: ""
             ensemble:
                 type: string
                 required: false
+                default: ""
             input:
                 type: string
                 required: false
+                default: ""
             keep_input:
                 type: string
                 required: false
+                default: ""
             algorithm:
                 type: string
                 required: false
+                default: ""
+            max_step:
+                type: string
+                required: false
+                default: "1"
 
+    croupier.datatypes.keycloak_credentials:
+        properties:
+            user:
+                type: string
+                required: true
+            pw:
+                type: string
+                required: false
+                default: ''
 
 workflows:
     run_jobs:
@@ -261,9 +265,6 @@ node_types:
             config:
                 description: type
                 type: croupier.datatypes.wm_config
-            vault_config:
-                description: Information about the vault instance that contains the infrastructure's ssh_config. Token and username.
-                type: croupier.datatypes.vault_config
             ssh_config:
                 description: SSH configuration
                 type: croupier.datatypes.ssh_config
@@ -301,14 +302,6 @@ node_types:
                     install_method: none
         interfaces:
             cloudify.interfaces.lifecycle:
-                create:
-                    implementation: croupier.croupier_plugin.tasks.download_credentials_vault
-                    inputs:
-                        vault_config:
-                            default: { get_property: [SELF, vault_config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
-
                 configure:
                     implementation: croupier.croupier_plugin.tasks.configure_execution
                     inputs:
@@ -431,6 +424,20 @@ node_types:
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job
 
+    croupier.nodes.Vault:
+        derived_from: cloudify.nodes.Root
+        properties:
+            token:
+                type: string
+                required: true
+            user:
+                type: string
+                required: true
+            address:
+                type: string
+                required: false
+                default: ''
+
     croupier.nodes.HPCExporter:
         derived_from: cloudify.nodes.Root
         properties:
@@ -473,15 +480,15 @@ node_types:
     croupier.nodes.ECMWFVerticalInterpolation:
         derived_from: croupier.nodes.Data
         properties:
-            ecmwf_ssh_credentials:
+            ssh_config:
                 description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
-                default: {}
+                type: croupier.datatypes.ssh_config
             keycloak_credentials:
                 description: login credentials for hidalgo keycloak. Fields- user, pw
-                default: {}
+                type: croupier.datatypes.keycloak_credentials
             query:
                 description: ECMWF Query fields. Fields- params, date, time, area, max_steps, [ensemble], [memebers], [input], [keep_input], [algorithm]
-                default: {}
+                type: croupier.datatypes.ecmwf_query
             port:
                 type: string
                 default: 9984
@@ -490,6 +497,13 @@ node_types:
                 default: True
         interfaces:
             cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.download_credentials_vault_ecmwf
+                    inputs:
+                        vault_config:
+                            default: { get_property: [ SELF, vault_config ] }
+                        ssh_config:
+                            default: { get_property: [ SELF, ecmwf_ssh_config ] }
                 configure:
                     implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
                     max_retries: 0
@@ -558,3 +572,14 @@ relationships:
                 postconfigure:
                     implementation: croupier.croupier_plugin.tasks.pass_data_info
                     max_retries: 0
+
+    retrieve_credentials_from_vault:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+             cloudify.interfaces.relationship_lifecycle:
+                 preconfigure:
+                     implementation: croupier.croupier_plugin.tasks.download_vault_credentials
+                     inputs:
+                         token:   { get_property: [TARGET, token  ] }
+                         user:    { get_property: [TARGET, user   ] }
+                         address: { get_property: [TARGET, address] }

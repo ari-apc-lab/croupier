@@ -48,7 +48,7 @@ from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
 from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
-from croupier_plugin.vault.vault import get_secret
+import croupier_plugin.vault.vault as vault
 from croupier_plugin.accounting_client.model.user import (User)
 from croupier_plugin.accounting_client.accounting_client import (AccountingClient)
 from croupier_plugin.accounting_client.model.resource_consumption_record import (ResourceConsumptionRecord)
@@ -57,45 +57,35 @@ from croupier_plugin.accounting_client.model.reporter import (Reporter, Reporter
 from croupier_plugin.accounting_client.model.resource import (ResourceType)
 
 standard_library.install_aliases()
-# from celery.contrib import rdb
 
 accounting_client = AccountingClient()
 
 
-@operation
-def download_credentials_vault(ssh_config, vault_config, **kwargs):
-    config = configparser.RawConfigParser()
-    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
-    config.read(config_file)
-    if ssh_config['get_credentials_from_vault']:
+@operation()
+def download_vault_credentials(token, user, address, **kwargs):
+    if not 'address':
+        config = configparser.RawConfigParser()
+        config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+        config.read(config_file)
         try:
-            vault_address = config.get('Vault', 'vault_address')
-            if vault_address is None:
+            address = config.get('Vault', 'vault_address')
+            if address is None:
                 raise NonRecoverableError('Could not find Vault address in the croupier config file.')
-            vault_address = vault_address if vault_address.startswith('http') else 'http://' + vault_address
 
         except configparser.NoSectionError:
             raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
 
-        if "username" not in vault_config or "token" not in vault_config:
-            raise NonRecoverableError("Vault config missing (username or token)")
+    address = address if address.startswith('http') else 'http://' + address
 
-        host = ssh_config['host']
-        vault_username = vault_config["username"]
-        vault_token = vault_config["token"]
-        secret_endpoint = vault_address + "/v1/ssh/" + vault_username + "/" + host
-        ctx.logger.info("Downloading secret from " + secret_endpoint)
-        secret = get_secret(vault_token, secret_endpoint)
-        if "error" not in secret:
+    if 'ssh_config' in ctx.source.instance.runtime_properties:
+        ssh_config = ctx.source.instance.runtime_properties['ssh_config']
+        ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address)
+        ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
 
-            ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else ""
-            ssh_config["private_key"] = secret["ssh_pkey"] if "ssh_pkey" in secret else ""
-            ssh_config["user"] = secret["ssh_user"]
-            ctx.instance.runtime_properties["ssh_config"] = ssh_config
-        else:
-            raise NonRecoverableError("Could not get ssh_config from vault for hpc " + host +
-                                      "\n Status code: " + str(secret["error"]) +
-                                      "\n Content: " + str(secret["content"]))
+    if 'keycloak_credentials' in ctx.source.instance.runtime_properties:
+        keycloak_credentials = ctx.source.instance.runtime_properties['keycloak_credentials']
+        keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address)
+        ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
 
 
 @operation
@@ -850,8 +840,8 @@ def ecmwf_vertical_interpolation(query, **kwargs):
     ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
     server_port = ctx.node.properties['port']
     server_host = requests.get('https://api.ipify.org').text
-    keycloak_credentials = ctx.node.properties["keycloak_credentials"]
-    ecmwf_ssh_credentials = ctx.node.properties["ecmwf_ssh_credentials"]
+    keycloak_credentials = ctx.instance.runtime_properties["keycloak_credentials"]
+    ecmwf_ssh_credentials = ctx.instance.runtime_properties["ssh_config"]
     ctx.logger.info('IP is: ' + server_host)
 
     arguments = {"notify": "http://" + server_host + ":" + str(server_port) + "/ready",
@@ -859,16 +849,16 @@ def ecmwf_vertical_interpolation(query, **kwargs):
                  "password": keycloak_credentials["pw"],
                  "params": query["params"],
                  "area": query["area"],
-                 "max_step": query["max_step"] if "max_step" in query else "1",
-                 "ensemble": query["ensemble"] if "ensemble" in query else "",
-                 "input": query["input"] if "input" in query else "",
-                 "members": query["members"] if "members" in query else "",
-                 "keep_input": query["keep_input"] if "keep_input" in query else "",
-                 "collection": query["collection"] if "collection" in query else "",
+                 "max_step": query["max_step"],
+                 "ensemble": query["ensemble"],
+                 "input": query["input"] ,
+                 "members": query["members"],
+                 "keep_input": query["keep_input"],
+                 "collection": query["collection"],
                  "algorithm": query["algorithm"] if "algorithm" in query and query[
                      "algorithm"] in ALGORITHMS else ""}
 
-    if "date" in query:
+    if query["date"]:
         arguments["date"] = query["date"]
         arguments["time"] = query["time"]
 

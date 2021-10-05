@@ -516,12 +516,13 @@ def install_croupier(**kwargs):
 
     install(ctx)
 
+    vault_tokens = {}
     config = configparser.RawConfigParser()
     config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
     config.read(config_file)
     try:
-        vault_address = config.get('Vault', 'vault_address')
-        if vault_address is None:
+        default_vault_address = config.get('Vault', 'vault_address')
+        if default_vault_address is None:
             ctx.logger.error('Could not find vault_address in the Vault section of the croupier config file.'
                              ' Did not revoke token')
             return
@@ -529,22 +530,24 @@ def install_croupier(**kwargs):
         ctx.logger.error('Could not find the Vault section in the croupier config file. Did not revoke token')
         return
 
-    vault_address = vault_address if vault_address.startswith("http") else "http://" + vault_address
-    vault_config = {"address": vault_address}
     for node in ctx.nodes:
-        if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
-            vault_config["token"] = node.properties["vault_config"]["token"]
-            break
-    if vault_config["token"]:
-        error = revoke_token(vault_config)
+        if 'croupier.nodes.Vault' in node.type_hierarchy:
+            address = node.properties['address'] if node.properties['address'] else default_vault_address
+            address = address if address.startswith("http") else "http://" + address
+            vault_tokens[address] = node.properties['token']
+
+    for vault_address in vault_tokens:
+
+        error = revoke_token(vault_tokens[vault_address], vault_address)
         if error:
-            ctx.logger.error("Could not revoke vault token" +
+            ctx.logger.error("Could not revoke vault token from " + vault_address +
                              "\n Status code: " + str(error["error"]) +
                              "\n Content: " + str(error["content"]))
 
         else:
-            ctx.logger.info("Token successfully revoked")
-    else:
+            ctx.logger.info("Token from " + vault_address + "successfully revoked")
+
+    if not vault_tokens:
         ctx.logger.warning("Could not find any tokens to revoke")
     ctx.logger.info("------------------Workflow Finished-----------------------")
 

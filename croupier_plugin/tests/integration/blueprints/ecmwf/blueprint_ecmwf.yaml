@@ -30,19 +30,17 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/plugin.yaml
+    - plugin.yaml
 
 inputs:
-    vault_config:
-        type: croupier.datatypes.vault_config
+    vault_user:
+        type: string
+    vault_token:
+        type: string
     ecmwf_query:
         type: croupier.datatypes.ecmwf_query
     ecmwf_ssh_credentials:
         type: croupier.datatypes.ssh_config
-    keycloak_credentials:
-        default:
-            username: ''
-            password: ''
 
 node_templates:
     hpc-vulcan:
@@ -51,15 +49,23 @@ node_templates:
             config:
                 infrastructure_interface: TORQUE
             ssh_config:
-                get_credentials_from_vault: true
                 host: hawk.hlrs.de
-            vault_config: { get_input: vault_config }
             job_prefix: ecmwf
             base_dir: "$HOME"
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
             workdir_prefix: "ecmwf"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            user: { get_input: vault_user }
+            token: { get_input: vault_token}
+
 
     job1:
         type: croupier.nodes.Job
@@ -94,12 +100,14 @@ node_templates:
     weather_data:
         type: croupier.nodes.ECMWFVerticalInterpolation
         properties:
-            ecmwf_ssh_credentials: { get_input: ecmwf_ssh_credentials }
+            ssh_config: { get_input: ecmwf_ssh_credentials }
             keycloak_credentials: { get_input: keycloak_credentials }
             query: { get_input: ecmwf_query }
         relationships:
             - type: data_target_infrastructure
               target: hpc-vulcan
+            - type: retrieve_credentials_from_vault
+              target: vault
 
 outputs:
     job1_name:
