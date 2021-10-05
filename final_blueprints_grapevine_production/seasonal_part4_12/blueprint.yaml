@@ -34,10 +34,7 @@ imports:
 inputs:
     vault_config:
         type: croupier.datatypes.vault_config
-    reservation_id:
-        type: string
-        default: ''
-        required: false
+
 
 node_templates:
     hpc_exporter:
@@ -116,6 +113,7 @@ deployment_settings:
             workflow: run_jobs
             since: '2021-10-01 00:00'
             recurrence: '1d'
+            timezone: 'Europe/Madrid'
 
 
 outputs:
