@@ -133,15 +133,16 @@ def get_prevailing_state(state1, state2):
 class InfrastructureInterface(object):
     infrastructure_interface = None
 
-    def __init__(self, infrastructure_interface):
+    def __init__(self, infrastructure_interface, monitor_start_time=None):
         self.infrastructure_interface = infrastructure_interface
+        self.monitor_start_time = monitor_start_time
         # self.audit_inserted = False
 
     @staticmethod
-    def factory(infrastructure_interface):
+    def factory(infrastructure_interface, monitor_start_time=None):
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
-            return Slurm(infrastructure_interface)
+            return Slurm(infrastructure_interface, monitor_start_time)
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
             return Torque(infrastructure_interface)
@@ -160,7 +161,8 @@ class InfrastructureInterface(object):
                    is_singularity,
                    logger,
                    workdir=None,
-                   context=None):
+                   context=None,
+                   timezone=None):
         """
         Sends a job to the HPC
 
@@ -179,7 +181,9 @@ class InfrastructureInterface(object):
         @rtype string
         @param context: Dictionary containing context env vars
         @rtype dictionary of strings
-        @return Slurm's job name sent. None if an error arise.
+        @param timezone: Timezone of the HPC the job is being submitted to
+        @rtype string
+        @return Slurm's job id sent. None if an error arise.
         """
         if not SshClient.check_ssh_client(ssh_client, logger):
             logger.error('check_ssh_client failed')
@@ -229,7 +233,7 @@ class InfrastructureInterface(object):
             settings = job_settings
 
         # build the call to submit the job
-        response = self._build_job_submission_call(name, settings, ssh_client, workdir, logger)
+        response = self._build_job_submission_call(name, settings, timezone=timezone)
 
         if 'error' in response:
             logger.error(
@@ -263,7 +267,7 @@ class InfrastructureInterface(object):
             logger.error("Job submission '" + call + "' exited with code " +
                          str(exit_code) + ":\n" + output)
             return False
-        return True
+        return output.split(' ')[-1].strip()
 
     def clean_job_aux_files(self,
                             ssh_client,
@@ -308,9 +312,9 @@ class InfrastructureInterface(object):
         @type ssh_client: SshClient
         @param ssh_client: ssh client connected to an HPC login node
         @type name: string
-        @param name: name of the job
-        @type job_settings: dictionary
-        @param job_settings: dictionary with the job options
+        @param name: Job name
+        @type job_options: dictionary
+        @param job_options: dictionary with the job options
         @type is_singularity: bool
         @param is_singularity: True if the job is in a container
         @rtype string
@@ -352,7 +356,8 @@ class InfrastructureInterface(object):
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         """
         Generates specific manager data accouding to job_settings
 
@@ -406,12 +411,13 @@ class InfrastructureInterface(object):
             "'_get_envar' not implemented.")
 
     # Monitor
-    def get_states(self,  workdir, credentials, job_names, logger):
+    def get_states(self, workdir, credentials, job_names, logger):
         """
         Get the states of the jobs names
-
+        @type workdir: string
+        @param workdir: Working directory in the HPC
         @type credentials: dictionary
-        @param credentials: dictionary with the HPC SSH credentials
+        @param credentials: SSH ssh_config to connect to the HPC
         @type job_names: list
         @param job_names: list of the job names to retrieve their states
         @rtype dict
@@ -420,6 +426,18 @@ class InfrastructureInterface(object):
         raise NotImplementedError("'get_states' not implemented.")
 
     #   ##################################################
+
+    def delete_reservation(self, ssh_client, reservation_id, deletion_path):
+        """
+        Deletes a reservation
+        @type ssh_client: SshClient
+        @param ssh_client: ssh client connected to an HPC login node
+        @type reservation_id: string
+        @param reservation_id: ID of the reservation to delete
+        @type deletion_path: string
+        @param deletion_path: Path where the executable that deletes reservations resides in the HPC
+        """
+        raise NotImplementedError("'delete_reservation' not implemented for this interface.")
 
     def _build_script(self, name, job_settings, workdir, ssh_client, logger, container=False):
         """
@@ -436,7 +454,6 @@ class InfrastructureInterface(object):
         if not container:
             if not isinstance(job_settings, dict) or \
                     not isinstance(name, basestring):
-
                 logger.error("Batch job settings malformed")
                 return None
 
@@ -512,7 +529,7 @@ class InfrastructureInterface(object):
 
         return script
 
-    def _build_job_submission_call(self, name, job_settings, ssh_client, workdir, logger):
+    def _build_job_submission_call(self, name, job_settings, timezone):
         """
         Generates submission command line as a string
 
@@ -547,7 +564,8 @@ class InfrastructureInterface(object):
 
         response = self._parse_job_settings(
             name,
-            job_settings)
+            job_settings,
+            timezone=timezone)
 
         # TODO Add extra audit support
         # if not self.audit_inserted:

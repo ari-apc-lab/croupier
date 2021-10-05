@@ -1,0 +1,542 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+#
+# blueprint_four.yaml
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    # to speed things up, it is possible downloading this file,
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine_production/resources/types/cfy_types.yaml
+    # relative import of plugin.yaml that resides in the blueprint directory
+    - plugin:croupier
+
+inputs:
+    vault_config:
+        type: croupier.datatypes.vault_config
+
+
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    cesga_hpc:
+        type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+        properties:
+            config:
+                infrastructure_interface: SLURM
+            ssh_config:
+                get_credentials_from_vault: true
+                host: ft2.cesga.es
+            vault_config: { get_input: vault_config }
+            job_prefix: ''
+            base_dir: /mnt/netapp2/Store_uni/home/otras/gag/pvo/croupier_logs
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            #simulate: True # COMMENT to test against a real HPC
+            workdir_prefix: "cycle12_part2_onlyspain"
+
+
+    madis_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/OBS_SCRIPTS/download_operational_madis.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+
+
+    imerg_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/OBS_SCRIPTS/download_operational_IMERG.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+
+
+    geogrid_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/TEST_WPS/run_geogrid.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: madis_12_spain
+            - type: job_depends_on
+              target: imerg_12_spain
+
+
+
+    ungrib_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/TEST_WPS/run_ungrib.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:30:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: geogrid_12_spain
+
+
+
+
+
+    ungribSST_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/TEST_WPS/run_ungrib_SST.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: ungrib_12_spain
+
+
+    metgrid_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/TEST_WPS/run_metgrid.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 10
+                tasks_per_node: 24
+                max_time: '01:15:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: ungribSST_12_spain
+
+
+
+
+
+
+    real_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/WRF_SCRIPTS/run_real.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 24
+                tasks_per_node: 24
+                max_time: '00:15:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: metgrid_12_spain
+
+
+
+
+
+    prep_obs_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/OBS_SCRIPTS/prepare_obs.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:45:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: real_12_spain
+
+
+
+
+
+
+
+    updatelowerspain_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/WRF_SCRIPTS/run_update_lower.in) 12 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:15:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: prep_obs_12_spain
+
+
+
+
+
+
+
+
+    wrfvar_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/WRF_SCRIPTS/run_wrfvar.in) 12 SPAIN 2"
+                arguments:
+                - script
+                nodes: 14
+                tasks: 336
+                tasks_per_node: 24
+                max_time: '03:00:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: updatelowerspain_job
+
+
+
+
+
+
+    wrf_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/WRF_SCRIPTS/run_wrf.in) 12 SPAIN 2"
+                arguments:
+                - script
+                nodes: 14
+                tasks: 336
+                tasks_per_node: 24
+                max_time: '04:30:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: wrfvar_12_spain
+
+
+
+
+# POST PROCESSING
+
+    postone_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/UPP_SCRIPTS/run_unipost_d01.in) 12 SPAIN"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 4
+                tasks_per_node: 4
+                max_time: '00:45:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: wrf_12_spain
+
+
+    posttwo_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/UPP_SCRIPTS/run_unipost_d02.in) 12 SPAIN"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 4
+                tasks_per_node: 4
+                max_time: '00:45:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: wrf_12_spain
+
+
+    postthree_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/UPP_SCRIPTS/run_unipost_d03.in) 12 SPAIN"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 4
+                tasks_per_node: 4
+                max_time: '00:45:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: wrf_12_spain
+
+
+
+
+    postfour_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/UPP_SCRIPTS/run_unipost_analyses.in) 12 SPAIN"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 4
+                tasks_per_node: 4
+                max_time: '00:45:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: wrf_12_spain
+
+
+    postfive_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS/POST_PR/post_prep_SPAIN.sh) 12"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                queue: batch
+                reservation: GV_R%d%m_12_S
+                recurrent_reservation: true
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: postone_12_spain
+            - type: job_depends_on
+              target: posttwo_12_spain
+            - type: job_depends_on
+              target: postthree_12_spain
+            - type: job_depends_on
+              target: postfour_12_spain
+
+
+deployment_settings:
+    default_schedules:
+        main:
+            workflow: run_jobs
+            since: '2021-10-01 23:58'
+            recurrence: '1d'
+            timezone: 'Europe/Madrid'
+
+
+outputs:
+    first_job_name:
+        description: first job name
+        value: { get_attribute: [madis_12_spain, job_name] }
+    second_job_name:
+        description: first job name
+        value: { get_attribute: [imerg_12_spain, job_name] }
+    third_job_name:
+        description: first job name
+        value: { get_attribute: [geogrid_12_spain, job_name] }
+    fourth_job_name:
+        description: first job name
+        value: { get_attribute: [ungrib_12_spain, job_name] }
+    fifth_job_name:
+        description: first job name
+        value: { get_attribute: [ungribSST_12_spain, job_name] }
+    sixth_job_name:
+        description: first job name
+        value: { get_attribute: [metgrid_12_spain, job_name] }
+    eleventh_job_name:
+        description: first job name
+        value: { get_attribute: [real_12_spain, job_name] }
+    thirteenth_job_name:
+        description: first job name
+        value: { get_attribute: [prep_obs_12_spain, job_name] }
+    updatelowerspain_job_name:
+        description: first job name
+        value: { get_attribute: [updatelowerspain_job, job_name] }
+    fifteenth_job_name:
+        description: first job name
+        value: { get_attribute: [wrfvar_12_spain, job_name] }
+    seventeenth_job_name:
+        description: first job name
+        value: { get_attribute: [wrf_12_spain, job_name] }
+    nineteenth_job_name:
+        description: first job name
+        value: { get_attribute: [postone_12_spain, job_name] }
+    twentieth_job_name:
+        description: first job name
+        value: { get_attribute: [posttwo_12_spain, job_name] }
+    twentifirst_job_name:
+        description: first job name
+        value: { get_attribute: [postthree_12_spain, job_name] }
+    twentisecond_job_name:
+        description: first job name
+        value: { get_attribute: [postfour_12_spain, job_name] }
+    twentithird_job_name:
+        description: first job name
+        value: { get_attribute: [postfive_12_spain, job_name] }
+

@@ -25,15 +25,21 @@ workflows.py - Holds the plugin workflows
 '''
 import abc
 from abc import ABC
+import os
+
+import configparser
 from builtins import next
 from builtins import str
 from builtins import object
 import sys
 import time
+from datetime import datetime
 
 from cloudify.decorators import workflow
 from cloudify.workflows import ctx, api, tasks
+from cloudify.plugins.workflows import install
 from croupier_plugin.job_requester import JobRequester
+from croupier_plugin.vault.vault import revoke_token
 
 LOOP_PERIOD = 1
 
@@ -91,32 +97,21 @@ class JobGraphInstance(TaskGraphInstance):
         self.workdir = self.runtime_properties['workdir']
         self.simulate = self.runtime_properties["simulate"]
 
-        # Decide how to monitor the job
-        if self.runtime_properties["external_monitor_entrypoint"]:
-            self.monitor_type = self.runtime_properties["external_monitor_type"]
-            self.monitor_config = {
-                'url': ('http://' +
-                        self.runtime_properties["external_monitor_entrypoint"] +
-                        self.runtime_properties["external_monitor_port"])
-            }
-        else:  # internal monitoring
-            self.monitor_type = self.runtime_properties["infrastructure_interface"]
-            self.monitor_config = self.runtime_properties["credentials"]
+        self.monitor_type = self.runtime_properties["infrastructure_interface"]
+        self.monitor_config = self.runtime_properties["ssh_config"]
 
-        self.monitor_period = int(self.runtime_properties["monitor_period"])
+        monitoring_options = self.runtime_properties["monitoring_options"]
+        self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \
+            else 10
 
-        # build job name
-        instance_components = instance.id.split('_')
-        self.name = self.runtime_properties["job_prefix"] + \
-                    instance_components[-1]
+        self.name = self.runtime_properties["job_prefix"] + self.instance.id
+
 
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
 
         self.instance.send_event('Queuing job..')
-        result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue',
-                                                 kwargs={"name": self.name})
-        # result.task.wait_for_terminated()
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
@@ -126,13 +121,21 @@ class JobGraphInstance(TaskGraphInstance):
         self.set_status(init_state)
         return result
 
+    def delete_reservation(self):
+        """ Sends the job's instance to the infrastructure queue """
+        self.update_properties()
+        if not 'reservation' in self.runtime_properties:
+            return
+        self.instance.send_event('Deleting reservation..')
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete_reservation')
+        result.get()
+
     def publish(self):
         """ Publish the job's instance outputs """
 
         self.instance.send_event('Publishing job outputs..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.publish',
                                                  kwargs={"name": self.name, "audit": self.audit})
-        # result.task.wait_for_terminated()
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.instance.send_event('..outputs sent for publication')
@@ -154,10 +157,9 @@ class JobGraphInstance(TaskGraphInstance):
         result = self.instance.execute_operation('croupier.interfaces.'
                                                  'lifecycle.cleanup',
                                                  kwargs={"name": self.name})
-        # result.task.wait_for_terminated()
+
         self.instance.send_event('.. job cleaned')
 
-        # print result.task.dump()
         return result.task
 
     def cancel(self):
@@ -166,12 +168,10 @@ class JobGraphInstance(TaskGraphInstance):
         self.clean()
 
         self.instance.send_event('Cancelling job..')
-        result = self.instance.execute_operation('croupier.interfaces.'
-                                                 'lifecycle.cancel',
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.cancel',
                                                  kwargs={"name": self.name})
         self.instance.send_event('.. job canceled')
         result.get()
-        # result.task.wait_for_terminated()
 
         self._status = 'CANCELLED'
 
@@ -345,13 +345,13 @@ class Monitor(object):
     MAX_ERRORS = 5
 
     def __init__(self, job_instances_map, logger):
-        self.job_ids = {}
         self._execution_pool = {}
         self.timestamp = 0
         self.job_instances_map = job_instances_map
         self.logger = logger
         self.jobs_requester = JobRequester()
         self.continued_errors = 0
+        self.monitor_start_time = datetime.now()
 
     def update_status(self):
         """Gets all executing instances and update their state"""
@@ -386,25 +386,26 @@ class Monitor(object):
             return
 
         # then look for the status of the instances through its name
-        # try:
-        states, audits = self.jobs_requester.request(monitor_jobs, self.logger)
+        try:
+            states, audits = self.jobs_requester.request(monitor_jobs, self.monitor_start_time, self.logger)
 
-        # set job audit
-        for inst_name, audit in audits.items():
-            self.job_instances_map[inst_name].audit = audit
+            # set job audit
+            for inst_name, audit in audits.items():
+                self.job_instances_map[inst_name].audit = audit
 
-        # finally set job status
-        for inst_name, state in states.items():
-            self.job_instances_map[inst_name].set_status(state)
+            # finally set job status
+            for inst_name, state in states.items():
+                self.job_instances_map[inst_name].set_status(state)
 
-        self.continued_errors = 0
-        # except Exception as exp:
-        #    if self.continued_errors >= Monitor.MAX_ERRORS:
-        #       self.logger.error(str(exp))
-        #       raise exp
-        #    else:
-        #       self.logger.warning(str(exp))
-        #       self.continued_errors += 1
+            self.continued_errors = 0
+        except Exception as exp:
+            if self.continued_errors >= Monitor.MAX_ERRORS:
+                self.logger.error("Error when monitoring jobs: " + str(exp))
+                raise exp
+            else:
+                self.continued_errors += 1
+                count = str(self.continued_errors)+"/"+str(Monitor.MAX_ERRORS)
+                self.logger.warning("Error when monitoring jobs ("+count+"): " + str(exp))
 
         # We wait to slow down the loop
         sys.stdout.flush()  # necessary to output work properly with sleep
@@ -425,6 +426,11 @@ class Monitor(object):
     def is_something_executing(self):
         """ True if there are nodes executing """
         return self._execution_pool
+
+def delete_reservations (job_instances_map):
+    for instance_name in job_instances_map:
+        instance = job_instances_map[instance_name]
+        instance.delete_reservation()
 
 
 def build_graph(nodes):
@@ -456,7 +462,6 @@ def build_graph(nodes):
 
 def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
-
     root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
@@ -479,7 +484,6 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         for node_name, exec_node in monitor.get_executions_iterator():
             if exec_node.check_status():
                 if exec_node.completed:
-                    ctx.logger.info("Finished job " + str(exec_node.name))
                     exec_node.clean_all_instances()
                     exec_nodes_finished.append(node_name)
                     new_nodes_to_execute = exec_node.get_children_ready()
@@ -500,9 +504,52 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         ctx.logger.info("Cancelling jobs...")
         cancel_all(monitor.get_executions_iterator())
 
-    ctx.logger.info(
-        "------------------Workflow Finished-----------------------")
+    delete_reservations(job_instances_map)
+
+    ctx.logger.info("------------------Workflow Finished-----------------------")
     return
+
+
+@workflow
+def install_croupier(**kwargs):
+
+    # deployment_id = ctx.nodes[0].properties['resource_config']['deployment']['id']
+    # rest_client = get_rest_client()
+    # rest_client.executions.start(deployment_id, "install")
+
+    install(ctx)
+
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+    config.read(config_file)
+    try:
+        vault_address = config.get('Vault', 'vault_address')
+        if vault_address is None:
+            ctx.logger.error('Could not find vault_address in the Vault section of the croupier config file.'
+                             ' Did not revoke token')
+            return
+    except configparser.NoSectionError:
+        ctx.logger.error('Could not find the Vault section in the croupier config file. Did not recoke token')
+        return
+
+    vault_address = vault_address if vault_address.startswith("http") else "http://" + vault_address
+    vault_config = {"address": vault_address}
+    for node in ctx.nodes:
+        if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
+            vault_config["token"] = node.properties["vault_config"]["token"]
+            break
+    if vault_config["token"]:
+        error = revoke_token(vault_config)
+        if error:
+            ctx.logger.error("Could not revoke vault token" +
+                             "\n Status code: " + str(error["error"]) +
+                             "\n Content: " + str(error["content"]))
+
+        else:
+            ctx.logger.info("Token successfully revoked")
+    else:
+        ctx.logger.warning("Could not find any tokens to revoke")
+    ctx.logger.info("------------------Workflow Finished-----------------------")
 
 
 def cancel_all(executions):
@@ -516,7 +563,6 @@ def wait_tasks_to_finish(tasks_result_list):
     """Blocks until all tasks have finished"""
     for result in tasks_result_list:
         result.get()
-        # task.wait_for_terminated()
 
 
 @workflow

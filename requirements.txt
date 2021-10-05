@@ -1,8 +1,7 @@
-setuptools~=40.7.3
+setuptools~=47.3.1
 future~=0.18.2
-PyYAML~=3.10
+PyYAML~=5.3.1
 requests~=2.24.0
-cloudify~=20.3.3
-paramiko~=2.7.2
 bottle~=0.12.7
 wget~=3.2
+pytz

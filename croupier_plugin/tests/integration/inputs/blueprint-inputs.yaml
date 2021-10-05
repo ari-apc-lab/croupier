@@ -253,7 +253,7 @@ ckan_outputs_dataset:
   type: ckan
 
 #################### Instance info ####################
-instance_id: test-jcarnero
+instance_id: test
 
 #################### ECMWF ####################
   ecmwf_ssh_credentials:

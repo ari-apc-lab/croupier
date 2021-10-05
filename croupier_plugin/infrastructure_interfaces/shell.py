@@ -35,7 +35,8 @@ class Shell(infrastructure_interface.InfrastructureInterface):
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = ''
 
         # add executable and arguments
@@ -55,7 +56,6 @@ class Shell(infrastructure_interface.InfrastructureInterface):
 
 # Monitor
     def get_states(self, workdir, credentials, job_names, logger):
-
         call = "cat croupier-monitor.data"
 
         client = SshClient(credentials)

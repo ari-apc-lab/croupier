@@ -1,0 +1,94 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint_singularity.yaml
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    - plugin.yaml
+
+inputs:
+    vault_config:
+        description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
+        default:
+            username: ''
+            token: ''
+        type: croupier.datatypes.vault_config
+
+node_templates:
+    cesga_hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: SLURM
+            ssh_config:
+                host: ft2.cesga.es
+                get_credentials_from_vault: true
+            vault_config: { get_input: vault_config }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: false
+            #simulate: True  # COMMENT to test against a real HPC
+            workdir_prefix: "easy_singularity"
+
+    easy_job:
+        type: croupier.nodes.SingularityJob
+        properties:
+            job_options:
+                pre:
+                    - { mpi_load_command }
+                    - { singularity_load_command }
+                partition: cola_corta
+                image: { singularity_image_storage } "/" { singularity_image_filename }
+                volumes:
+                    - { scratch_voulume_mount_point }
+                    - { singularity_mount_point }
+                commands: ["/usr/local/bin/easy.sh"]
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:05:00"
+            deployment:
+                bootstrap: "scripts/singularity_bootstrap.sh"
+                revert: "scripts/singularity_revert.sh"
+                inputs:
+                    - { singularity_image_storage }
+                    - { singularity_image_filename }
+                    - { singularity_image_uri }
+                    - { singularity_load_command }
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_hpc
+
+outputs:
+    easy_job_name:
+        description: easy job name in the HPC
+        value: { get_attribute: [easy_job, job_name] }

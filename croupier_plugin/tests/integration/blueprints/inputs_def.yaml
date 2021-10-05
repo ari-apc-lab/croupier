@@ -36,10 +36,9 @@ inputs:
   hpc_interface_config:
     description: timezone and HPC interface
     default:
-      country_tz: Europe/Madrid
       infrastructure_interface: SLURM
   hpc_interface_credentials:
-    description: HPC credentials
+    description: HPC ssh_config
     default: {}
   mpi_load_command:
     default: ''
@@ -51,6 +50,8 @@ inputs:
     default: ''
   partition_name:
     default: default
+  reservation_id:
+    default: ''
   singularity_image_storage:
     description: Path to store the downloaded singularity image
     default: $HOME
@@ -86,7 +87,7 @@ inputs:
     default:
       infrastructure_interface: SHELL
   cloud_interface_credentials:
-    description: Cloud credentials
+    description: Cloud ssh_config
     default: {}
   openstack_config:
     default: {}

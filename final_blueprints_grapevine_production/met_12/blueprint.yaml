@@ -1,0 +1,499 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+#
+# blueprint_single.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine_production/resources/types/cfy_types.yaml
+    - plugin:croupier
+
+
+inputs:
+    vault_config:
+        type: croupier.datatypes.vault_config
+
+
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    cesga_interface:
+        type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+        properties:
+            config:
+                infrastructure_interface: SLURM
+            ssh_config:
+                get_credentials_from_vault: true
+                host: ft2.cesga.es
+            vault_config: { get_input: vault_config }
+            job_prefix: ''
+            base_dir: /mnt/netapp2/Store_uni/home/otras/gag/pvo/croupier_logs
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            #simulate: True  # COMMENT to test against a real HPC
+            workdir_prefix: "MET_12"
+
+
+
+    prep_rain_era_12:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/PRECIP_MET/prep_rain_era.sh) 12 192"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '01:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+
+
+    prep_rh_obs_12:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/RH_MET/rh_prep_obs.sh) 12 192"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:45:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+
+
+    prep_wind_obs_12:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/WIND_MET/wind_prep_obs.sh) 12 192"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '01:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+
+
+    prep_wind_wrf_12_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/WIND_MET/wind_prep_wrf.sh) 12 192 GREECE"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '01:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+
+
+    prep_wind_wrf_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/WIND_MET/wind_prep_wrf.sh) 12 192 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '01:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+
+
+    met_run_rain_12_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/PRECIP_MET/met_run_RAIN.sh) 12 192 GREECE"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+    met_run_temp_12_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/TEMP_MET/met_run_ERA_TEMP.sh) 12 192 GREECE"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+    met_run_rh_12_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/RH_MET/met_run_ERA_RH.sh) 12 192 GREECE"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+
+
+    met_run_wind_12_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/WIND_MET/met_run_WIND.sh) 12 192 GREECE"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+    met_run_rain_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/PRECIP_MET/met_run_RAIN.sh) 12 192 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+    met_run_temp_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/TEMP_MET/met_run_ERA_TEMP.sh) 12 192 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+    met_run_rh_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/RH_MET/met_run_ERA_RH.sh) 12 192 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+
+
+    met_run_wind_12_spain:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/MET_SCRIPTS/WIND_MET/met_run_WIND.sh) 12 192 SPAIN"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '04:30:00'
+                partition: thinnodes
+                reservation: MET_%d%m_12
+                recurrent_reservation: true
+                # qos: shared
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: prep_rain_era_12
+            - type: job_depends_on
+              target: prep_rh_obs_12
+            - type: job_depends_on
+              target: prep_wind_obs_12
+            - type: job_depends_on
+              target: prep_wind_wrf_12_greece
+            - type: job_depends_on
+              target: prep_wind_wrf_12_spain
+
+
+deployment_settings:
+    default_schedules:
+        main:
+            workflow: run_jobs
+            since: '2021-10-01 07:00'
+            recurrence: '1d'
+            timezone: 'Europe/Madrid'
+
+
+outputs:
+    job_4_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [prep_rain_era_12, job_name] }
+    job_5_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [prep_rh_obs_12, job_name] }
+    job_6_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [prep_wind_obs_12, job_name] }
+    job_7_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [prep_wind_wrf_12_greece, job_name] }
+    job_8_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [prep_wind_wrf_12_spain, job_name] }
+    job_9_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [met_run_rain_12_greece, job_name] }
+    job_10_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [met_run_temp_12_greece, job_name] }
+    job_11_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [met_run_rh_12_greece, job_name] }
+    job_12_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [met_run_wind_12_greece, job_name] }
+    job_13_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [met_run_rain_12_spain, job_name] }
+    job_14_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [met_run_temp_12_spain, job_name] }
+    job_15_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [met_run_rh_12_spain, job_name] }
+    job_16_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [met_run_wind_12_spain, job_name] }
+    job_17_name:
+        description: Bernoulli job 2 in the HPC
+        value: { get_attribute: [reservation_delete_met_12, job_name] }

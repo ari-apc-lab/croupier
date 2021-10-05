@@ -1,0 +1,209 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+#
+# blueprint_single.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine_production/resources/types/cfy_types.yaml
+    - plugin:croupier
+
+inputs:
+    vault_config:
+        type: croupier.datatypes.vault_config
+
+
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    cesga_interface:
+        type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+        properties:
+            config:
+                infrastructure_interface: SLURM
+            ssh_config:
+                get_credentials_from_vault: true
+                host: ft2.cesga.es
+            vault_config: { get_input: vault_config }
+            job_prefix: ''
+            base_dir: /mnt/netapp2/Store_uni/home/otras/gag/pvo/croupier_logs
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            #simulate: True  # COMMENT to test against a real HPC
+            workdir_prefix: "SEASONAL_PART2_18"
+
+
+    geogrid_18:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/SEASONAL_SCRIPTS/TEST_WPS/run_geogrid.in) 18"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                reservation: SEAS2_%d%m_18
+                recurrent_reservation: true
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+
+
+    ungrib_pgb_18:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/SEASONAL_SCRIPTS/TEST_WPS/run_ungrib_pgb.in) 18"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:45:00'
+                partition: thinnodes
+                reservation: SEAS2_%d%m_18
+                recurrent_reservation: true
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: geogrid_18
+
+
+    ungrib_sfc_18:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/SEASONAL_SCRIPTS/TEST_WPS/run_ungrib_sfc.in) 18"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:25:00'
+                partition: thinnodes
+                reservation: SEAS2_%d%m_18
+                recurrent_reservation: true
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: ungrib_pgb_18
+
+
+    metgrid_18:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/SEASONAL_SCRIPTS/TEST_WPS/run_metgrid.in) 18"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 24
+                tasks_per_node: 24
+                max_time: '01:00:00'
+                partition: thinnodes
+                reservation: SEAS2_%d%m_18
+                recurrent_reservation: true
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: ungrib_sfc_18
+
+
+    real_18:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_climate_model_workflow/SEASONAL_SCRIPTS/WRF_SCRIPTS/run_real.in) 18"
+                arguments:
+                - script
+                nodes: 2
+                tasks: 48
+                tasks_per_node: 24
+                max_time: '00:45:00'
+                partition: thinnodes
+                reservation: SEAS2_%d%m_18
+                recurrent_reservation: true
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: job_managed_by_interface
+              target: cesga_interface
+            - type: job_depends_on
+              target: metgrid_18
+
+
+
+deployment_settings:
+    default_schedules:
+        main:
+            workflow: run_jobs
+            since: '2021-10-01 00:00'
+            recurrence: '1d'
+            timezone: 'Europe/Madrid'
+
+
+outputs:
+    job_2_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [geogrid_18, job_name] }
+    job_3_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [ungrib_pgb_18, job_name] }
+    job_4_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [ungrib_sfc_18, job_name] }
+    job_5_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [metgrid_18, job_name] }
+    job_6_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [real_18, job_name] }
+    job_7_name:
+        description: Bernoulli job 1 in the HPC
+        value: { get_attribute: [reservation_delete_seas2_18, job_name] }

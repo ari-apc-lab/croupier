@@ -1,7 +1,21 @@
 #!/bin/bash
 set -e
 
+while getopts 'hb:' OPTION; do
+  case "$OPTION" in
+    h)
+      echo "Usage: $0 [-b blueprint_folder] " >&2
+      exit 1
+      ;;
+    b)
+      blueprints_folder="$OPTARG"
+      ;;
+    esac
+done
+
 echo 'This script installs Cloudify and Croupier, overriding any preexisting installation'
+echo 'Eventually, it can install the zipped blueprints located at given folder with option -b <path>'
+echo 'The name of the blueprint yaml contained in the zip file must be blueprint.yaml'
 echo 'Dependencies:'
 echo '1- Docker running'
 echo '2- Python 3.6 installed in path /usr/bin/python3.6, pip3.6 available'
@@ -9,8 +23,10 @@ echo '3- wget installed'
 read -p 'press any key to continue...'
 
 #Install Cloudify CLI
-wget https://repository.cloudifysource.org/cloudify/5.2.0/ga-release/cloudify-cli-5.2.0-ga.el7.x86_64.rpm
-sudo rpm -Uhv --nodeps cloudify-cli-5.2.0-ga.el7.x86_64.rpm
+if ! rpm -q cloudify-cli; then
+  wget https://repository.cloudifysource.org/cloudify/5.2.0/ga-release/cloudify-cli-5.2.0-ga.el7.x86_64.rpm
+  sudo rpm -Uhv --nodeps cloudify-cli-5.2.0-ga.el7.x86_64.rpm
+fi
 
 #Run Cloudify
 docker stop cfy_manager_local || true && docker rm cfy_manager_local || true
@@ -34,6 +50,17 @@ until cfy profiles use localhost -t default_tenant -u admin -p admin; do
 done
 
 cfy plugins upload croupier-3.1.0-py36-none-linux_x86_64.wgn -y ../../croupier/plugin.yaml -t default_tenant
+
+#Install blueprints from given folder
+if [ -n "$blueprints_folder" ]; then
+  echo "Installing blueprints from folder $blueprints_folder"
+  for blueprint in "$blueprints_folder"/*; do
+    if [[ $blueprint == *.zip ]]; then
+      echo "Installing blueprint " $blueprint
+      cfy blueprints upload -a $blueprint
+    fi
+  done
+fi
 
 #Cleanup
 rm croupier-3.1.0-py36-none-linux_x86_64.wgn
