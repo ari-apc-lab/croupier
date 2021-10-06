@@ -300,7 +300,7 @@ def start_monitoring_hpc(
         if 'ssh_config' in ctx.instance.runtime_properties:
             ssh_config = ctx.instance.runtime_properties['ssh_config']
         infrastructure_interface = config_infra['infrastructure_interface'].lower()
-        infrastructure_interface = "pbs" if infrastructure_interface is "torque" else infrastructure_interface
+        infrastructure_interface = "pbs" if infrastructure_interface == "torque" else infrastructure_interface
         monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
 
         deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options\
