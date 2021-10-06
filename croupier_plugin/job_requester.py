@@ -71,7 +71,6 @@ class JobRequester(object):
                             settings['names'],
                             logger
                         )
-                        print(partial_states)
                     else:
                         states, audits = self._no_states(
                             host,
