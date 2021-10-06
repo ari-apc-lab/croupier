@@ -233,7 +233,7 @@ class Torque(InfrastructureInterface):
             logger) if job_names else {}
 
     @staticmethod
-    def _get_states_detailed(workdir, credentials, job_names, logger):
+    def _get_states_detailed(workdir, ssh_config, job_names, logger):
         """
         Get job states by job ids
 
@@ -252,7 +252,7 @@ class Torque(InfrastructureInterface):
         call = "echo {} | xargs -n 1 qselect -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(credentials)
+        client = SshClient(ssh_config, logger)
 
         output, exit_code = client.execute_shell_command(
             call,

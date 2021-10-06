@@ -275,13 +275,13 @@ class Slurm(InfrastructureInterface):
     #     return job_settings
 
     # Monitor
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, ssh_config, job_names, logger):
 
         monitor_start_time_str = start_time_tostr(self.monitor_start_time)
 
         call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names) + " -S " + monitor_start_time_str
 
-        client = SshClient(credentials)
+        client = SshClient(ssh_config, logger)
 
         output, exit_code = client.execute_shell_command(
             call,
