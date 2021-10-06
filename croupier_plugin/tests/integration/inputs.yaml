@@ -24,8 +24,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.gorronogoitia@atos.net
 #
-# inputs_def.yaml
+# inputs.yaml
 
 
-inputs:
-    vault_token: s.FNVRvsAwH5Fge3ASxwBdDPU3
+vault_token: s.vHBFb0Tdz6krt0J4jEwqGLbu
