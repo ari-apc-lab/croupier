@@ -35,30 +35,29 @@ import errno
 import yaml
 from cloudify.test_utils import workflow_test
 
-
-def load_inputs(*args, **kwargs):
-    """ Parse inputs yaml file """
-    if args[0]:
-        folder = args[0]
-        path = os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', folder, 'inputs.yaml')
-    else:
-        path = os.path.join('croupier_plugin', 'tests', 'integration', 'inputs.yaml')
-
-    # Check whether a inputs_file file is available
-    if not os.path.isfile(path):
-        raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), path)
-    inputs = {}
-    print("Using inputs file:" + path)
-    with open(path, 'r') as stream:
-        try:
-            inputs = yaml.full_load(stream)
-        except yaml.YAMLError as exc:
-            print(exc)
-    return inputs
-
-
 class TestPlugin(unittest.TestCase):
     """ Test workflows class """
+
+
+    def load_inputs(self, *args, **kwargs):
+        """ Parse inputs yaml file """
+        if args:
+            folder = args[0]
+            path = os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', folder, 'inputs.yaml')
+        else:
+            path = os.path.join('croupier_plugin', 'tests', 'integration', 'inputs.yaml')
+
+        # Check whether a inputs_file file is available
+        if not os.path.isfile(path):
+            raise IOError(errno.ENOENT, os.strerror(errno.ENOENT), path)
+        inputs = {}
+        print("Using inputs file:" + path)
+        with open(path, 'r') as stream:
+            try:
+                inputs = yaml.full_load(stream)
+            except yaml.YAMLError as exc:
+                print(exc)
+        return inputs
 
     # Run every test
     def run_test(self, cfy_local, revoke_vault_token=False):
@@ -100,7 +99,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'single', 'blueprint.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_single(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -114,7 +113,7 @@ class TestPlugin(unittest.TestCase):
         ],
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_single_script(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -124,7 +123,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'single', 'blueprint_scale.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_single_scale(self, cfy_local):
         self.run_test(cfy_local)
 
     # ------------------------------------------------------------------------------
@@ -152,7 +151,7 @@ class TestPlugin(unittest.TestCase):
             (os.path.join('blueprints', 'four', 'scripts', 'delete_script.sh'), 'scripts')
         ],
         inputs='load_inputs')
-    def test_four(self, cfy_local):
+    def test_four_scale(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -162,7 +161,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'multihpc', 'blueprint_multihpc.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_multihpc(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -172,7 +171,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'multihpc', 'blueprint_multihpc_exporter.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_multihpc_exporter(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -182,7 +181,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'hpc-exporter', 'blueprint.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_exporter(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -192,7 +191,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'publish', 'blueprint_publish.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_publish(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -206,7 +205,7 @@ class TestPlugin(unittest.TestCase):
                            (os.path.join('blueprints', 'singularity', 'scripts', 'singularity_revert.sh'),
                             'scripts')],
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_singularity(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -216,7 +215,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'openstack', 'blueprint_openstack.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_openstack(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -226,7 +225,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'openstack', 'blueprint_hpc_openstack.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs')
-    def test_easy(self, cfy_local):
+    def test_openstack_hpc(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -236,7 +235,7 @@ class TestPlugin(unittest.TestCase):
         os.path.join('blueprints', 'ecmwf', 'blueprint_ecmwf.yaml'),
         copy_plugin_yaml=True,
         inputs='load_inputs', input_func_args='ecmwf')
-    def test_easy(self, cfy_local):
+    def test_ecmwf(self, cfy_local):
         self.run_test(cfy_local)
 
 

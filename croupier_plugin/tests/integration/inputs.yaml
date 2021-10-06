@@ -28,6 +28,4 @@
 
 
 inputs:
-  vault_config:
-    token: ''
-    username: ''
+    vault_token: s.FNVRvsAwH5Fge3ASxwBdDPU3

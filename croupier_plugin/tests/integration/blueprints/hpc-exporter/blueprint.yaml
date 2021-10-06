@@ -28,29 +28,32 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://www.getcloudify.org/spec/cloudify/6.2.0/types.yaml
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
-    vault_config:
-        description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
-        default:
-            username: ''
-            token: ''
-        type: croupier.datatypes.vault_config
+    vault_token:
+        type: string
 
 node_templates:
     hpc_exporter:
         type: croupier.nodes.HPCExporter
+        properties:
+            address: 192.168.3.74:9110
 
-    cesga_hpc:
+    vault:
+        type: croupier.datatypes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: jesus
+            address: http://77.231.202.214:8200
+
+    hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: SLURM
+                infrastructure_interface: TORQUE
             ssh_config:
-                host: ft2.cesga.es
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
+                host: sodalite-fe.hlrs.de
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -61,6 +64,8 @@ node_templates:
         relationships:
             - type: interface_monitored_by
               target: hpc_exporter
+            - type: download_credentials_from_vault
+              target: vault
     easy_job:
         type: croupier.nodes.Job
         properties:
@@ -68,11 +73,10 @@ node_templates:
                 commands:
                 - "touch test_file"
                 max_time: '00:05:00'
-                partition: { get_input: partition_name }
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_hpc
+              target: hpc
 
 outputs:
     single_job_name:
