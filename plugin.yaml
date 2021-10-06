@@ -527,8 +527,8 @@ relationships:
     interface_monitored_by:
         derived_from: cloudify.relationships.depends_on
         source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure:
+            cloudify.interfaces.relationship_lifecycle.preconfigure:
+            :
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface_monitor
     job_managed_by_interface:
         derived_from: cloudify.relationships.contained_in
@@ -576,13 +576,12 @@ relationships:
     retrieve_credentials_from_vault:
         derived_from: cloudify.relationships.depends_on
         source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.download_vault_credentials
-                    inputs:
-                        token:
-                            default: { get_property: [TARGET, token  ] }
-                        user:
-                            default: { get_property: [TARGET, user   ] }
-                        address:
-                            default: { get_property: [TARGET, address] }
+            cloudify.interfaces.relationship_lifecycle.preconfigure:
+                implementation: croupier.croupier_plugin.tasks.download_vault_credentials
+                inputs:
+                    token:
+                        default: { get_property: [TARGET, token  ] }
+                    user:
+                        default: { get_property: [TARGET, user   ] }
+                    address:
+                        default: { get_property: [TARGET, address] }
