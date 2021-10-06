@@ -574,7 +574,7 @@ relationships:
                     max_retries: 0
 
     retrieve_credentials_from_vault:
-        derived_from: cloudify.relationships.depends_on
+        derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:

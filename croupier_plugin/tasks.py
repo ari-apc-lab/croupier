@@ -265,20 +265,22 @@ def configure_monitor(address, **kwargs):
             ctx.logger.error(
                 'Could not find Monitoring section in the croupier config file. No HPC Exporter will be activated')
             return
-        monitoring_id = ctx.deployment.name + ctx.deployment.id
-        ctx.logger.info("Monitoring_id generated: " + monitoring_id)
-        ctx.instance.runtime_properties["monitoring_id"] = monitoring_id
 
-        ctx.instance.runtime_properties["hpc_exporter_address"] = address if address.startswith("http") \
-            else "http://" + address
+    monitoring_id = ctx.deployment.id
+    ctx.logger.info("Monitoring_id generated: " + monitoring_id)
+    ctx.instance.runtime_properties["monitoring_id"] = monitoring_id
+
+    ctx.instance.runtime_properties["hpc_exporter_address"] = address if address.startswith("http") \
+        else "http://" + address
 
 
 @operation
 def preconfigure_interface_monitor(**kwargs):
-    ctx.source.instance.runtime_properties["monitoring_id"] = \
-        ctx.target.instance.runtime_properties["monitoring_id"]
-    ctx.source.instance.runtime_properties["hpc_exporter_address"] = \
-        ctx.target.instance.runtime_properties["hpc_exporter_address"]
+    ctx.logger.info(str(ctx.target.instance.runtime_properties))
+    ctx.source.instance.runtime_properties["monitoring_id"] = ctx.target.instance.runtime_properties["monitoring_id"]
+
+    hpc_exporter_address = ctx.target.instance.runtime_properties["hpc_exporter_address"]
+    ctx.source.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address
 
 
 @operation
