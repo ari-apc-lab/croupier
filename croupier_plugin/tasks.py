@@ -81,12 +81,13 @@ def download_vault_credentials(token, user, address, **kwargs):
         ssh_config = ctx.source.instance.runtime_properties['ssh_config']
         ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address)
         ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
+        ctx.logger.info("Vault credentials downloaded")
 
     if 'keycloak_credentials' in ctx.source.instance.runtime_properties:
         keycloak_credentials = ctx.source.instance.runtime_properties['keycloak_credentials']
         keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address)
         ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
-
+        ctx.logger.info("Keycloak credentials downloaded")
 
 @operation
 def preconfigure_interface(
