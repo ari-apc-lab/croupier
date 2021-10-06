@@ -91,7 +91,7 @@ class JobGraphInstance(TaskGraphInstance):
         super().__init__(parent, instance)
 
         # Get runtime properties
-        self.host = self.runtime_properties["credentials"]["host"]
+        self.host = self.runtime_properties["ssh_config"]["host"]
         self.workdir = self.runtime_properties['workdir']
         self.simulate = self.runtime_properties["simulate"]
 

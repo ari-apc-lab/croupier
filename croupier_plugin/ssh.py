@@ -269,13 +269,13 @@ class SshClient(object):
 class SshForward(object):
     """Represents a ssh port forwarding"""
 
-    def __init__(self, credentials):
-        self._client = SshClient(credentials['tunnel'])
+    def __init__(self, ssh_config):
+        self._client = SshClient(ssh_config['tunnel'])
         self._remote_port = \
-            int(credentials['port']) if 'port' in credentials else 22
+            int(ssh_config['port']) if 'port' in ssh_config else 22
 
         class SubHander(Handler):
-            chain_host = credentials['host']
+            chain_host = ssh_config['host']
             chain_port = self._remote_port
             ssh_transport = self._client.get_transport()
 

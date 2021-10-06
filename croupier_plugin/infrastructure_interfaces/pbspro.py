@@ -208,10 +208,10 @@ class Pbspro(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, ssh_config, job_names, logger):
         return self._get_states_detailed(
             workdir,
-            credentials,
+            ssh_config,
             job_names,
             logger) if job_names else {}
 
