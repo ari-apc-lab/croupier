@@ -169,7 +169,7 @@ def configure_execution(
         if 'ssh_config' in ctx.instance.runtime_properties:
             ssh_config = ctx.instance.runtime_properties['ssh_config']
         try:
-            client = SshClient(ssh_config, ctx.logger)
+            client = SshClient(ssh_config)
         except Exception as exp:
             raise NonRecoverableError(
                 "Failed trying to connect to infrastructure interface: " + str(exp))
@@ -239,7 +239,7 @@ def cleanup_execution(
 
         if 'ssh_config' in ctx.instance.runtime_properties:
             ssh_config = ctx.instance.runtime_properties['ssh_config']
-        client = SshClient(ssh_config, ctx.logger)
+        client = SshClient(ssh_config)
         client.execute_shell_command(
             'rm -r ' + workdir,
             wait_result=True)
@@ -507,7 +507,7 @@ def deploy_job(script,
 
     # Execute the script and manage the output
     success = False
-    client = SshClient(ssh_config, ctx.logger)
+    client = SshClient(ssh_config)
     script_content = script if script[0] == '#' else ctx.get_resource(script)
     if wm.create_shell_script(client,
                               name,

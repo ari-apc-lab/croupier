@@ -61,9 +61,8 @@ class SshClient(object):
     """Represents a ssh client"""
     _client = None
 
-    def __init__(self, ssh_config, logger):
+    def __init__(self, ssh_config):
         # Build a tunnel if necessary
-        self._logger = logger
         self._tunnel = None
         self._host = ssh_config['host']
         self._user = ssh_config['user']
@@ -81,7 +80,6 @@ class SshClient(object):
         # Build the private key if provided
         self._private_key = None
         if 'private_key' in ssh_config and ssh_config['private_key']:
-            logger.info('Found private key')
             key_data = ssh_config['private_key']
             if not isinstance(key_data, str):
                 key_data = str(key_data, "utf-8")
@@ -258,8 +256,7 @@ class SshClient(object):
                 return False
 
     @staticmethod
-    def check_ssh_client(ssh_client,
-                         logger):
+    def check_ssh_client(ssh_client, logger):
         if not isinstance(ssh_client, SshClient) or not ssh_client.is_open():
             logger.error("SSH Client can't be used")
             return False

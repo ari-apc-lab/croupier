@@ -58,7 +58,7 @@ class Shell(infrastructure_interface.InfrastructureInterface):
     def get_states(self, workdir, ssh_config, job_names, logger):
         call = "cat croupier-monitor.data"
 
-        client = SshClient(ssh_config, logger)
+        client = SshClient(ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,

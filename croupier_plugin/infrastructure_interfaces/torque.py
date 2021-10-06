@@ -252,7 +252,7 @@ class Torque(InfrastructureInterface):
         call = "echo {} | xargs -n 1 qselect -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(ssh_config, logger)
+        client = SshClient(ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,
