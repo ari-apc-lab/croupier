@@ -425,7 +425,7 @@ node_types:
         derived_from: croupier.nodes.Job
 
     croupier.nodes.Vault:
-        derived_from: cloudify.nodes.SharedResource
+        derived_from: cloudify.nodes.Root
         properties:
             token:
                 type: string
@@ -439,7 +439,7 @@ node_types:
                 default: ''
 
     croupier.nodes.HPCExporter:
-        derived_from: cloudify.nodes.SharedResource
+        derived_from: cloudify.nodes.Root
         properties:
             address:
                 type: string
