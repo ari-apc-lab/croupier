@@ -32,15 +32,20 @@ imports:
 
 
 inputs:
-    vault_config:
-        type: croupier.datatypes.vault_config
+    vault_token:
+        type: string
 
 
 node_templates:
     hpc_exporter:
         type: croupier.nodes.HPCExporter
 
-    cesga_interface:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: jesus
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
@@ -65,7 +70,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_interface
+              target: cesga_hpc
 
     job_2:
         type: croupier.nodes.Job
@@ -75,7 +80,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_interface
+              target: cesga_hpc
 
     job_3:
         type: croupier.nodes.Job
@@ -85,7 +90,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_interface
+              target: cesga_hpc
 
 deployment_settings:
     default_schedules:

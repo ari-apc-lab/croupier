@@ -39,7 +39,7 @@ inputs:
             username: ''
 
 node_templates:
-    cesga_interface:
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:

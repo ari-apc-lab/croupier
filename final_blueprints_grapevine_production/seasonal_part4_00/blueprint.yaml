@@ -32,26 +32,31 @@ imports:
 
 
 inputs:
-    vault_config:
-        type: croupier.datatypes.vault_config
+    vault_token:
+        type: string
 
 
 node_templates:
     hpc_exporter:
         type: croupier.nodes.HPCExporter
 
-    cesga_interface:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: jesus
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         relationships:
             - type: interface_monitored_by
               target: hpc_exporter
+            - type: retrieve_credentials_from_vault
+              target: vault
         properties:
             config:
                 infrastructure_interface: SLURM
             ssh_config:
-                get_credentials_from_vault: true
                 host: ft2.cesga.es
-            vault_config: { get_input: vault_config }
             job_prefix: ''
             base_dir: /mnt/netapp2/Store_uni/home/otras/gag/pvo/croupier_logs
             monitoring_options:
@@ -80,7 +85,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_interface
+              target: cesga_hpc
 
 
     post_prep_00:
@@ -102,7 +107,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_interface
+              target: cesga_hpc
             - type: job_depends_on
               target: unipost_00
 

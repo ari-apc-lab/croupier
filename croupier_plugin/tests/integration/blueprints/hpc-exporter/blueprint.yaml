@@ -37,15 +37,12 @@ inputs:
 node_templates:
     hpc_exporter:
         type: croupier.nodes.HPCExporter
-        properties:
-            address: 192.168.3.74:9110
 
     vault:
         type: croupier.nodes.Vault
         properties:
             token: { get_input: vault_token }
             user: jesus
-            address: http://77.231.202.214:8200
 
     hpc:
         type: croupier.nodes.InfrastructureInterface

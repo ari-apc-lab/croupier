@@ -37,7 +37,7 @@ inputs:
             username: ''
 
 node_templates:
-    cesga_interface:
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
@@ -71,7 +71,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_interface
+              target: cesga_hpc
 
     bernoulli_job_2:
         type: croupier.nodes.Job
@@ -90,7 +90,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: cesga_interface
+              target: cesga_hpc
 
 outputs:
     bernoulli_job_1_name:
