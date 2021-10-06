@@ -276,9 +276,7 @@ def configure_monitor(address, **kwargs):
 
 @operation
 def preconfigure_interface_monitor(**kwargs):
-    ctx.logger.info(str(ctx.target.instance.runtime_properties))
     ctx.source.instance.runtime_properties["monitoring_id"] = ctx.target.instance.runtime_properties["monitoring_id"]
-
     hpc_exporter_address = ctx.target.instance.runtime_properties["hpc_exporter_address"]
     ctx.source.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address
 
