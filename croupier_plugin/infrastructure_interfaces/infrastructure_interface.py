@@ -207,7 +207,7 @@ class InfrastructureInterface(object):
                 logger.error('script_content is None')
                 return False
 
-            if not self._create_shell_script(
+            if not self.create_shell_script(
                     ssh_client,
                     name + ".script",
                     script_content,
@@ -460,7 +460,7 @@ class InfrastructureInterface(object):
             if 'commands' not in job_settings or \
                     not job_settings['commands'] or \
                     'max_time' not in job_settings:
-                logger.error("Batch job settings malformed")
+                logger.error("Batch job settings malformed. commands or max_time missing")
                 return None
         else:
             if not isinstance(job_settings, dict) or \
@@ -615,12 +615,12 @@ class InfrastructureInterface(object):
 
         return response
 
-    def _create_shell_script(self,
-                             ssh_client,
-                             name,
-                             script_content,
-                             logger,
-                             workdir=None):
+    def create_shell_script(self,
+                            ssh_client,
+                            name,
+                            script_content,
+                            logger,
+                            workdir=None):
         # @TODO: why not to use ctx.download_resource and
         #        ssh_client.open_sftp().put(...)?
         # escape for echo command

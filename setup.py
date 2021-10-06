@@ -23,7 +23,7 @@ license information in the project root.
 
 setup.py
 '''
-
+import os
 
 from setuptools import setup
 

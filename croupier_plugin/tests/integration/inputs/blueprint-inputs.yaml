@@ -255,6 +255,24 @@ ckan_outputs_dataset:
 #################### Instance info ####################
 instance_id: test
 
+#################### ECMWF ####################
+  ecmwf_ssh_credentials:
+    host: <HOST>
+    user: <USER>
+    private_key: |
+      -----BEGIN RSA PRIVATE KEY-----
+      <KEY>
+      -----END RSA PRIVATE KEY-----
+  keycloak_credentials:
+    user: < HOST >
+    pw: < PASSWORD >
+  ecmwf_query:
+    params: u/v
+    date: 20210505
+    area: 45/18/46/19
+    time: 00
+    collection: hidalgo-test
+
 ####################### Optional ######################
 test_file: 'Test file
 

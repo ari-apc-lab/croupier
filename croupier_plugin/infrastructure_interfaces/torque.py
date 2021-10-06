@@ -135,7 +135,7 @@ class Torque(InfrastructureInterface):
             _add_setting('-q', shlex_quote(queue))
 
         if _check_job_settings_key('memory'):
-            _add_setting('-l', 'mem={}'.format(job_settings('memory')))
+            _add_setting('-l', 'mem={}'.format(job_settings['memory']))
 
         if _check_job_settings_key('mail_user'):
             _add_setting('-M', job_settings['mail_user'])
@@ -225,20 +225,20 @@ class Torque(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, ssh_config, job_names, logger):
         return self._get_states_detailed(
             workdir,
-            credentials,
+            ssh_config,
             job_names,
             logger) if job_names else {}
 
     @staticmethod
-    def _get_states_detailed(workdir, credentials, job_names, logger):
+    def _get_states_detailed(workdir, ssh_config, job_names, logger):
         """
         Get job states by job ids
 
         This function uses `qstat` command to query Torque.
-        Please don't launch this call very friquently. Polling it
+        Please don't launch this call very frequently. Polling it
         frequently, especially across all users on the cluster,
         will slow down response times and may bring
         scheduling to a crawl.
@@ -252,7 +252,7 @@ class Torque(InfrastructureInterface):
         call = "echo {} | xargs -n 1 qselect -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(credentials)
+        client = SshClient(ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,

@@ -29,25 +29,12 @@ plugins:
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
-        source: https://github.com/ari-apc-lab/croupier/archive/grapevine-python3.zip
+        source: https://github.com/ari-apc-lab/croupier/archive/hidalgo.zip
         install_arguments: -r plugin-requirements.txt
         package_name: croupier
         package_version: "3.1.0"
 
 data_types:
-
-    croupier.datatypes.vault_config:
-        properties:
-            username:
-                description: Username under which the ssh ssh_config are saved in vault
-                type: string
-                required: false
-                default: ''
-            token:
-                description: Vault token with access to the user's ssh ssh_config.
-                type: string
-                required: false
-                default: ''
 
     croupier.datatypes.wm_config:
         properties:
@@ -79,10 +66,6 @@ data_types:
                 type: integer
                 required: false
                 default: 22
-            get_credentials_from_vault:
-                type: boolean
-                required: false
-                default: false
             private_key:
                 type: string
                 required: false
@@ -214,6 +197,61 @@ data_types:
             name:
                 type: string
 
+    croupier.datatypes.ecmwf_query:
+        properties:
+            area:
+                type: string
+                required: true
+            params:
+                type: string
+                required: true
+            date:
+                type: string
+                required: false
+                default: ""
+            time:
+                type: string
+                required: false
+                default: ""
+            collection:
+                type: string
+                required: false
+                default: ""
+            members:
+                type: string
+                required: false
+                default: ""
+            ensemble:
+                type: string
+                required: false
+                default: ""
+            input:
+                type: string
+                required: false
+                default: ""
+            keep_input:
+                type: string
+                required: false
+                default: ""
+            algorithm:
+                type: string
+                required: false
+                default: ""
+            max_step:
+                type: string
+                required: false
+                default: "1"
+
+    croupier.datatypes.keycloak_credentials:
+        properties:
+            user:
+                type: string
+                required: true
+            pw:
+                type: string
+                required: false
+                default: ''
+
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
@@ -227,9 +265,6 @@ node_types:
             config:
                 description: type
                 type: croupier.datatypes.wm_config
-            vault_config:
-                description: Information about the vault instance that contains the infrastructure's ssh_config. Token and username.
-                type: croupier.datatypes.vault_config
             ssh_config:
                 description: SSH configuration
                 type: croupier.datatypes.ssh_config
@@ -267,14 +302,6 @@ node_types:
                     install_method: none
         interfaces:
             cloudify.interfaces.lifecycle:
-                create:
-                    implementation: croupier.croupier_plugin.tasks.download_credentials_vault
-                    inputs:
-                        vault_config:
-                            default: { get_property: [SELF, vault_config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
-
                 configure:
                     implementation: croupier.croupier_plugin.tasks.configure_execution
                     inputs:
@@ -397,6 +424,20 @@ node_types:
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job
 
+    croupier.nodes.Vault:
+        derived_from: cloudify.nodes.Root
+        properties:
+            token:
+                type: string
+                required: true
+            user:
+                type: string
+                required: true
+            address:
+                type: string
+                required: false
+                default: ''
+
     croupier.nodes.HPCExporter:
         derived_from: cloudify.nodes.Root
         properties:
@@ -412,6 +453,65 @@ node_types:
                         address:
                             default: { get_property: [SELF,address] }
 
+    croupier.nodes.Data:
+        derived_from: cloudify.nodes.WebServer
+        properties:
+            data_urls:
+                description: list of URLs of the files to download to the HPC (ckan for example)
+                default: []
+            unzip_data:
+                description: True if the files need to be unzipped after downloading
+                type: boolean
+                default: False
+            dest_data:
+                description: Path where the data needs to be downloaded to. If left blank it will be the job workdir
+                type: string
+                default: ""
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start:
+                    implementation: croupier.croupier_plugin.tasks.download_data
+                    max_retries: 0
+            croupier.interfaces.lifecycle:
+                delete:
+                    implementation: croupier.croupier_plugin.tasks.delete_data
+                    max_retries: 0
+
+    croupier.nodes.ECMWFVerticalInterpolation:
+        derived_from: croupier.nodes.Data
+        properties:
+            ssh_config:
+                description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
+                type: croupier.datatypes.ssh_config
+            keycloak_credentials:
+                description: login credentials for hidalgo keycloak. Fields- user, pw
+                type: croupier.datatypes.keycloak_credentials
+            query:
+                description: ECMWF Query fields. Fields- params, date, time, area, max_steps, [ensemble], [memebers], [input], [keep_input], [algorithm]
+                type: croupier.datatypes.ecmwf_query
+            port:
+                type: string
+                default: 9984
+            unzip_data:
+                type: boolean
+                default: True
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.download_credentials_vault_ecmwf
+                    inputs:
+                        vault_config:
+                            default: { get_property: [ SELF, vault_config ] }
+                        ssh_config:
+                            default: { get_property: [ SELF, ecmwf_ssh_config ] }
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
+                    max_retries: 0
+                    inputs:
+                        query:
+                            default: { get_property: [ SELF, query ] }
+                        keycloak_credentials:
+                            default: { get_property: [ SELF, keycloak_credentials ] }
 relationships:
     interface_contained_in:
         derived_from: cloudify.relationships.contained_in
@@ -425,7 +525,7 @@ relationships:
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
     interface_monitored_by:
-        derived_from: cloudify.relationships.contained_in
+        derived_from: cloudify.relationships.depends_on
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
@@ -447,5 +547,42 @@ relationships:
                             default: { get_property: [TARGET, monitoring_options] }
                         simulate:
                             default: { get_property: [TARGET, simulate] }
+
+    data_target_infrastructure:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_data
+                    inputs:
+                        config:
+                            default: { get_property: [ TARGET, config ] }
+                        ssh_config:
+                            default: { get_property: [ TARGET, ssh_config ] }
+                        simulate:
+                            default: { get_property: [ TARGET, simulate ] }
+
     job_depends_on:
         derived_from: cloudify.relationships.depends_on
+
+    job_needs_data:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.pass_data_info
+                    max_retries: 0
+
+    retrieve_credentials_from_vault:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.download_vault_credentials
+                    inputs:
+                        token:
+                            default: { get_property: [TARGET, token  ] }
+                        user:
+                            default: { get_property: [TARGET, user   ] }
+                        address:
+                            default: { get_property: [TARGET, address] }

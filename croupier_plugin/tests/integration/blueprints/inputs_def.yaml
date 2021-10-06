@@ -150,6 +150,15 @@ inputs:
   instance_id:
     default: test-jcarnero
 
+  #################### ECMWF ####################
+  ecmwf_ssh_credentials:
+    default: {}
+  keycloak_credentials:
+    default: {}
+  query:
+    default: {}
+  data_dest:
+    default: $HOME
   ####################### Optional ######################
   test_file:
     default: 'Test file'

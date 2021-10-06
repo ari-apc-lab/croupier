@@ -55,10 +55,10 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         return "pkill -f " + name
 
 # Monitor
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, ssh_config, job_names, logger):
         call = "cat croupier-monitor.data"
 
-        client = SshClient(credentials)
+        client = SshClient(ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -68,10 +68,13 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         client.close_connection()
 
         states = {}
+        audits = {}
         if exit_code == 0:
             states = self._parse_states(output, logger)
+        for job_name in job_names:
+            audits[job_name] = {}
 
-        return states
+        return states, audits
 
     def _parse_states(self, raw_states, logger):
         """ Parse two colums exit codes into a dict """
