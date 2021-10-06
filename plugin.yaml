@@ -525,9 +525,10 @@ relationships:
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
     interface_monitored_by:
-        derived_from: cloudify.relationships.connected_to
+        derived_from: cloudify.relationships.depends_on
         source_interfaces:
-            cloudify.interfaces.relationship_lifecycle.postconfigure:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface_monitor
     job_managed_by_interface:
         derived_from: cloudify.relationships.contained_in
@@ -573,7 +574,7 @@ relationships:
                     max_retries: 0
 
     retrieve_credentials_from_vault:
-        derived_from: cloudify.relationships.contained_in
+        derived_from: cloudify.relationships.depends_on
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:

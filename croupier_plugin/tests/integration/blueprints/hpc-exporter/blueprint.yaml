@@ -62,10 +62,11 @@ node_templates:
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "hpc-exporter"
         relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
             - type: interface_monitored_by
               target: hpc_exporter
+            - type: retrieve_credentials_from_vault
+              target: vault
+
 
     easy_job:
         type: croupier.nodes.Job
