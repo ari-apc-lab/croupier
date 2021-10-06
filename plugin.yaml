@@ -425,7 +425,7 @@ node_types:
         derived_from: croupier.nodes.Job
 
     croupier.nodes.Vault:
-        derived_from: cloudify.nodes.Root
+        derived_from: cloudify.nodes.SharedResource
         properties:
             token:
                 type: string
@@ -439,7 +439,7 @@ node_types:
                 default: ''
 
     croupier.nodes.HPCExporter:
-        derived_from: cloudify.nodes.Root
+        derived_from: cloudify.nodes.SharedResource
         properties:
             address:
                 type: string
@@ -525,7 +525,7 @@ relationships:
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
     interface_monitored_by:
-        derived_from: cloudify.relationships.depends_on
+        derived_from: cloudify.relationships.depends_on_shared_resource
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle.preconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface_monitor
@@ -573,7 +573,7 @@ relationships:
                     max_retries: 0
 
     retrieve_credentials_from_vault:
-        derived_from: cloudify.relationships.depends_on
+        derived_from: cloudify.relationships.depends_on_shared_resource
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
