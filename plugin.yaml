@@ -527,7 +527,7 @@ relationships:
     interface_monitored_by:
         derived_from: cloudify.relationships.connected_to
         source_interfaces:
-            cloudify.interfaces.relationship_lifecycle.preconfigure:
+            cloudify.interfaces.relationship_lifecycle.postconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface_monitor
     job_managed_by_interface:
         derived_from: cloudify.relationships.contained_in
