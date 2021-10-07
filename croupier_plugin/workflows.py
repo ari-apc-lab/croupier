@@ -108,7 +108,7 @@ class JobGraphInstance(TaskGraphInstance):
         for relationship_instance in self.instance.relationships:
             relationship = relationship_instance.relationship
             if relationship.is_derived_from("job_managed_by_interface"):
-                ctx.logger.info("Operations: " + relationship.source_operations)
+                ctx.logger.info("Operations: " + str(relationship.source_operations))
                 result_configure = relationship_instance.\
                     execute_source_operation('cloudify.interfaces.lifecycle.preconfigure', kwargs={"run_jobs": True})
                 result_configure.get()
