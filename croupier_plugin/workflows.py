@@ -106,7 +106,9 @@ class JobGraphInstance(TaskGraphInstance):
 
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
-
+        result_configure = self.instance.execute_operation('cloudify.interfaces.lifecycle.preconfigure',
+                                                           kwargs={"run_jobs": True})
+        result_configure.get()
         self.instance.send_event('Queuing job..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
         result.get()

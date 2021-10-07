@@ -401,23 +401,30 @@ def preconfigure_job(
     """ Match the job with its ssh_config """
     ctx.logger.info('Preconfiguring job..')
 
-    if 'ssh_config' not in ctx.target.instance.runtime_properties:
-        ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
-    else:
-        ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
-    ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
-    ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
-    ctx.source.instance.runtime_properties['reservation_deletion_path'] = config['reservation_deletion_path']
-    ctx.source.instance.runtime_properties['timezone'] = config['country_tz']
-    ctx.source.instance.runtime_properties['simulate'] = simulate
-    ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
-    ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
-    if 'hpc_exporter_address' in ctx.target.instance.runtime_properties and \
-            ctx.target.instance.runtime_properties['hpc_exporter_address']:
-        ctx.source.instance.runtime_properties['hpc_exporter_address'] = \
-            ctx.target.instance.runtime_properties['hpc_exporter_address']
-        ctx.source.instance.runtime_properties['monitoring_id'] = \
-            ctx.target.instance.runtime_properties['monitoring_id']
+    if "run_jobs" not in kwargs:
+        if 'ssh_config' not in ctx.target.instance.runtime_properties:
+            ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
+        else:
+            ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
+        ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
+        ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
+        ctx.source.instance.runtime_properties['reservation_deletion_path'] = config['reservation_deletion_path']
+        ctx.source.instance.runtime_properties['timezone'] = config['country_tz']
+        ctx.source.instance.runtime_properties['simulate'] = simulate
+        ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
+
+        if 'hpc_exporter_address' in ctx.target.instance.runtime_properties and \
+                ctx.target.instance.runtime_properties['hpc_exporter_address']:
+            ctx.source.instance.runtime_properties['hpc_exporter_address'] = \
+                ctx.target.instance.runtime_properties['hpc_exporter_address']
+            ctx.source.instance.runtime_properties['monitoring_id'] = \
+                ctx.target.instance.runtime_properties['monitoring_id']
+
+        if not ctx.target.node.properties['recurring_workflow']:
+            ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
+
+    elif ctx.target.node.properties['recurring_workflow'] and kwargs["run_jobs"]:
+        ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 
 @operation
