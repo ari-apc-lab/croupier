@@ -203,6 +203,15 @@ class DataGraphInstance(TaskGraphInstance):
             if 'data_urls' in self.runtime_properties else []
 
 
+class InfrastructureInterface(GraphInstance):
+
+    def __init__(self, parent, instance):
+        super().__init__(parent, instance)
+
+    def launch(self):
+        self.instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"run_jobs": True})
+
+
 class GraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
@@ -212,6 +221,7 @@ class GraphNode(object):
         self.cfy_node = node
         self.is_job = 'croupier.nodes.Job' in node.type_hierarchy
         self.is_data = 'croupier.nodes.Data' in node.type_hierarchy
+        self.is_infrastructure_interface = 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy
         self.is_task = self.is_job or self.is_data
         self.completed = False
         self.failed = False
@@ -231,6 +241,8 @@ class GraphNode(object):
                 job_instances_map[graph_instance.name] = graph_instance
             elif self.is_data:
                 graph_instance = DataGraphInstance(self, instance)
+            elif self.is_infrastructure_interface:
+                graph_instance = InfrastructureInterface(self, instance)
             else:
                 graph_instance = GraphInstance(self, instance)
 

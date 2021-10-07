@@ -359,7 +359,7 @@ class InfrastructureInterface(object):
             script=False,
             timezone=None):
         """
-        Generates specific manager data accouding to job_settings
+        Generates specific manager data according to job_settings
 
         @type job_id: string
         @param job_id: name of the job

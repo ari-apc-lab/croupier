@@ -63,6 +63,7 @@ node_templates:
             base_dir: /mnt/netapp2/Store_uni/home/otras/gag/pvo/croupier_logs
             monitoring_options:
                 monitor_period: 15
+                deployment_label: seasonal_part4_06
             skip_cleanup: true
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "SEASONAL_PART4_06"

@@ -151,12 +151,22 @@ def configure_execution(
         workdir_prefix,
         monitoring_options,
         accounting_options,
+        recurring_workflow,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Creates the working directory for the execution """
-    ctx.logger.info('Connecting to infrastructure interface..')
 
-    if not simulate:
+    # Registering accounting and monitoring options
+    ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
+    ctx.instance.runtime_properties['accounting_options'] = accounting_options
+    ctx.instance.runtime_properties['infrastructure_host'] = ssh_config['host']
+    if recurring_workflow and "run_jobs" not in kwargs:
+        ctx.logger.info(
+            "Configuration of infrastructure interfaces in the case of recurring workflows happens during run_jobs")
+    elif not recurring_workflow and "run_jobs" in kwargs and kwargs["run_jobs"]:
+        pass
+    elif not simulate:
+        ctx.logger.info('Connecting to infrastructure interface..')
         if 'infrastructure_interface' not in config:
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
@@ -205,11 +215,6 @@ def configure_execution(
         # Register Croupier instance in Accounting if not done before
         if accounting_client.report_to_accounting:
             registerOrchestratorInstanceInAccounting(ctx)
-
-        # Registering accounting and monitoring options
-        ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
-        ctx.instance.runtime_properties['accounting_options'] = accounting_options
-        ctx.instance.runtime_properties['infrastructure_host'] = ssh_config['host']
 
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:

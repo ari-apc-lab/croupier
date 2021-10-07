@@ -297,6 +297,11 @@ node_types:
                 description: True to not clean all files at deployment removal
                 type: boolean
                 default: False
+            recurring_worflow:
+                description: True if the workflow is scheduled to run recurrently
+                type : boolean
+                default: False
+                required: False
             agent_config:
                 default:
                     install_method: none
