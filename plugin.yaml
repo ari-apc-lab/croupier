@@ -322,6 +322,8 @@ node_types:
                             default: { get_property: [SELF, monitoring_options] }
                         accounting_options:
                             default: { get_property: [SELF, accounting_options] }
+                        recurring_workflow:
+                            default: { get_property: [SELF, recurring_workflow] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 delete:
