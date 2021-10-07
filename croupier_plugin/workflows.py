@@ -484,9 +484,9 @@ def build_configure_graph(nodes):
     jobs = []
     interfaces = []
     for node in nodes:
-        if 'croupier.node.InfrastructureInterface' in node.type_hierarchy:
+        if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
             interfaces.append(ConfigureInterface(node))
-        elif 'croupier.node.Job' in node.type_hierarchy:
+        elif 'croupier.nodes.Job' in node.type_hierarchy:
             jobs.append(ConfigureJob(node))
 
     return jobs, interfaces
