@@ -27,7 +27,7 @@
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine_production/resources/types/cfy_types.yaml
+    - http://www.getcloudify.org/spec/cloudify/6.2.0/types.yaml
     - plugin:croupier
 inputs:
     vault_token:
