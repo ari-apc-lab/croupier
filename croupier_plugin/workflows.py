@@ -93,7 +93,7 @@ class JobGraphInstance(TaskGraphInstance):
         # Get runtime properties
         self.host = self.runtime_properties["ssh_config"]["host"]
         self.simulate = self.runtime_properties["simulate"]
-        self.workdir = self.runtime_properties["workdir"] if "workdir" in self.runtime_properties else ''
+        self.workdir = self.runtime_properties["workdir"]
         self.monitor_type = self.runtime_properties["infrastructure_interface"]
         self.monitor_config = self.runtime_properties["ssh_config"]
 
@@ -105,14 +105,6 @@ class JobGraphInstance(TaskGraphInstance):
 
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
-        for relationship_instance in self.instance.relationships:
-            relationship = relationship_instance.relationship
-            if relationship.is_derived_from("job_managed_by_interface"):
-                ctx.logger.info("Operations: " + str(relationship.source_operations))
-                result_configure = relationship_instance.\
-                    execute_source_operation('preconfigure', kwargs={"run_jobs": True})
-                result_configure.get()
-        self.workdir = self.instance._node_instance.runtime_properties['workdir']
         self.instance.send_event('Queuing job..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
         result.get()
@@ -209,15 +201,6 @@ class DataGraphInstance(TaskGraphInstance):
             if 'data_urls' in self.runtime_properties else []
 
 
-class InfrastructureInterface(GraphInstance):
-
-    def __init__(self, parent, instance):
-        super().__init__(parent, instance)
-
-    def launch(self):
-        self.instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"run_jobs": True})
-
-
 class GraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
@@ -227,7 +210,6 @@ class GraphNode(object):
         self.cfy_node = node
         self.is_job = 'croupier.nodes.Job' in node.type_hierarchy
         self.is_data = 'croupier.nodes.Data' in node.type_hierarchy
-        self.is_infrastructure_interface = 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy
         self.is_task = self.is_job or self.is_data
         self.completed = False
         self.failed = False
@@ -247,8 +229,6 @@ class GraphNode(object):
                 job_instances_map[graph_instance.name] = graph_instance
             elif self.is_data:
                 graph_instance = DataGraphInstance(self, instance)
-            elif self.is_infrastructure_interface:
-                graph_instance = InfrastructureInterface(self, instance)
             else:
                 graph_instance = GraphInstance(self, instance)
 
@@ -475,6 +455,43 @@ def build_graph(nodes):
     return root_nodes, job_instances_map
 
 
+class ConfigureInterface(object):
+    def __init__(self, node):
+        self.instances = node.instances
+
+    def configure(self):
+        for instance in self.instances:
+            result = instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"run_jobs": True})
+            result.get()
+
+
+class ConfigureJob(object):
+    def __init__(self, node):
+        self.instances = node.instances
+
+    def configure(self):
+        for instance in self.instances:
+            for relationship_instance in instance.relationships:
+                relationship = relationship_instance.relationship
+                if relationship.is_derived_from("job_managed_by_interface"):
+                    ctx.logger.info("Operations: " + str(relationship.source_operations))
+                    result_configure = relationship_instance.execute_source_operation('preconfigure',
+                                                                                      kwargs={"run_jobs": True})
+                    result_configure.get()
+
+
+def build_configure_graph(nodes):
+    jobs = []
+    interfaces = []
+    for node in nodes:
+        if 'croupier.node.InfrastructureInterface' in node.type_hierarchy:
+            interfaces.append(ConfigureInterface(node))
+        elif 'croupier.node.Job' in node.type_hierarchy:
+            jobs.append(ConfigureJob(node))
+
+    return jobs, interfaces
+
+
 def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
     root_nodes, job_instances_map = build_graph(ctx.nodes)
@@ -568,6 +585,17 @@ def install_croupier(**kwargs):
     if not vault_tokens:
         ctx.logger.warning("Could not find any tokens to revoke")
     ctx.logger.info("------------------Workflow Finished-----------------------")
+
+
+@workflow
+def croupier_configure(**kwargs):
+    interface_instances, job_instances = build_configure_graph(ctx.nodes)
+
+    for interface in interface_instances:
+        interface.configure()
+
+    for job in job_instances:
+        job.configure()
 
 
 def cancel_all(executions):
