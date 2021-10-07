@@ -80,7 +80,7 @@ def create_vault(address, **kwargs):
 
 @operation()
 def download_vault_credentials(token, user, **kwargs):
-    address = ctx.instance.runtime_properties['address']
+    address = ctx.target.instance.runtime_properties['address']
 
     if 'ssh_config' in ctx.source.node.properties:
         ssh_config = ctx.source.node.properties['ssh_config']
