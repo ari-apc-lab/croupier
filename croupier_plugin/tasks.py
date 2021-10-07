@@ -62,10 +62,9 @@ accounting_client = AccountingClient()
 
 
 @operation()
-def download_vault_credentials(token, user, address, **kwargs):
-    ctx.logger.warning('Using vault address: "' + address + '"')
+def create_vault(address, **kwargs):
     if not address:
-        ctx.logger.info('Getting address from config')
+        ctx.logger.info("No address provided, getting vault address from croupier's config file")
         config = configparser.RawConfigParser()
         config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
         config.read(config_file)
@@ -76,8 +75,12 @@ def download_vault_credentials(token, user, address, **kwargs):
 
         except configparser.NoSectionError:
             raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
+    ctx.instance.runtime_properties['address'] = address if address.startswith('http') else 'http://' + address
 
-    address = address if address.startswith('http') else 'http://' + address
+
+@operation()
+def download_vault_credentials(token, user, **kwargs):
+    address = ctx.instance.runtime_properties['address']
 
     if 'ssh_config' in ctx.source.node.properties:
         ssh_config = ctx.source.node.properties['ssh_config']
@@ -251,8 +254,9 @@ def cleanup_execution(
     else:
         ctx.logger.warning('clean up simulated.')
 
+
 @operation
-def configure_monitor(address, **kwargs):
+def create_monitor(address, **kwargs):
     if not address:
         ctx.logger.info(
             "No HPC Exporter address provided. Using address set in croupier installation's config file")

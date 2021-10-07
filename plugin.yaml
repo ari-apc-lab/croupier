@@ -437,6 +437,13 @@ node_types:
                 type: string
                 required: false
                 default: ''
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.create_vault
+                    inputs:
+                        address:
+                            default: { get_property: [ SELF,address ] }
 
     croupier.nodes.HPCExporter:
         derived_from: cloudify.nodes.Root
@@ -448,7 +455,7 @@ node_types:
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
-                    implementation: croupier.croupier_plugin.tasks.configure_monitor
+                    implementation: croupier.croupier_plugin.tasks.create_monitor
                     inputs:
                         address:
                             default: { get_property: [SELF,address] }
@@ -584,5 +591,3 @@ relationships:
                             default: { get_property: [TARGET, token  ] }
                         user:
                             default: { get_property: [TARGET, user   ] }
-                        address:
-                            default: { get_property: [TARGET, address] }
