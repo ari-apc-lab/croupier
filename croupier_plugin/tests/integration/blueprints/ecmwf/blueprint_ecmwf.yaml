@@ -37,6 +37,8 @@ inputs:
         type: string
     vault_token:
         type: string
+    vault_user:
+        type: string
     ecmwf_query:
         type: croupier.datatypes.ecmwf_query
     ecmwf_ssh_credentials:

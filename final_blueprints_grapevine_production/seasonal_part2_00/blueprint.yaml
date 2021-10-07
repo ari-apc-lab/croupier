@@ -33,6 +33,8 @@ imports:
 inputs:
     vault_token:
         type: string
+    vault_user:
+        type: string
 
 
 node_templates:
@@ -43,7 +45,7 @@ node_templates:
         type: croupier.nodes.Vault
         properties:
             token: { get_input: vault_token }
-            user: jesus
+            user: { get_input: vault_user }
     cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         relationships:
