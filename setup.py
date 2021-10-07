@@ -34,7 +34,7 @@ setup(
     # Do not use underscores in the plugin name.
     name='croupier',
 
-    version='3.1.0',
+    version='3.2.0',
     author='Jesus Gorronogoitia',
     author_email='jesus.gorronogoitia@atos.net',
     description='Plugin to use HPC resources in Cloudify',
