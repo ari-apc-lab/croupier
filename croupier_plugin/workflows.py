@@ -589,7 +589,7 @@ def croupier_install(**kwargs):
 
 @workflow
 def croupier_configure(**kwargs):
-    interface_instances, job_instances = build_configure_graph(ctx.nodes)
+    job_instances, interface_instances = build_configure_graph(ctx.nodes)
 
     for interface in interface_instances:
         interface.configure()
