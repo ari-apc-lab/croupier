@@ -53,6 +53,7 @@ node_templates:
             - type: interface_monitored_by
               target: hpc_exporter
         properties:
+            recurring_workflow: True
             config:
                 infrastructure_interface: SHELL
             ssh_config:

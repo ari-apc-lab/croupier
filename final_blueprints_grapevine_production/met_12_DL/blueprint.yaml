@@ -50,6 +50,7 @@ node_templates:
     cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
+            recurring_workflow: True
             config:
                 infrastructure_interface: SHELL
             ssh_config:

@@ -54,6 +54,7 @@ node_templates:
             - type: retrieve_credentials_from_vault
               target: vault
         properties:
+            recurring_workflow: True
             config:
                 infrastructure_interface: SLURM
             ssh_config:
