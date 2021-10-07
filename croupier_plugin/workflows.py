@@ -92,9 +92,8 @@ class JobGraphInstance(TaskGraphInstance):
 
         # Get runtime properties
         self.host = self.runtime_properties["ssh_config"]["host"]
-        self.workdir = self.runtime_properties['workdir']
         self.simulate = self.runtime_properties["simulate"]
-
+        self.workdir = self.runtime_properties["workdir"] if "workdir" in self.runtime_properties else ''
         self.monitor_type = self.runtime_properties["infrastructure_interface"]
         self.monitor_config = self.runtime_properties["ssh_config"]
 
@@ -109,6 +108,7 @@ class JobGraphInstance(TaskGraphInstance):
         result_configure = self.instance.execute_operation('cloudify.interfaces.lifecycle.preconfigure',
                                                            kwargs={"run_jobs": True})
         result_configure.get()
+        self.workdir = self.instance.runtime_properties['workdir']
         self.instance.send_event('Queuing job..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
         result.get()
