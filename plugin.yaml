@@ -256,7 +256,9 @@ workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
     croupier_install:
-        mapping: croupier.croupier_plugin.workflows.install_croupier
+        mapping: croupier.croupier_plugin.workflows.croupier_install
+    croupier_configure:
+        mapping: croupier.croupier_plugin.workflows.croupier_configure
 
 node_types:
     croupier.nodes.InfrastructureInterface:

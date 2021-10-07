@@ -543,7 +543,7 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
 
 
 @workflow
-def install_croupier(**kwargs):
+def croupier_install(**kwargs):
 
     # deployment_id = ctx.nodes[0].properties['resource_config']['deployment']['id']
     # rest_client = get_rest_client()
