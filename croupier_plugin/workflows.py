@@ -110,7 +110,7 @@ class JobGraphInstance(TaskGraphInstance):
             if relationship.is_derived_from("job_managed_by_interface"):
                 ctx.logger.info("Operations: " + str(relationship.source_operations))
                 result_configure = relationship_instance.\
-                    execute_source_operation('cloudify.interfaces.lifecycle.preconfigure', kwargs={"run_jobs": True})
+                    execute_source_operation('preconfigure', kwargs={"run_jobs": True})
                 result_configure.get()
         self.workdir = self.instance._node_instance.runtime_properties['workdir']
         self.instance.send_event('Queuing job..')
