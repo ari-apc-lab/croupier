@@ -63,9 +63,7 @@ accounting_client = AccountingClient()
 
 @operation()
 def download_vault_credentials(token, user, address, **kwargs):
-    ctx.logger.info('Using vault address: "' + address + '"')
-    if not 'address':
-        ctx.logger.info('Getting address from config')
+    if not address:
         config = configparser.RawConfigParser()
         config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
         config.read(config_file)
