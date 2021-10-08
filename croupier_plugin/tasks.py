@@ -892,7 +892,6 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudi
     out_file = "/dev/null"
     command += " > " + out_file + " 2>&1 & disown"
 
-    ctx.logger.info("Sending command: " + command)
     client.execute_shell_command(command)
     client.close_connection()
 
