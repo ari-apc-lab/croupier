@@ -488,6 +488,13 @@ node_types:
                 start:
                     implementation: croupier.croupier_plugin.tasks.download_data
                     max_retries: 0
+                    inputs:
+                        data_urls:
+                            default: { get_property: [SELF, data_urls] }
+                        unzip_data:
+                            default: { get_property: [ SELF, unzip_data ] }
+                        dest_data:
+                            default: { get_property: [ SELF, dest_data ] }
             croupier.interfaces.lifecycle:
                 delete:
                     implementation: croupier.croupier_plugin.tasks.delete_data
@@ -505,12 +512,16 @@ node_types:
             query:
                 description: ECMWF Query fields. Fields- params, date, time, area, max_steps, [ensemble], [memebers], [input], [keep_input], [algorithm]
                 type: croupier.datatypes.ecmwf_query
-            port:
+            server_port:
                 type: string
                 default: 9984
             unzip_data:
                 type: boolean
                 default: True
+            cloudify_address:
+                type: string
+                default: ''
+                required: False
         interfaces:
             cloudify.interfaces.lifecycle:
                 configure:
@@ -518,11 +529,15 @@ node_types:
                     max_retries: 0
                     inputs:
                         query:
-                            default: { get_property: [ SELF, query ] }
+                            default: { get_property: [SELF, query] }
                         ssh_config:
-                            default: { get_property: [ SELF, ssh_config ] }
+                            default: { get_property: [SELF, ssh_config] }
                         keycloak_credentials:
-                            default: { get_property: [ SELF, keycloak_credentials ] }
+                            default: { get_property: [SELF, keycloak_credentials] }
+                        cloudify_address:
+                            default: { get_property: [SELF, cloudify_address] }
+                        server_port:
+                            default: { get_property: [SELF, port] }
 relationships:
     interface_contained_in:
         derived_from: cloudify.relationships.contained_in

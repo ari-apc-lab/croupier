@@ -853,10 +853,9 @@ def publish(publish_list, data_mover_options, **kwargs):
 
 
 @operation
-def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, **kwargs):
+def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudify_address, server_port, **kwargs):
     ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
-    server_port = ctx.node.properties['port']
-    server_host = requests.get('https://api.ipify.org').text
+    server_host = cloudify_address if cloudify_address else requests.get('https://api.ipify.org').text
     if "keycloak_credentials" in ctx.instance.runtime_properties:
         keycloak_credentials = ctx.instance.runtime_properties["keycloak_credentials"]
     if "ssh_config" in ctx.instance.runtime_properties:
@@ -929,24 +928,20 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, **kwar
 
 
 @operation
-def download_data(**kwargs):
+def download_data(unzip_data, dest_data, data_urls, **kwargs):
     ctx.logger.info('Downloading data...')
     simulate = ctx.instance.runtime_properties['simulate']
 
-    if not simulate and 'data_urls' in ctx.instance.runtime_properties \
-            and ctx.instance.runtime_properties['data_urls']:
-        data_urls = ctx.instance.runtime_properties['data_urls']
-        inputs = data_urls
+    if not simulate and 'data_urls' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['data_urls']:
+        if 'data_urls' in ctx.instance.runtime_properties:
+            data_urls.extend(ctx.instance.runtime_properties['data_urls'])
         ssh_config = ctx.instance.runtime_properties['ssh_config']
-        workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
-            else ctx.instance.runtime_properties['workdir']
+        workdir = dest_data if dest_data else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = data_download_unzip_script() if 'unzip_data' in ctx.node.properties and ctx.node.properties[
-            'unzip_data'] \
-            else data_download_script()
+        script = data_download_unzip_script() if unzip_data  else data_download_script()
         skip_cleanup = False
-        if deploy_job(script, inputs, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
+        if deploy_job(script, data_urls, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
             files_downloaded = ctx.instance.runtime_properties['files_downloaded'] \
                 if 'files_downloaded' in ctx.instance.runtime_properties else []
