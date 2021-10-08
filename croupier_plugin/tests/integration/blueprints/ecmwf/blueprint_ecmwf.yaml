@@ -107,7 +107,7 @@ node_templates:
                 time: 00
                 collection: hidalgo-test
         relationships:
-            - type: data_target_infrastructure
+            - type: task_managed_by_interface
               target: hpc
             - type: retrieve_credentials_from_vault
               target: vault
