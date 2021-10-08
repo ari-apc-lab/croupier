@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 HLRS. All rights reserved.
 
 This file is part of Croupier.
@@ -23,7 +23,7 @@ license information in the project root.
 
 utilities.py:
 Set of useful utilities for passing files, composing Shell scripts, etc
-'''
+"""
 
 
 # Import proper implementation of shell lexical quoting

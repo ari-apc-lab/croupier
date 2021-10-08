@@ -618,7 +618,7 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
 
 # TODO: Implement these workflows properly
 
-'''
+"""
 @workflow
 def gather_data(**kwargs):  # pylint: disable=W0613
     execute_jobs(force_data=True, skip_jobs=True, **kwargs)
@@ -627,7 +627,7 @@ def gather_data(**kwargs):  # pylint: disable=W0613
 @workflow
 def run_jobs_force_get_data(**kwargs):  # pylint: disable=W0613
     execute_jobs(force_data=True, skip_jobs=False)
-'''
+"""
 
 
 

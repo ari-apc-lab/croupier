@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -25,7 +25,7 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 
 tasks.py: Holds the plugin tasks
-'''
+"""
 from __future__ import print_function
 import os
 import sys
@@ -35,7 +35,6 @@ from future import standard_library
 from builtins import str
 import socket
 import traceback
-from time import sleep, time
 from datetime import datetime
 import pytz
 
@@ -214,7 +213,7 @@ def configure_execution(
 
         # Register Croupier instance in Accounting if not done before
         if accounting_client.report_to_accounting:
-            registerOrchestratorInstanceInAccounting(ctx)
+            register_orchestrator_instance_accounting()
 
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
@@ -272,7 +271,7 @@ def create_monitor(address, **kwargs):
             address = config.get('Monitoring', 'hpc_exporter_address')
             if address is None:
                 ctx.logger.error(
-                    'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
+                   'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
                 return
         except configparser.NoSectionError:
             ctx.logger.error(
@@ -314,7 +313,7 @@ def start_monitoring_hpc(
         infrastructure_interface = "pbs" if infrastructure_interface == "torque" else infrastructure_interface
         monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
 
-        deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options\
+        deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options \
             else ctx.deployment.id
         hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
         only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
@@ -467,7 +466,7 @@ def bootstrap_job(
 
 
 @operation
-def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
+def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
     """Revert a job using a script that receives SSH ssh_config as input"""
     if not deployment:
         return
@@ -621,7 +620,6 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         client.close_connection()
     else:
         ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
-        is_submitted = True
         jobid = "Simulated"
 
     if jobid:
@@ -646,7 +644,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
 @operation
 def delete_reservation():
-    if not ('reservation' in ctx.instance.runtime_properties) and not\
+    if not ('reservation' in ctx.instance.runtime_properties) and not \
             ('reservation_deletion_path' in ctx.instance.runtime_properties):
         return
     reservation_id = ctx.instance.runtime_properties['reservation']
@@ -669,8 +667,9 @@ def delete_reservation():
             reservation_id,
             deletion_path)
     except Exception as ex:
-        ctx.logger.error('Reservation could not be deleted because: ' + ex.message)
-        raise ex
+        ctx.logger.error('Reservation could not be deleted because: ' + str(ex))
+        client.close_connection()
+        return
     client.close_connection()
 
     if ok:
@@ -813,7 +812,7 @@ def publish(publish_list, data_mover_options, **kwargs):
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
                 convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger) \
-                    if audit is not None and "cput" in audit and audit["cput"] else 0
+                if audit is not None and "cput" in audit and audit["cput"] else 0
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -872,7 +871,7 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, **kwar
                  "area": query["area"],
                  "max_step": query["max_step"],
                  "ensemble": query["ensemble"],
-                 "input": query["input"] ,
+                 "input": query["input"],
                  "members": query["members"],
                  "keep_input": query["keep_input"],
                  "collection": query["collection"],
@@ -1033,20 +1032,20 @@ def pass_data_info(**kwargs):
     ctx.source.instance.runtime_properties['files_downloaded'] = files_downloaded
 
 
-def getHours(cput):
+def get_hours(cput):
     return int(cput[:cput.index(':')])
 
 
-def getMinutes(cput):
+def get_minutes(cput):
     return int(cput[cput.index(':') + 1:cput.rindex(':')])
 
 
-def getSeconds(cput):
+def get_seconds(cput):
     return int(cput[cput.rindex(':') + 1:])
 
 
-def parseHours(cput):
-    hours = getHours(cput) + getMinutes(cput) / 60.0 + getSeconds(cput) / 3600.0
+def parse_hours(cput):
+    hours = get_hours(cput) + get_minutes(cput) / 60.0 + get_seconds(cput) / 3600.0
     return hours
 
 
@@ -1060,7 +1059,7 @@ def monitor_job(jobid, hpc_exporter_entrypoint, deployment_id, host):
     requests.post(url, json=payload)
 
 
-def registerOrchestratorInstanceInAccounting(ctx):
+def register_orchestrator_instance_accounting():
     hostname = socket.gethostname()
     reporter_name = 'croupier@' + hostname
 
@@ -1068,7 +1067,7 @@ def registerOrchestratorInstanceInAccounting(ctx):
         reporter = accounting_client.get_reporter_by_name(reporter_name)
         ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
         ctx.logger.info('Registered Croupier reporter in Accounting with id {}'.format(reporter.id))
-    except Exception as err:
+    except Exception:
         # Croupier not registered in Accounting
         try:
             ip = requests.get('https://api.ipify.org').text
@@ -1077,9 +1076,7 @@ def registerOrchestratorInstanceInAccounting(ctx):
             ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
         except Exception as err:
             ctx.logger.warning(
-                'Croupier orchestrator instance could not be registered into Accounting, raising an error: {err}'.
-                    format(err=err))
-
+                'Croupier instance could not be registered into Accounting, raising an error: {}'.format(err))
 
 
 def convert_cput(cput, job_id, workdir, ssh_client, logger):
@@ -1091,8 +1088,8 @@ def convert_cput(cput, job_id, workdir, ssh_client, logger):
 
 
 def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, logger):
+    workflow_id = ctx.workflow_id
     try:
-        workflow_id = ctx.workflow_id
         start_transaction = audit['start_timestamp']
         stop_transaction = audit['stop_timestamp']
         workflow_parameters = audit['workflow_parameters']
@@ -1101,15 +1098,14 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
             username = ctx.instance.runtime_properties['ssh_config']['user']
         try:
             user = accounting_client.get_user_by_name(username)
-        except Exception as err:
+        except Exception:
             # User not registered
             try:
                 user = User(username)
                 user = accounting_client.add_user(user)
             except Exception as err:
                 raise Exception(
-                    'User {username} could not be registered into Accounting, raising an error: {err}'.
-                        format(username=username, err=err))
+                    'User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
 
         # Register HPC CPU total
         server = ctx.instance.runtime_properties['ssh_config']['host']
@@ -1133,7 +1129,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
     except Exception as err:
         logger.error(
             'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
-                format(workflow_id=workflow_id, err=err))
+            format(workflow_id=workflow_id, err=err))
 
 
 def read_processors_per_node(job_id, workdir, ssh_client, logger):

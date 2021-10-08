@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 infrastructure_interface.py
-'''
+"""
 from builtins import str
 from builtins import range
 from past.builtins import basestring

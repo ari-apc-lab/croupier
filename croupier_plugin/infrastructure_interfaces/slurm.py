@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 slurm.py: Holds the slurm functions
-'''
+"""
 from builtins import str
 import datetime, pytz
 import time
