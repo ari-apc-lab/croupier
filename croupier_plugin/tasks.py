@@ -390,7 +390,7 @@ def stop_monitoring_hpc(
 
 
 @operation
-def preconfigure_job(
+def preconfigure_task(
         config,
         ssh_config,
         job_prefix,
@@ -405,6 +405,8 @@ def preconfigure_job(
             ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
         else:
             ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
+        if not ctx.target.node.properties['recurring_workflow']:
+            ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
         ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
         ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
         ctx.source.instance.runtime_properties['reservation_deletion_path'] = config['reservation_deletion_path']
@@ -418,9 +420,6 @@ def preconfigure_job(
                 ctx.target.instance.runtime_properties['hpc_exporter_address']
             ctx.source.instance.runtime_properties['monitoring_id'] = \
                 ctx.target.instance.runtime_properties['monitoring_id']
-
-        if not ctx.target.node.properties['recurring_workflow']:
-            ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
     elif ctx.target.node.properties['recurring_workflow'] and kwargs["run_jobs"]:
         ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
@@ -938,7 +937,7 @@ def download_data(**kwargs):
             and ctx.instance.runtime_properties['data_urls']:
         data_urls = ctx.instance.runtime_properties['data_urls']
         inputs = data_urls
-        credentials = ctx.instance.runtime_properties['credentials']
+        ssh_config = ctx.instance.runtime_properties['ssh_config']
         workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
@@ -947,7 +946,7 @@ def download_data(**kwargs):
             'unzip_data'] \
             else data_download_script()
         skip_cleanup = False
-        if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+        if deploy_job(script, inputs, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
             files_downloaded = ctx.instance.runtime_properties['files_downloaded'] \
                 if 'files_downloaded' in ctx.instance.runtime_properties else []
@@ -975,14 +974,14 @@ def delete_data(**kwargs):
     if "files_downloaded" in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded'] \
             and not simulate:
         inputs = ctx.instance.runtime_properties["files_downloaded"]
-        credentials = ctx.instance.runtime_properties['credentials']
+        ssh_config = ctx.instance.runtime_properties['ssh_config']
         workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         script = data_delete_script()
         skip_cleanup = False
-        if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+        if deploy_job(script, inputs, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data deleted')
             ctx.instance.runtime_properties["files_downloaded"] = []
         else:
@@ -991,35 +990,6 @@ def delete_data(**kwargs):
         ctx.logger.info("...data deletion simulated")
     else:
         ctx.logger.warning('...nothing to delete')
-
-
-@operation
-def preconfigure_data(
-        config,
-        credentials,
-        external_monitor_entrypoint,
-        external_monitor_port,
-        external_monitor_type,
-        external_monitor_orchestrator_port,
-        monitor_period,
-        simulate,
-        **kwargs):  # pylint: disable=W0613
-    """ Save infrastructure properties in the data node instance (credentials, etc.) """
-    ctx.logger.info('Preconfiguring data..')
-
-    if 'credentials' not in ctx.target.instance.runtime_properties:
-        ctx.source.instance.runtime_properties['credentials'] = credentials
-    else:
-        ctx.source.instance.runtime_properties['credentials'] = ctx.target.instance.runtime_properties['credentials']
-
-    ctx.source.instance.runtime_properties['external_monitor_entrypoint'] = external_monitor_entrypoint
-    ctx.source.instance.runtime_properties['external_monitor_port'] = external_monitor_port
-    ctx.source.instance.runtime_properties['external_monitor_type'] = external_monitor_type
-    ctx.source.instance.runtime_properties['monitor_orchestrator_port'] = external_monitor_orchestrator_port
-    ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
-    ctx.source.instance.runtime_properties['simulate'] = simulate
-    ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
-    ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 
 @operation

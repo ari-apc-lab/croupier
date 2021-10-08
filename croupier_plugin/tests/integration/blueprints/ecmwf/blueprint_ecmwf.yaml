@@ -72,7 +72,7 @@ node_templates:
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc
             - type: job_needs_data
               target: weather_data
@@ -86,7 +86,7 @@ node_templates:
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc
             - type: job_needs_data
               target: weather_data

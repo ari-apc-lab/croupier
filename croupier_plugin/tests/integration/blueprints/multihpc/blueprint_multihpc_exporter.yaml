@@ -98,7 +98,7 @@ node_templates:
                 partition: cola_corta
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
 
     sodalite_job:
@@ -116,7 +116,7 @@ node_templates:
                 queue: batch
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: sodalite_hpc
 
 outputs:

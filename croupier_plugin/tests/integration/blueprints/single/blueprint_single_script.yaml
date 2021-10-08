@@ -77,7 +77,7 @@ node_templates:
                     - 'single'
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
 
 outputs:

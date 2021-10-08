@@ -473,7 +473,7 @@ class ConfigureJob(object):
         for instance in self.instances:
             for relationship_instance in instance.relationships:
                 relationship = relationship_instance.relationship
-                if relationship.is_derived_from("job_managed_by_interface"):
+                if relationship.is_derived_from("task_managed_by_interface"):
                     ctx.logger.info("Operations: " + str(relationship.source_operations))
                     result_configure = relationship_instance.execute_source_operation('preconfigure',
                                                                                       kwargs={"run_jobs": True})

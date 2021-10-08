@@ -65,7 +65,7 @@ node_templates:
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
 
     job2:
@@ -80,7 +80,7 @@ node_templates:
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
             - type: job_depends_on
               target: job1
@@ -104,7 +104,7 @@ node_templates:
                     - "script_"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
             - type: job_depends_on
               target: job1
@@ -128,7 +128,7 @@ node_templates:
                     - "script_"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
             - type: job_depends_on
               target: job2

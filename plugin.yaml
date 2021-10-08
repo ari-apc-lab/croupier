@@ -535,18 +535,20 @@ relationships:
                             default: { get_property: [SOURCE, ssh_config] }
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
+
     interface_monitored_by:
         derived_from: cloudify.relationships.depends_on
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface_monitor
-    job_managed_by_interface:
+
+    task_managed_by_interface:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.preconfigure_job
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_task
                     inputs:
                         config:
                             default: { get_property: [TARGET, config] }
@@ -558,20 +560,6 @@ relationships:
                             default: { get_property: [TARGET, monitoring_options] }
                         simulate:
                             default: { get_property: [TARGET, simulate] }
-
-    data_target_infrastructure:
-        derived_from: cloudify.relationships.contained_in
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.preconfigure_data
-                    inputs:
-                        config:
-                            default: { get_property: [ TARGET, config ] }
-                        ssh_config:
-                            default: { get_property: [ TARGET, ssh_config ] }
-                        simulate:
-                            default: { get_property: [ TARGET, simulate ] }
 
     job_depends_on:
         derived_from: cloudify.relationships.depends_on

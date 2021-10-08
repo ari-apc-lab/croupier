@@ -63,7 +63,7 @@ node_templates:
                 partition: { get_input: partition_name }
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
 
 outputs:

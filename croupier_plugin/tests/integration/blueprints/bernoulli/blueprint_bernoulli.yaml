@@ -71,7 +71,7 @@ node_templates:
                 revert: "scripts/delete_bernoulli_script.sh"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
 
     bernoulli_job_2:
@@ -90,7 +90,7 @@ node_templates:
                 revert: "scripts/delete_bernoulli_script.sh"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
 
 outputs:

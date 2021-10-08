@@ -85,7 +85,7 @@ node_templates:
                     - { singularity_load_command }
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: cesga_hpc
 
 outputs:

@@ -106,7 +106,7 @@ node_templates:
         partition: cola_corta
       skip_cleanup: True
     relationships:
-      - type: job_managed_by_interface
+      - type: task_managed_by_interface
         target: hpc_interface
 
   vm_job:
@@ -116,7 +116,7 @@ node_templates:
         commands: ["touch single_vm.test"]
         max_time: 00:01:00
     relationships:
-      - type: job_managed_by_interface
+      - type: task_managed_by_interface
         target: openstack_interface
       - type: job_depends_on
         target: hpc_job
