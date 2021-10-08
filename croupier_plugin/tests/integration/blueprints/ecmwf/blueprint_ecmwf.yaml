@@ -30,28 +30,22 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
+    - plugin:croupier
 
 inputs:
     vault_user:
         type: string
     vault_token:
         type: string
-    vault_user:
-        type: string
-    ecmwf_query:
-        type: croupier.datatypes.ecmwf_query
-    ecmwf_ssh_credentials:
-        type: croupier.datatypes.ssh_config
 
 node_templates:
-    hpc-vulcan:
+    hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
                 infrastructure_interface: TORQUE
             ssh_config:
-                host: hawk.hlrs.de
+                host: sodalite-fe.hlrs.de
             job_prefix: ecmwf
             base_dir: "$HOME"
             monitoring_options:
@@ -79,7 +73,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc-vulcan
+              target: hpc
             - type: job_needs_data
               target: weather_data
 
@@ -93,7 +87,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: job_managed_by_interface
-              target: hpc-vulcan
+              target: hpc
             - type: job_needs_data
               target: weather_data
             - type: job_depends_on
@@ -102,12 +96,19 @@ node_templates:
     weather_data:
         type: croupier.nodes.ECMWFVerticalInterpolation
         properties:
-            ssh_config: { get_input: ecmwf_ssh_credentials }
-            keycloak_credentials: { get_input: keycloak_credentials }
-            query: { get_input: ecmwf_query }
+            ssh_config:
+                host: 136.156.90.143
+            keycloak_credentials:
+                user: { get_input: vault_user }
+            query:
+                area: 45/18/44/19
+                params: u/v
+                date: 20210910
+                time: 00
+                collection: hidalgo-test
         relationships:
             - type: data_target_infrastructure
-              target: hpc-vulcan
+              target: hpc
             - type: retrieve_credentials_from_vault
               target: vault
 

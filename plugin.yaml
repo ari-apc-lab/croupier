@@ -513,19 +513,14 @@ node_types:
                 default: True
         interfaces:
             cloudify.interfaces.lifecycle:
-                create:
-                    implementation: croupier.croupier_plugin.tasks.download_credentials_vault_ecmwf
-                    inputs:
-                        vault_config:
-                            default: { get_property: [ SELF, vault_config ] }
-                        ssh_config:
-                            default: { get_property: [ SELF, ecmwf_ssh_config ] }
                 configure:
                     implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
                     max_retries: 0
                     inputs:
                         query:
                             default: { get_property: [ SELF, query ] }
+                        ssh_config:
+                            default: { get_property: [ SELF, ssh_config ] }
                         keycloak_credentials:
                             default: { get_property: [ SELF, keycloak_credentials ] }
 relationships:

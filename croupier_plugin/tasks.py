@@ -829,7 +829,6 @@ def publish(publish_list, data_mover_options, **kwargs):
                         'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
                         'Croupier instance not registered in Accounting'.format(workflow_id=ctx.workflow_id))
 
-
             for publish_item in publish_list:
                 if not published:
                     break
@@ -856,12 +855,14 @@ def publish(publish_list, data_mover_options, **kwargs):
 
 
 @operation
-def ecmwf_vertical_interpolation(query, **kwargs):
+def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, **kwargs):
     ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
     server_port = ctx.node.properties['port']
     server_host = requests.get('https://api.ipify.org').text
-    keycloak_credentials = ctx.instance.runtime_properties["keycloak_credentials"]
-    ecmwf_ssh_credentials = ctx.instance.runtime_properties["ssh_config"]
+    if "keycloak_credentials" in ctx.instance.runtime_properties:
+        keycloak_credentials = ctx.instance.runtime_properties["keycloak_credentials"]
+    if "ssh_config" in ctx.instance.runtime_properties:
+        ssh_config = ctx.instance.runtime_properties["ssh_config"]
     ctx.logger.info('IP is: ' + server_host)
 
     arguments = {"notify": "http://" + server_host + ":" + str(server_port) + "/ready",
@@ -882,7 +883,7 @@ def ecmwf_vertical_interpolation(query, **kwargs):
         arguments["date"] = query["date"]
         arguments["time"] = query["time"]
 
-    client = SshClient(ecmwf_ssh_credentials)
+    client = SshClient(ssh_config)
 
     command = "cd cloudify && source /opt/anaconda3/etc/profile.d/conda.sh && conda activate && " \
               "nohup python3 interpolator.py"
