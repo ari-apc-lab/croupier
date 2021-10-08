@@ -455,6 +455,11 @@ node_templates:
 
 
 deployment_settings:
+    configure:
+        workflow: croupier_configure
+        since: '2021-10-01 06:50'
+        recurrence: '1d'
+        timezone: 'Europe/Madrid'
     default_schedules:
         main:
             workflow: run_jobs
