@@ -100,8 +100,8 @@ class JobGraphInstance(TaskGraphInstance):
         monitoring_options = self.runtime_properties["monitoring_options"]
         self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \
             else 10
-        self.reservation = self.node.properties["job_options"]["reservation"] \
-            if "reservation" in self.node.properties["job_options"] else ""
+        self.reservation = self.node.cfy_node.properties["job_options"]["reservation"] \
+            if "reservation" in self.cfy_node.node.properties["job_options"] else ""
         self.name = self.runtime_properties["job_prefix"] + self.instance.id
 
     def launch(self):
