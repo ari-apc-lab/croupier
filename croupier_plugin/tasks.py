@@ -564,11 +564,12 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     name = kwargs['name']
     is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.type_hierarchy
 
-    if 'reservation' in job_options and 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
+    if 'reservation' in job_options:
         reservation_id = job_options['reservation']
         if 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
             timezone = ctx.instance.runtime_properties['timezone']
-            job_options['reservation'] = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
+            reservation_id = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
+            job_options['reservation'] = reservation_id
         ctx.instance.runtime_properties['reservation'] = reservation_id
 
     if not simulate:
@@ -642,9 +643,11 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
 
 @operation
-def delete_reservation():
+def delete_reservation(**kwargs):
+    name = kwargs["name"]
     if not ('reservation' in ctx.instance.runtime_properties) and not \
             ('reservation_deletion_path' in ctx.instance.runtime_properties):
+        ctx.logger.warning("No reservation found for job " + name)
         return
     reservation_id = ctx.instance.runtime_properties['reservation']
     interface_type = ctx.instance.runtime_properties['infrastructure_interface']

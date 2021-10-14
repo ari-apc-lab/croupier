@@ -100,7 +100,8 @@ class JobGraphInstance(TaskGraphInstance):
         monitoring_options = self.runtime_properties["monitoring_options"]
         self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \
             else 10
-
+        self.reservation = self.node.properties["job_options"]["reservation"] \
+            if "reservation" in self.node.properties["job_options"] else ""
         self.name = self.runtime_properties["job_prefix"] + self.instance.id
 
     def launch(self):
@@ -119,10 +120,9 @@ class JobGraphInstance(TaskGraphInstance):
     def delete_reservation(self):
         """ Sends the job's instance to the infrastructure queue """
         self.update_properties()
-        if 'reservation' not in self.runtime_properties:
-            return
-        self.instance.send_event('Deleting reservation..')
-        result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete_reservation')
+        self.instance.send_event('Deleting reservation...')
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete_reservation',
+                                                 kwargs={"name": self.name})
         result.get()
 
     def publish(self):
@@ -422,12 +422,6 @@ class Monitor(object):
         return self._execution_pool
 
 
-def delete_reservations(job_instances_map):
-    for instance_name in job_instances_map:
-        instance = job_instances_map[instance_name]
-        instance.delete_reservation()
-
-
 def build_graph(nodes):
     """ Creates a new graph of nodes and instances with the job wrapper """
 
@@ -536,7 +530,12 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         ctx.logger.info("Cancelling jobs...")
         cancel_all(monitor.get_executions_iterator())
 
-    delete_reservations(job_instances_map)
+    deleted_reservations = []
+    for instance_name in job_instances_map:
+        instance = job_instances_map[instance_name]
+        if instance.reservation not in deleted_reservations and instance.reservation:
+            instance.delete_reservation()
+            deleted_reservations.append(instance.reservation)
 
     ctx.logger.info("------------------Workflow Finished-----------------------")
     return
