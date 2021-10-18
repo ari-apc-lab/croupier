@@ -8,5 +8,5 @@ requests
 networkx==1.9.1
 urllib3==1.26.2
 cffi==1.14.5
-cryptography==3.3.1
+cryptography==3.3.2
 pytz
