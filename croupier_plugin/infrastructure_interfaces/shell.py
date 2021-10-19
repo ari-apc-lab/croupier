@@ -31,6 +31,9 @@ from croupier_plugin.infrastructure_interfaces import infrastructure_interface
 
 class Shell(infrastructure_interface.InfrastructureInterface):
 
+    def _get_jobid(self, output):
+        return "SHELL_JOB"
+
     def _parse_job_settings(
             self,
             job_id,

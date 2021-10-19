@@ -129,6 +129,9 @@ def start_time_tostr(start_time):
 class Slurm(InfrastructureInterface):
     """ Slurm Workload Manger Driver """
 
+    def _get_jobid(self, output):
+        return output.split(' ')[-1].strip()
+
     def _parse_job_settings(
             self,
             job_id,
