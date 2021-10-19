@@ -41,7 +41,8 @@ import socket
 import _thread
 
 from croupier_plugin.utilities import shlex_quote
-from paramiko import RSAKey, client, ssh_exception
+from paramiko import RSAKey, client
+from paramiko.ssh_exception import SSHException
 
 try:
     import socketserver
@@ -123,7 +124,7 @@ class SshClient(object):
                     password=self._passwd,
                     look_for_keys=False
                 )
-            except ssh_exception.SSHException as err:
+            except (SSHException, socket.error) as err:
                 if retries > 0 and str(err) == "Error reading SSH protocol banner":
                     retries -= 1
                     logging.getLogger("paramiko").warning("Retrying SSH connection: " + str(err))
@@ -178,9 +179,20 @@ class SshClient(object):
             else:
                 cmd = command
             # there is one channel per command
-            stdin, stdout, stderr = self._client.exec_command(
-                cmd,
-                timeout=exec_timeout)
+            retries = 3
+            while True:
+                try:
+                    stdin, stdout, stderr = self._client.exec_command(
+                        cmd,
+                        timeout=exec_timeout)
+                except (SSHException, socket.error) as se:
+                    if retries > 0:
+                        retries -= 1
+                        logging.getLogger("paramiko").warning("Retrying SSH connection: " + str(se))
+                        continue
+                    else:
+                        raise se
+                break
 
             if wait_result:
                 # get the shared channel for stdout/stderr/stdin
