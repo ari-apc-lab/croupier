@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -26,7 +26,7 @@ ssh.py: Wrap of paramiko to send ssh commands
 Todo:
     * read stderr and return it
     * control SSH exceptions and return failures
-'''
+"""
 from __future__ import print_function
 from future import standard_library
 
@@ -41,7 +41,8 @@ import socket
 import _thread
 
 from croupier_plugin.utilities import shlex_quote
-from paramiko import RSAKey, client, ssh_exception
+from paramiko import RSAKey, client
+from paramiko.ssh_exception import SSHException
 
 try:
     import socketserver
@@ -123,7 +124,7 @@ class SshClient(object):
                     password=self._passwd,
                     look_for_keys=False
                 )
-            except ssh_exception.SSHException as err:
+            except (SSHException, socket.error) as err:
                 if retries > 0 and str(err) == "Error reading SSH protocol banner":
                     retries -= 1
                     logging.getLogger("paramiko").warning("Retrying SSH connection: " + str(err))
@@ -178,9 +179,20 @@ class SshClient(object):
             else:
                 cmd = command
             # there is one channel per command
-            stdin, stdout, stderr = self._client.exec_command(
-                cmd,
-                timeout=exec_timeout)
+            retries = 3
+            while True:
+                try:
+                    stdin, stdout, stderr = self._client.exec_command(
+                        cmd,
+                        timeout=exec_timeout)
+                except (SSHException, socket.error) as se:
+                    if retries > 0:
+                        retries -= 1
+                        logging.getLogger("paramiko").warning("Retrying SSH connection: " + str(se))
+                        continue
+                    else:
+                        raise se
+                break
 
             if wait_result:
                 # get the shared channel for stdout/stderr/stdin
@@ -217,7 +229,7 @@ class SshClient(object):
                             # make sure to read stderr to prevent stall
                             stdout_chunks.append(stderr.channel.recv_stderr(len(c.in_stderr_buffer)))
                             got_chunk = True
-                    '''
+                    """
                     1) make sure that there are at least 2 cycles with no data
                         in the input buffers in order to not exit too early
                         (i.e. cat on a >200k file).
@@ -225,7 +237,7 @@ class SshClient(object):
                         received the exit code
                     3) check if input buffers are empty
                     4) exit the loop
-                    '''
+                    """
                     if (not got_chunk
                             and stdout.channel.exit_status_ready()
                             and not stderr.channel.recv_stderr_ready()

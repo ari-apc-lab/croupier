@@ -131,7 +131,7 @@ The following code uses ``hpc_interface`` to describe four jobs that should run 
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
 
     second_parallel_job:
@@ -146,7 +146,7 @@ The following code uses ``hpc_interface`` to describe four jobs that should run 
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
             - type: job_depends_on
               target: first_job
@@ -170,7 +170,7 @@ The following code uses ``hpc_interface`` to describe four jobs that should run 
                     - "script_"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
             - type: job_depends_on
               target: first_job
@@ -194,7 +194,7 @@ The following code uses ``hpc_interface`` to describe four jobs that should run 
                     - "script_"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
             - type: job_depends_on
               target: second_parallel_job
@@ -202,7 +202,7 @@ The following code uses ``hpc_interface`` to describe four jobs that should run 
               target: third_parallel_job
 
 
-Finally, jobs have two main types of relationships: **job_managed_by_interface**, to stablish which infrastructure interface will run the job, and **job_depends_on**, to describe the dependency between jobs. In the example above, `fourth_job` depends on `three_parallel_job` and `second_parallel_job`, so it will not execute until the other two have finished. In the same way, `three_parallel_job` and `second_parallel_job` depends on `first_job`, so they will run in parallel once the first job is finished. All jobs are contained in `hpc_interface`, so they will run on the HPC using the credentials provided. A third one, **interface_contained_in** is used to link the Infrastructure Interface to other Cloudify plugins, sush as Openstack. See `relationships <./plugin.html#relationships>`__ for more information.
+Finally, jobs have two main types of relationships: **task_managed_by_interface**, to stablish which infrastructure interface will run the job, and **job_depends_on**, to describe the dependency between jobs. In the example above, `fourth_job` depends on `three_parallel_job` and `second_parallel_job`, so it will not execute until the other two have finished. In the same way, `three_parallel_job` and `second_parallel_job` depends on `first_job`, so they will run in parallel once the first job is finished. All jobs are contained in `hpc_interface`, so they will run on the HPC using the credentials provided. A third one, **interface_contained_in** is used to link the Infrastructure Interface to other Cloudify plugins, sush as Openstack. See `relationships <./plugin.html#relationships>`__ for more information.
 
 
 .. _outputs:

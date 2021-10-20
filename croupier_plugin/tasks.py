@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -25,7 +25,7 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 
 tasks.py: Holds the plugin tasks
-'''
+"""
 from __future__ import print_function
 import os
 import sys
@@ -35,7 +35,6 @@ from future import standard_library
 from builtins import str
 import socket
 import traceback
-from time import sleep, time
 from datetime import datetime
 import pytz
 
@@ -62,8 +61,9 @@ accounting_client = AccountingClient()
 
 
 @operation()
-def download_vault_credentials(token, user, address, **kwargs):
-    if not 'address':
+def create_vault(address, **kwargs):
+    if not address:
+        ctx.logger.info("No address provided, getting vault address from croupier's config file")
         config = configparser.RawConfigParser()
         config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
         config.read(config_file)
@@ -74,8 +74,12 @@ def download_vault_credentials(token, user, address, **kwargs):
 
         except configparser.NoSectionError:
             raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
+    ctx.instance.runtime_properties['address'] = address if address.startswith('http') else 'http://' + address
 
-    address = address if address.startswith('http') else 'http://' + address
+
+@operation()
+def download_vault_credentials(token, user, **kwargs):
+    address = ctx.target.instance.runtime_properties['address']
 
     if 'ssh_config' in ctx.source.node.properties:
         ssh_config = ctx.source.node.properties['ssh_config']
@@ -146,12 +150,22 @@ def configure_execution(
         workdir_prefix,
         monitoring_options,
         accounting_options,
+        recurring_workflow,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Creates the working directory for the execution """
-    ctx.logger.info('Connecting to infrastructure interface..')
 
-    if not simulate:
+    # Registering accounting and monitoring options
+    ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
+    ctx.instance.runtime_properties['accounting_options'] = accounting_options
+    ctx.instance.runtime_properties['infrastructure_host'] = ssh_config['host']
+    if recurring_workflow and "run_jobs" not in kwargs:
+        ctx.logger.info(
+            "Configuration of infrastructure interfaces in the case of recurring workflows happens during run_jobs")
+    elif not recurring_workflow and "run_jobs" in kwargs and kwargs["run_jobs"]:
+        pass
+    elif not simulate:
+        ctx.logger.info('Connecting to infrastructure interface..')
         if 'infrastructure_interface' not in config:
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
@@ -199,12 +213,7 @@ def configure_execution(
 
         # Register Croupier instance in Accounting if not done before
         if accounting_client.report_to_accounting:
-            registerOrchestratorInstanceInAccounting(ctx)
-
-        # Registering accounting and monitoring options
-        ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
-        ctx.instance.runtime_properties['accounting_options'] = accounting_options
-        ctx.instance.runtime_properties['infrastructure_host'] = ssh_config['host']
+            register_orchestrator_instance_accounting()
 
         ctx.logger.info('..infrastructure ready to be used on ' + workdir)
     else:
@@ -249,8 +258,9 @@ def cleanup_execution(
     else:
         ctx.logger.warning('clean up simulated.')
 
+
 @operation
-def configure_monitor(address, **kwargs):
+def create_monitor(address, **kwargs):
     if not address:
         ctx.logger.info(
             "No HPC Exporter address provided. Using address set in croupier installation's config file")
@@ -261,7 +271,7 @@ def configure_monitor(address, **kwargs):
             address = config.get('Monitoring', 'hpc_exporter_address')
             if address is None:
                 ctx.logger.error(
-                    'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
+                   'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
                 return
         except configparser.NoSectionError:
             ctx.logger.error(
@@ -303,7 +313,7 @@ def start_monitoring_hpc(
         infrastructure_interface = "pbs" if infrastructure_interface == "torque" else infrastructure_interface
         monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
 
-        deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options\
+        deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options \
             else ctx.deployment.id
         hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
         only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
@@ -380,7 +390,7 @@ def stop_monitoring_hpc(
 
 
 @operation
-def preconfigure_job(
+def preconfigure_task(
         config,
         ssh_config,
         job_prefix,
@@ -390,23 +400,29 @@ def preconfigure_job(
     """ Match the job with its ssh_config """
     ctx.logger.info('Preconfiguring job..')
 
-    if 'ssh_config' not in ctx.target.instance.runtime_properties:
-        ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
-    else:
-        ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
-    ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
-    ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
-    ctx.source.instance.runtime_properties['reservation_deletion_path'] = config['reservation_deletion_path']
-    ctx.source.instance.runtime_properties['timezone'] = config['country_tz']
-    ctx.source.instance.runtime_properties['simulate'] = simulate
-    ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
-    ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
-    if 'hpc_exporter_address' in ctx.target.instance.runtime_properties and \
-            ctx.target.instance.runtime_properties['hpc_exporter_address']:
-        ctx.source.instance.runtime_properties['hpc_exporter_address'] = \
-            ctx.target.instance.runtime_properties['hpc_exporter_address']
-        ctx.source.instance.runtime_properties['monitoring_id'] = \
-            ctx.target.instance.runtime_properties['monitoring_id']
+    if "run_jobs" not in kwargs:
+        if 'ssh_config' not in ctx.target.instance.runtime_properties:
+            ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
+        else:
+            ctx.source.instance.runtime_properties['ssh_config'] = ctx.target.instance.runtime_properties['ssh_config']
+        if not ctx.target.node.properties['recurring_workflow']:
+            ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
+        ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
+        ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
+        ctx.source.instance.runtime_properties['reservation_deletion_path'] = config['reservation_deletion_path']
+        ctx.source.instance.runtime_properties['timezone'] = config['country_tz']
+        ctx.source.instance.runtime_properties['simulate'] = simulate
+        ctx.source.instance.runtime_properties['job_prefix'] = job_prefix
+
+        if 'hpc_exporter_address' in ctx.target.instance.runtime_properties and \
+                ctx.target.instance.runtime_properties['hpc_exporter_address']:
+            ctx.source.instance.runtime_properties['hpc_exporter_address'] = \
+                ctx.target.instance.runtime_properties['hpc_exporter_address']
+            ctx.source.instance.runtime_properties['monitoring_id'] = \
+                ctx.target.instance.runtime_properties['monitoring_id']
+
+    elif ctx.target.node.properties['recurring_workflow'] and kwargs["run_jobs"]:
+        ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 
 @operation
@@ -449,7 +465,7 @@ def bootstrap_job(
 
 
 @operation
-def revert_job(deployment, skip_cleanup, **kwarsgs):  # pylint: disable=W0613
+def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
     """Revert a job using a script that receives SSH ssh_config as input"""
     if not deployment:
         return
@@ -548,11 +564,12 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     name = kwargs['name']
     is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.type_hierarchy
 
-    if 'reservation' in job_options and 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
+    if 'reservation' in job_options:
         reservation_id = job_options['reservation']
         if 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
             timezone = ctx.instance.runtime_properties['timezone']
-            job_options['reservation'] = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
+            reservation_id = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
+            job_options['reservation'] = reservation_id
         ctx.instance.runtime_properties['reservation'] = reservation_id
 
     if not simulate:
@@ -603,7 +620,6 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         client.close_connection()
     else:
         ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
-        is_submitted = True
         jobid = "Simulated"
 
     if jobid:
@@ -627,9 +643,11 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
 
 @operation
-def delete_reservation():
-    if not ('reservation' in ctx.instance.runtime_properties) and not\
+def delete_reservation(**kwargs):
+    name = kwargs["name"]
+    if not ('reservation' in ctx.instance.runtime_properties) and not \
             ('reservation_deletion_path' in ctx.instance.runtime_properties):
+        ctx.logger.warning("No reservation found for job " + name)
         return
     reservation_id = ctx.instance.runtime_properties['reservation']
     interface_type = ctx.instance.runtime_properties['infrastructure_interface']
@@ -651,8 +669,9 @@ def delete_reservation():
             reservation_id,
             deletion_path)
     except Exception as ex:
-        ctx.logger.error('Reservation could not be deleted because: ' + ex.message)
-        raise ex
+        ctx.logger.error('Reservation could not be deleted because: ' + str(ex))
+        client.close_connection()
+        return
     client.close_connection()
 
     if ok:
@@ -795,7 +814,7 @@ def publish(publish_list, data_mover_options, **kwargs):
             hpc_interface = ctx.instance.relationships[0].target.instance
             audit["cput"] = \
                 convert_cput(audit["cput"], job_id=name, workdir=workdir, ssh_client=client, logger=ctx.logger) \
-                    if audit is not None and "cput" in audit and audit["cput"] else 0
+                if audit is not None and "cput" in audit and audit["cput"] else 0
             # Report metrics to Accounting component
             if accounting_client.report_to_accounting:
                 username = None
@@ -810,7 +829,6 @@ def publish(publish_list, data_mover_options, **kwargs):
                     ctx.logger.error(
                         'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
                         'Croupier instance not registered in Accounting'.format(workflow_id=ctx.workflow_id))
-
 
             for publish_item in publish_list:
                 if not published:
@@ -838,12 +856,13 @@ def publish(publish_list, data_mover_options, **kwargs):
 
 
 @operation
-def ecmwf_vertical_interpolation(query, **kwargs):
+def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudify_address, server_port, **kwargs):
     ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
-    server_port = ctx.node.properties['port']
-    server_host = requests.get('https://api.ipify.org').text
-    keycloak_credentials = ctx.instance.runtime_properties["keycloak_credentials"]
-    ecmwf_ssh_credentials = ctx.instance.runtime_properties["ssh_config"]
+    server_host = cloudify_address if cloudify_address else requests.get('https://api.ipify.org').text
+    if "keycloak_credentials" in ctx.instance.runtime_properties:
+        keycloak_credentials = ctx.instance.runtime_properties["keycloak_credentials"]
+    if "ssh_config" in ctx.instance.runtime_properties:
+        ssh_config = ctx.instance.runtime_properties["ssh_config"]
     ctx.logger.info('IP is: ' + server_host)
 
     arguments = {"notify": "http://" + server_host + ":" + str(server_port) + "/ready",
@@ -853,7 +872,7 @@ def ecmwf_vertical_interpolation(query, **kwargs):
                  "area": query["area"],
                  "max_step": query["max_step"],
                  "ensemble": query["ensemble"],
-                 "input": query["input"] ,
+                 "input": query["input"],
                  "members": query["members"],
                  "keep_input": query["keep_input"],
                  "collection": query["collection"],
@@ -864,7 +883,7 @@ def ecmwf_vertical_interpolation(query, **kwargs):
         arguments["date"] = query["date"]
         arguments["time"] = query["time"]
 
-    client = SshClient(ecmwf_ssh_credentials)
+    client = SshClient(ssh_config)
 
     command = "cd cloudify && source /opt/anaconda3/etc/profile.d/conda.sh && conda activate && " \
               "nohup python3 interpolator.py"
@@ -876,7 +895,6 @@ def ecmwf_vertical_interpolation(query, **kwargs):
     out_file = "/dev/null"
     command += " > " + out_file + " 2>&1 & disown"
 
-    ctx.logger.info("Sending command: " + command)
     client.execute_shell_command(command)
     client.close_connection()
 
@@ -912,24 +930,20 @@ def ecmwf_vertical_interpolation(query, **kwargs):
 
 
 @operation
-def download_data(**kwargs):
+def download_data(unzip_data, dest_data, data_urls, **kwargs):
     ctx.logger.info('Downloading data...')
     simulate = ctx.instance.runtime_properties['simulate']
 
-    if not simulate and 'data_urls' in ctx.instance.runtime_properties \
-            and ctx.instance.runtime_properties['data_urls']:
-        data_urls = ctx.instance.runtime_properties['data_urls']
-        inputs = data_urls
-        credentials = ctx.instance.runtime_properties['credentials']
-        workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
-            else ctx.instance.runtime_properties['workdir']
+    if not simulate and 'data_urls' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['data_urls']:
+        if 'data_urls' in ctx.instance.runtime_properties:
+            data_urls.extend(ctx.instance.runtime_properties['data_urls'])
+        ssh_config = ctx.instance.runtime_properties['ssh_config']
+        workdir = dest_data if dest_data else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = data_download_unzip_script() if 'unzip_data' in ctx.node.properties and ctx.node.properties[
-            'unzip_data'] \
-            else data_download_script()
+        script = data_download_unzip_script() if unzip_data  else data_download_script()
         skip_cleanup = False
-        if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+        if deploy_job(script, data_urls, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
             files_downloaded = ctx.instance.runtime_properties['files_downloaded'] \
                 if 'files_downloaded' in ctx.instance.runtime_properties else []
@@ -957,14 +971,14 @@ def delete_data(**kwargs):
     if "files_downloaded" in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded'] \
             and not simulate:
         inputs = ctx.instance.runtime_properties["files_downloaded"]
-        credentials = ctx.instance.runtime_properties['credentials']
+        ssh_config = ctx.instance.runtime_properties['ssh_config']
         workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
             else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         script = data_delete_script()
         skip_cleanup = False
-        if deploy_job(script, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+        if deploy_job(script, inputs, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data deleted')
             ctx.instance.runtime_properties["files_downloaded"] = []
         else:
@@ -973,35 +987,6 @@ def delete_data(**kwargs):
         ctx.logger.info("...data deletion simulated")
     else:
         ctx.logger.warning('...nothing to delete')
-
-
-@operation
-def preconfigure_data(
-        config,
-        credentials,
-        external_monitor_entrypoint,
-        external_monitor_port,
-        external_monitor_type,
-        external_monitor_orchestrator_port,
-        monitor_period,
-        simulate,
-        **kwargs):  # pylint: disable=W0613
-    """ Save infrastructure properties in the data node instance (credentials, etc.) """
-    ctx.logger.info('Preconfiguring data..')
-
-    if 'credentials' not in ctx.target.instance.runtime_properties:
-        ctx.source.instance.runtime_properties['credentials'] = credentials
-    else:
-        ctx.source.instance.runtime_properties['credentials'] = ctx.target.instance.runtime_properties['credentials']
-
-    ctx.source.instance.runtime_properties['external_monitor_entrypoint'] = external_monitor_entrypoint
-    ctx.source.instance.runtime_properties['external_monitor_port'] = external_monitor_port
-    ctx.source.instance.runtime_properties['external_monitor_type'] = external_monitor_type
-    ctx.source.instance.runtime_properties['monitor_orchestrator_port'] = external_monitor_orchestrator_port
-    ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
-    ctx.source.instance.runtime_properties['simulate'] = simulate
-    ctx.source.instance.runtime_properties['monitor_period'] = monitor_period
-    ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 
 @operation
@@ -1014,20 +999,20 @@ def pass_data_info(**kwargs):
     ctx.source.instance.runtime_properties['files_downloaded'] = files_downloaded
 
 
-def getHours(cput):
+def get_hours(cput):
     return int(cput[:cput.index(':')])
 
 
-def getMinutes(cput):
+def get_minutes(cput):
     return int(cput[cput.index(':') + 1:cput.rindex(':')])
 
 
-def getSeconds(cput):
+def get_seconds(cput):
     return int(cput[cput.rindex(':') + 1:])
 
 
-def parseHours(cput):
-    hours = getHours(cput) + getMinutes(cput) / 60.0 + getSeconds(cput) / 3600.0
+def parse_hours(cput):
+    hours = get_hours(cput) + get_minutes(cput) / 60.0 + get_seconds(cput) / 3600.0
     return hours
 
 
@@ -1041,7 +1026,7 @@ def monitor_job(jobid, hpc_exporter_entrypoint, deployment_id, host):
     requests.post(url, json=payload)
 
 
-def registerOrchestratorInstanceInAccounting(ctx):
+def register_orchestrator_instance_accounting():
     hostname = socket.gethostname()
     reporter_name = 'croupier@' + hostname
 
@@ -1049,7 +1034,7 @@ def registerOrchestratorInstanceInAccounting(ctx):
         reporter = accounting_client.get_reporter_by_name(reporter_name)
         ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
         ctx.logger.info('Registered Croupier reporter in Accounting with id {}'.format(reporter.id))
-    except Exception as err:
+    except Exception:
         # Croupier not registered in Accounting
         try:
             ip = requests.get('https://api.ipify.org').text
@@ -1058,9 +1043,7 @@ def registerOrchestratorInstanceInAccounting(ctx):
             ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
         except Exception as err:
             ctx.logger.warning(
-                'Croupier orchestrator instance could not be registered into Accounting, raising an error: {err}'.
-                    format(err=err))
-
+                'Croupier instance could not be registered into Accounting, raising an error: {}'.format(err))
 
 
 def convert_cput(cput, job_id, workdir, ssh_client, logger):
@@ -1072,8 +1055,8 @@ def convert_cput(cput, job_id, workdir, ssh_client, logger):
 
 
 def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, logger):
+    workflow_id = ctx.workflow_id
     try:
-        workflow_id = ctx.workflow_id
         start_transaction = audit['start_timestamp']
         stop_transaction = audit['stop_timestamp']
         workflow_parameters = audit['workflow_parameters']
@@ -1082,15 +1065,14 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
             username = ctx.instance.runtime_properties['ssh_config']['user']
         try:
             user = accounting_client.get_user_by_name(username)
-        except Exception as err:
+        except Exception:
             # User not registered
             try:
                 user = User(username)
                 user = accounting_client.add_user(user)
             except Exception as err:
                 raise Exception(
-                    'User {username} could not be registered into Accounting, raising an error: {err}'.
-                        format(username=username, err=err))
+                    'User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
 
         # Register HPC CPU total
         server = ctx.instance.runtime_properties['ssh_config']['host']
@@ -1114,7 +1096,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
     except Exception as err:
         logger.error(
             'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
-                format(workflow_id=workflow_id, err=err))
+            format(workflow_id=workflow_id, err=err))
 
 
 def read_processors_per_node(job_id, workdir, ssh_client, logger):

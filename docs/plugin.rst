@@ -357,7 +357,7 @@ This example demonstrates how to describe a job.
         scale: 4
       skip_cleanup: True
     relationships:
-    - type: job_managed_by_interface
+    - type: task_managed_by_interface
       target: hpc_interface
    ...
 
@@ -385,7 +385,7 @@ This example demonstrates how to describe an script job.
           - "script-"
       skip_cleanup: True
     relationships:
-      - type: job_managed_by_interface
+      - type: task_managed_by_interface
         target: hpc_interface
    ...
 
@@ -552,7 +552,7 @@ This example demonstrates how to describe a new job executed in a
           - { get_input: singularity_load_command }
       skip_cleanup: True
     relationships:
-        - type: job_managed_by_interface
+        - type: task_managed_by_interface
           target: hpc_interface
    ...
 
@@ -585,7 +585,7 @@ section.
 The following plugin relationship operations are defined in the HPC
 plugin:
 
--  ``job_managed_by_interface`` Sets a croupier_nodes_job_ to be executed
+-  ``task_managed_by_interface`` Sets a croupier_nodes_job_ to be executed
    by interface croupier_nodes_interface_.
 
 -  ``job_depends_on`` Sets a croupier_nodes_job_ as a dependency of

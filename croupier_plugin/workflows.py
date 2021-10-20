@@ -92,21 +92,20 @@ class JobGraphInstance(TaskGraphInstance):
 
         # Get runtime properties
         self.host = self.runtime_properties["ssh_config"]["host"]
-        self.workdir = self.runtime_properties['workdir']
         self.simulate = self.runtime_properties["simulate"]
-
+        self.workdir = self.runtime_properties["workdir"]
         self.monitor_type = self.runtime_properties["infrastructure_interface"]
         self.monitor_config = self.runtime_properties["ssh_config"]
 
         monitoring_options = self.runtime_properties["monitoring_options"]
         self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \
             else 10
-
+        self.reservation = self.node.cfy_node.properties["job_options"]["reservation"] \
+            if "reservation" in self.node.cfy_node.properties["job_options"] else ""
         self.name = self.runtime_properties["job_prefix"] + self.instance.id
 
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
-
         self.instance.send_event('Queuing job..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
         result.get()
@@ -121,10 +120,9 @@ class JobGraphInstance(TaskGraphInstance):
     def delete_reservation(self):
         """ Sends the job's instance to the infrastructure queue """
         self.update_properties()
-        if 'reservation' not in self.runtime_properties:
-            return
-        self.instance.send_event('Deleting reservation..')
-        result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete_reservation')
+        self.instance.send_event('Deleting reservation...')
+        result = self.instance.execute_operation('croupier.interfaces.lifecycle.delete_reservation',
+                                                 kwargs={"name": self.name})
         result.get()
 
     def publish(self):
@@ -424,12 +422,6 @@ class Monitor(object):
         return self._execution_pool
 
 
-def delete_reservations(job_instances_map):
-    for instance_name in job_instances_map:
-        instance = job_instances_map[instance_name]
-        instance.delete_reservation()
-
-
 def build_graph(nodes):
     """ Creates a new graph of nodes and instances with the job wrapper """
 
@@ -455,6 +447,42 @@ def build_graph(nodes):
             child.add_parent(parent)
 
     return root_nodes, job_instances_map
+
+
+class ConfigureInterface(object):
+    def __init__(self, node):
+        self.instances = node.instances
+
+    def configure(self):
+        for instance in self.instances:
+            result = instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"run_jobs": True})
+            result.get()
+
+
+class ConfigureJob(object):
+    def __init__(self, node):
+        self.instances = node.instances
+
+    def configure(self):
+        for instance in self.instances:
+            for relationship_instance in instance.relationships:
+                relationship = relationship_instance.relationship
+                if relationship.is_derived_from("task_managed_by_interface"):
+                    result_configure = relationship_instance.execute_source_operation('preconfigure',
+                                                                                      kwargs={"run_jobs": True})
+                    result_configure.get()
+
+
+def build_configure_graph(nodes):
+    jobs = []
+    interfaces = []
+    for node in nodes:
+        if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
+            interfaces.append(ConfigureInterface(node))
+        elif 'croupier.nodes.Job' in node.type_hierarchy:
+            jobs.append(ConfigureJob(node))
+
+    return jobs, interfaces
 
 
 def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
@@ -501,14 +529,19 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         ctx.logger.info("Cancelling jobs...")
         cancel_all(monitor.get_executions_iterator())
 
-    delete_reservations(job_instances_map)
+    deleted_reservations = []
+    for instance_name in job_instances_map:
+        instance = job_instances_map[instance_name]
+        if instance.reservation not in deleted_reservations and instance.reservation:
+            instance.delete_reservation()
+            deleted_reservations.append(instance.reservation)
 
     ctx.logger.info("------------------Workflow Finished-----------------------")
     return
 
 
 @workflow
-def install_croupier(**kwargs):
+def croupier_install(**kwargs):
 
     # deployment_id = ctx.nodes[0].properties['resource_config']['deployment']['id']
     # rest_client = get_rest_client()
@@ -552,6 +585,17 @@ def install_croupier(**kwargs):
     ctx.logger.info("------------------Workflow Finished-----------------------")
 
 
+@workflow
+def croupier_configure(**kwargs):
+    job_instances, interface_instances = build_configure_graph(ctx.nodes)
+
+    for interface in interface_instances:
+        interface.configure()
+
+    for job in job_instances:
+        job.configure()
+
+
 def cancel_all(executions):
     """Cancel all pending or running jobs"""
     for _, exec_node in executions:
@@ -572,7 +616,7 @@ def run_jobs(**kwargs):  # pylint: disable=W0613
 
 # TODO: Implement these workflows properly
 
-'''
+"""
 @workflow
 def gather_data(**kwargs):  # pylint: disable=W0613
     execute_jobs(force_data=True, skip_jobs=True, **kwargs)
@@ -581,7 +625,7 @@ def gather_data(**kwargs):  # pylint: disable=W0613
 @workflow
 def run_jobs_force_get_data(**kwargs):  # pylint: disable=W0613
     execute_jobs(force_data=True, skip_jobs=False)
-'''
+"""
 
 
 

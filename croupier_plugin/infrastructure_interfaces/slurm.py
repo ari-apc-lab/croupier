@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 slurm.py: Holds the slurm functions
-'''
+"""
 from builtins import str
 import datetime, pytz
 import time
@@ -128,6 +128,9 @@ def start_time_tostr(start_time):
 
 class Slurm(InfrastructureInterface):
     """ Slurm Workload Manger Driver """
+
+    def _get_jobid(self, output):
+        return output.split(' ')[-1].strip()
 
     def _parse_job_settings(
             self,

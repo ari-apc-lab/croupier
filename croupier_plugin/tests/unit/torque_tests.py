@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 HLRS. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: hpcgogol@hlrs.de
 
 torque_tests.py: Holds the Torque unit tests
-'''
+"""
 
 from builtins import map
 from builtins import range

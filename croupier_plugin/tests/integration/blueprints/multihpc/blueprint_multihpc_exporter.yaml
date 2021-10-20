@@ -45,6 +45,11 @@ node_templates:
     hpc_exporter:
         type: croupier.nodes.HPCExporter
 
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
     cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:

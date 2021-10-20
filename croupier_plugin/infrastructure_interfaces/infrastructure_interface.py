@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 infrastructure_interface.py
-'''
+"""
 from builtins import str
 from builtins import range
 from past.builtins import basestring
@@ -267,7 +267,14 @@ class InfrastructureInterface(object):
             logger.error("Job submission '" + call + "' exited with code " +
                          str(exit_code) + ":\n" + output)
             return False
-        return output.split(' ')[-1].strip()
+
+        return self._get_jobid(output)
+
+    def _get_jobid(self, output):
+        """
+        Implemented in child classes.
+        """
+        return None
 
     def clean_job_aux_files(self,
                             ssh_client,
@@ -359,7 +366,7 @@ class InfrastructureInterface(object):
             script=False,
             timezone=None):
         """
-        Generates specific manager data accouding to job_settings
+        Generates specific manager data according to job_settings
 
         @type job_id: string
         @param job_id: name of the job
@@ -411,13 +418,13 @@ class InfrastructureInterface(object):
             "'_get_envar' not implemented.")
 
     # Monitor
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, ssh_config, job_names, logger):
         """
         Get the states of the jobs names
         @type workdir: string
         @param workdir: Working directory in the HPC
-        @type credentials: dictionary
-        @param credentials: SSH ssh_config to connect to the HPC
+        @type ssh_config: dictionary
+        @param ssh_config: SSH ssh_config to connect to the HPC
         @type job_names: list
         @param job_names: list of the job names to retrieve their states
         @rtype dict

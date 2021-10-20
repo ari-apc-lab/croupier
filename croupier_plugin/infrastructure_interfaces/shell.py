@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 bash.py
-'''
+"""
 
 
 from croupier_plugin.ssh import SshClient
@@ -30,6 +30,9 @@ from croupier_plugin.infrastructure_interfaces import infrastructure_interface
 
 
 class Shell(infrastructure_interface.InfrastructureInterface):
+
+    def _get_jobid(self, output):
+        return "SHELL_JOB"
 
     def _parse_job_settings(
             self,

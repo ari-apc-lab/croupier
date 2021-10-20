@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 setup.py
-'''
+"""
 import os
 
 from setuptools import setup
@@ -34,7 +34,7 @@ setup(
     # Do not use underscores in the plugin name.
     name='croupier',
 
-    version='3.1.0',
+    version='3.2.0',
     author='Jesus Gorronogoitia',
     author_email='jesus.gorronogoitia@atos.net',
     description='Plugin to use HPC resources in Cloudify',
@@ -56,7 +56,7 @@ setup(
         # Necessary dependency for developing plugins, do not remove!
         "cloudify-common==6.2.0",
         "paramiko==2.7.2",
-        "pyyaml==5.3.1",
+        "pyyaml>=5.4",
         "wget",
         "future==0.18.2"
     ],

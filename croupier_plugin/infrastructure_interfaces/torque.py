@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 HLRS. All rights reserved.
 
 This file is part of Croupier.
@@ -26,7 +26,7 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 
 torque.py
-'''
+"""
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
@@ -58,6 +58,9 @@ def convert_to_seconds(cput):
 
 class Torque(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
+
+    def _get_jobid(self, output):
+        return output.split(' ')[-1].strip()
 
     def _parse_job_settings(
             self,
