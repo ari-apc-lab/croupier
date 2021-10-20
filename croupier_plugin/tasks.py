@@ -173,7 +173,7 @@ def configure_execution(
         ctx.logger.info(' - manager: {interface_type}'.format(
             interface_type=interface_type))
 
-        wm = InfrastructureInterface.factory(interface_type)
+        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir_prefix)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -239,7 +239,7 @@ def cleanup_execution(
     if not simulate:
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = config['infrastructure_interface']
-        wm = InfrastructureInterface.factory(interface_type)
+        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -514,7 +514,7 @@ def deploy_job(script,
                skip_cleanup):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH ssh_config as input """
 
-    wm = InfrastructureInterface.factory(interface_type)
+    wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
     if not wm:
         raise NonRecoverableError(
             "Infrastructure Interface '" +
@@ -592,7 +592,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
-        wm = InfrastructureInterface.factory(interface_type)
+        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
         if not wm:
             client.close_connection()
             raise NonRecoverableError(
@@ -653,7 +653,7 @@ def delete_reservation(**kwargs):
     interface_type = ctx.instance.runtime_properties['infrastructure_interface']
     client = SshClient(ctx.instance.runtime_properties['ssh_config'])
     deletion_path = ctx.instance.runtime_properties['reservation_deletion_path']
-    wm = InfrastructureInterface.factory(interface_type)
+    wm = InfrastructureInterface.factory(interface_type, ctx.logger, '')
     if not wm:
         client.close_connection()
         raise NonRecoverableError(
@@ -703,7 +703,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
             client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
-            wm = InfrastructureInterface.factory(interface_type)
+            wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
@@ -748,7 +748,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
             client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
-            wm = InfrastructureInterface.factory(interface_type)
+            wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError(
