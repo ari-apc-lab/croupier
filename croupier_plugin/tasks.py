@@ -613,7 +613,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                 is_singularity,
                 ctx,
                 workdir=workdir,
-                context=context_vars)
+                environment=context_vars)
         except Exception as ex:
             ctx.logger.error('Job could not be submitted because error ' + str(ex))
             raise ex

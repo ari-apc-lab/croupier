@@ -162,6 +162,7 @@ class InfrastructureInterface(object):
                    job_settings,
                    is_singularity,
                    context=None,
+                   environment=None,
                    timezone=None):
         """
         Sends a job to the HPC
@@ -175,8 +176,10 @@ class InfrastructureInterface(object):
         @type is_singularity: bool
         @param is_singularity: True if the job is in a container
         @rtype string
-        @param context: Dictionary containing context env vars
-        @rtype dictionary of strings
+        @param context: cloudify context
+        @type context: cloudify.ctx
+        @param environment: Dictionary containing context env vars
+        @type environment: dictionary of strings
         @param timezone: Timezone of the HPC the job is being submitted to
         @rtype string
         @return Slurm's job id sent. None if an error arise.
@@ -253,7 +256,7 @@ class InfrastructureInterface(object):
 
         output, exit_code = ssh_client.execute_shell_command(
             call,
-            env=context,
+            env=environment,
             workdir=self.workdir,
             wait_result=True)
         if exit_code != 0:
@@ -319,7 +322,7 @@ class InfrastructureInterface(object):
         if not SshClient.check_ssh_client(ssh_client, self.logger):
             return False
 
-        call = self._build_job_cancellation_call(name, job_options, self.logger)
+        call = self._build_job_cancellation_call(name, job_options)
         if call is None:
             return False
 
