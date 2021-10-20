@@ -12,8 +12,8 @@ class DataMoverProxy(object):
 
     def __init__(self, data_mover_options, logger):
         # Read data_mover_options
-        self.hpc_user_id = ctx.instance.runtime_properties['credentials']['user']
-        self.hpc_user_ssh_credentials = ctx.instance.runtime_properties['credentials']['private_key']
+        self.hpc_user_id = ctx.instance.runtime_properties['ssh_config']['user']
+        self.hpc_user_ssh_credentials = ctx.instance.runtime_properties['ssh_config']['private_key']
         if 'cloud_user' in data_mover_options:
             self.cloud_user = data_mover_options['cloud_user']
         if 'workspace' in data_mover_options:
@@ -57,7 +57,7 @@ class DataMoverProxy(object):
                     "hawk.hww.hlrs.de",
                     self.hpc_user_id + "-" + self.ws_name + "/")  # AGAIN THE SAME USER_ID AS WE JUST PLACE IN THE SECOND PARAMETER!!!
             else:
-                raise Exception("GridFTPServer for HAWK could not be set. Check datamover options (ws_name")
+                raise Exception("GridFTPServer for HAWK could not be set. Check datamover options (ws_name)")
 
         if ('cloud_target' in data_mover_options and data_mover_options['cloud_target']) == 'ATOSFR':
             if self.cloud_user is not None:

@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 HLRS. All rights reserved.
 
 This file is part of Croupier.
@@ -26,7 +26,7 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 
 torque.py
-'''
+"""
 from __future__ import absolute_import
 from future import standard_library
 standard_library.install_aliases()
@@ -55,14 +55,19 @@ def convert_to_seconds(cput):
     hours = getHours(cput) * 3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
     return hours
 
+
 class Torque(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
+
+    def _get_jobid(self, output):
+        return output.split(' ')[-1].strip()
 
     def _parse_job_settings(
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = {'data': ''}
         if script:
             _prefix = '#PBS'
@@ -133,7 +138,7 @@ class Torque(InfrastructureInterface):
             _add_setting('-q', shlex_quote(queue))
 
         if _check_job_settings_key('memory'):
-            _add_setting('-l', 'mem={}'.format(job_settings('memory')))
+            _add_setting('-l', 'mem={}'.format(job_settings['memory']))
 
         if _check_job_settings_key('mail_user'):
             _add_setting('-M', job_settings['mail_user'])
@@ -223,20 +228,20 @@ class Torque(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, ssh_config, job_names, logger):
         return self._get_states_detailed(
             workdir,
-            credentials,
+            ssh_config,
             job_names,
             logger) if job_names else {}
 
     @staticmethod
-    def _get_states_detailed(workdir, credentials, job_names, logger):
+    def _get_states_detailed(workdir, ssh_config, job_names, logger):
         """
-        Get job states by job names
+        Get job states by job ids
 
         This function uses `qstat` command to query Torque.
-        Please don't launch this call very friquently. Polling it
+        Please don't launch this call very frequently. Polling it
         frequently, especially across all users on the cluster,
         will slow down response times and may bring
         scheduling to a crawl.
@@ -250,7 +255,7 @@ class Torque(InfrastructureInterface):
         call = "echo {} | xargs -n 1 qselect -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(credentials)
+        client = SshClient(ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -298,7 +303,6 @@ class Torque(InfrastructureInterface):
         jobs = {}
         audits = {}
         for job in Torque._tokenize_qstat_detailed(StringIO(qstat_output)):
-            # ignore job['Job_Id'], use identification by name
             name = job.get('Job_Name', '')
             state_code = job.get('job_state', None)
             audit = {}

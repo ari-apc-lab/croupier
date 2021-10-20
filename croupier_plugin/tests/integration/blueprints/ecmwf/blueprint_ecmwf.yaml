@@ -1,0 +1,124 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Ramos Rivas
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.2.ramos@atos.net
+#
+# blueprint_ecmwf.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    # to speed things up, it is possible downloading this file,
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
+    # relative import of plugin.yaml that resides in the blueprint directory
+    - plugin:croupier
+
+inputs:
+    vault_user:
+        type: string
+    vault_token:
+        type: string
+
+node_templates:
+    hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: TORQUE
+            ssh_config:
+                host: sodalite-fe.hlrs.de
+            job_prefix: ecmwf
+            base_dir: "$HOME"
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "ecmwf"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            user: { get_input: vault_user }
+            token: { get_input: vault_token}
+
+
+    job1:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - touch test
+                max_time: "00:01:00"
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+            - type: job_needs_data
+              target: weather_data
+
+    job2:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - tar -czf test.tar *.grib test
+                max_time: "00:01:00"
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+            - type: job_needs_data
+              target: weather_data
+            - type: job_depends_on
+              target: job1
+
+    weather_data:
+        type: croupier.nodes.ECMWFVerticalInterpolation
+        properties:
+            ssh_config:
+                host: 136.156.90.143
+            keycloak_credentials:
+                user: { get_input: vault_user }
+            query:
+                area: 45/18/44/19
+                params: u/v
+                date: 20210910
+                time: 00
+                collection: hidalgo-test
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+outputs:
+    job1_name:
+        description: job1 job name
+        value: { get_attribute: [job1, job_name] }
+    job2_name:
+        description: job2 job name
+        value: { get_attribute: [ job2, job_name ] }
+    weather_data:
+        description: ckan url to weather data
+        value: { get_attribute: [ weather_data, data_urls ] }

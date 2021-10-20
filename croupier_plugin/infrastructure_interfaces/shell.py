@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 bash.py
-'''
+"""
 
 
 from croupier_plugin.ssh import SshClient
@@ -31,11 +31,15 @@ from croupier_plugin.infrastructure_interfaces import infrastructure_interface
 
 class Shell(infrastructure_interface.InfrastructureInterface):
 
+    def _get_jobid(self, output):
+        return "SHELL_JOB"
+
     def _parse_job_settings(
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = ''
 
         # add executable and arguments
@@ -54,12 +58,10 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         return "pkill -f " + name
 
 # Monitor
-    def get_states(self, workdir, credentials, job_names, logger):
-        # TODO set start time of consulting
-        # (sacct only check current day)
+    def get_states(self, workdir, ssh_config, job_names, logger):
         call = "cat croupier-monitor.data"
 
-        client = SshClient(credentials)
+        client = SshClient(ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -69,10 +71,13 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         client.close_connection()
 
         states = {}
+        audits = {}
         if exit_code == 0:
             states = self._parse_states(output, logger)
+        for job_name in job_names:
+            audits[job_name] = {}
 
-        return states
+        return states, audits
 
     def _parse_states(self, raw_states, logger):
         """ Parse two colums exit codes into a dict """
@@ -87,20 +92,14 @@ class Shell(infrastructure_interface.InfrastructureInterface):
 
     def _parse_exit_codes(self, exit_code):
         if exit_code == '0':  # exited normally
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.COMPLETED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.COMPLETED]
         elif exit_code == '1':  # general error
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.FAILED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.FAILED]
         elif exit_code == '126':  # cannot execute
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.REVOKED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.REVOKED]
         elif exit_code == '127':  # not found
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.BOOTFAIL]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.BOOTFAIL]
         elif exit_code == '130':  # terminated by ctrl+c
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.CANCELLED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.CANCELLED]
         else:
-            return infrastructure_interface.JOBSTATESLIST
-            [infrastructure_interface.FAILED]
+            return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.FAILED]

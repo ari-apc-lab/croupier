@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 external_repository.py: Holds the external repository common behaviour
-'''
+"""
 
 from builtins import object
 from croupier_plugin.ssh import SshClient

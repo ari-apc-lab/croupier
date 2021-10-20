@@ -32,14 +32,236 @@ plugins:
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the the blueprint directory under the
         # "plugins" directory.
-        source: https://github.com/ari-apc-lab/croupier/archive/permedcoe.zip
+        source: https://github.com/ari-apc-lab/croupier/archive/grapevine-python.zip
         install_arguments: -r plugin-requirements.txt
         package_name: croupier
-        package_version: "3.1.0"
+        package_version: "3.2.0"
+
+data_types:
+
+    croupier.datatypes.wm_config:
+        properties:
+            infrastructure_interface:
+                description: Scheduler type.
+                type: string
+                required: true
+            country_tz:
+                description: Timezone
+                type: string
+                required: false
+                default: 'GMT'
+            reservation_deletion_path:
+                description: Path where the executable to delete a reservation is located
+                type: string
+                required: false
+                default: '/opt/cesga/sistemas/reservas/sresdelete'
+
+    croupier.datatypes.ssh_config:
+        properties:
+            user:
+                type: string
+                required: false
+                default: ''
+            host:
+                type: string
+                required: true
+            port:
+                type: integer
+                required: false
+                default: 22
+            private_key:
+                type: string
+                required: false
+                default: ''
+            password:
+                type: string
+                required: false
+                default: ''
+            private_key_password:
+                type: string
+                required: false
+                default: ''
+            tunnel:
+                type: string
+                required: false
+                default: ''
+            login_shell:
+                type: string
+                required: false
+                default: ''
+
+    croupier.datatypes.monitoring_options:
+        properties:
+            monitor_period:
+                description: How often to scrape the WM for metrics
+                type: integer
+                required: false
+                default: 15
+            deployment_label:
+                description: Deployment label to apply to the metrics to identify the deployment.
+                type: string
+                required: false
+            hpc_label:
+                description: HPC label to apply to the metrics to identify the HPC WM
+                type: string
+                required: false
+            only_jobs:
+                description: Set to true to not monitor the infrastructure metrics (queues/partitions)
+                type: boolean
+                required: false
+                default: false
+
+    croupier.datatypes.accounting_options:
+        properties:
+            reporting_user:
+                type: string
+                required: false
+
+    croupier.datatypes.job_deployment_config:
+        properties:
+            inputs:
+                default: []
+                required: false
+            bootstrap:
+                default: ''
+                required: false
+                type: string
+            revert:
+                default: ''
+                required: false
+                type: string
+
+    croupier.datatypes.data_mover_options:
+        properties:
+            cloud_user:
+                type: string
+                required: false
+            workspace:
+                type: string
+                required: false
+            create_ws:
+                type: string
+                required: false
+            ws_lifetime:
+                type: string
+                required: false
+            grid_userkey:
+                type: string
+                required: false
+            grid_usercert:
+                type: string
+                required: false
+            grid_certpass:
+                type: string
+                required: false
+            download:
+                type: croupier.datatypes.data_mover.nodes
+                required: false
+            upload:
+                type: croupier.datatypes.data_mover.nodes
+                required: false
+            hpc_target:
+                type: string
+                required: false
+            cloud_target:
+                type: string
+                required: false
+
+    croupier.datatypes.data_mover.nodes:
+        properties:
+            source:
+                type: string
+                required: false
+                default: ''
+            target:
+                type: string
+                required: false
+                default: ''
+
+    croupier.datatypes.dataset:
+        properties:
+            config:
+                type: croupier.datatypes.dataset_config
+                required: true
+            dataset:
+                type: croupier.datatypes.dataset_dataset
+                required: true
+            type:
+                type: string
+                required: true
+
+    croupier.datatypes.dataset_config:
+        properties:
+            api_key:
+              type: string
+
+    croupier.datatypes.dataset_dataset:
+        properties:
+            name:
+                type: string
+
+    croupier.datatypes.ecmwf_query:
+        properties:
+            area:
+                type: string
+                required: true
+            params:
+                type: string
+                required: true
+            date:
+                type: string
+                required: false
+                default: ""
+            time:
+                type: string
+                required: false
+                default: ""
+            collection:
+                type: string
+                required: false
+                default: ""
+            members:
+                type: string
+                required: false
+                default: ""
+            ensemble:
+                type: string
+                required: false
+                default: ""
+            input:
+                type: string
+                required: false
+                default: ""
+            keep_input:
+                type: string
+                required: false
+                default: ""
+            algorithm:
+                type: string
+                required: false
+                default: ""
+            max_step:
+                type: string
+                required: false
+                default: "1"
+
+    croupier.datatypes.keycloak_credentials:
+        properties:
+            user:
+                type: string
+                required: true
+            pw:
+                type: string
+                required: false
+                default: ''
 
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
+    croupier_install:
+        mapping: croupier.croupier_plugin.workflows.croupier_install
+    croupier_configure:
+        mapping: croupier.croupier_plugin.workflows.croupier_configure
 
 data_types:
     croupier.data.infrastructure.Config:
@@ -194,27 +416,12 @@ node_types:
         derived_from: cloudify.nodes.Compute
         properties:
             config:
-                description: type, and optionally timezone
-                type: croupier.data.infrastructure.Config
-            credentials:
-                description: SSH credentials
-                type: croupier.data.infrastructure.Credentials
-            external_monitor_entrypoint:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ""
-                type: string
-            external_monitor_port:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ":9090"
-                type: string
-            external_monitor_type:
-                description: Monitor type, e.g PROMETHEUS
-                default: "PROMETHEUS"
-                type: string
-            external_monitor_orchestrator_port:
-                description: Monitor entrypoint, port and orchestrator port
-                default: ":8079"
-                type: string
+                description: type
+                type: croupier.datatypes.wm_config
+            ssh_config:
+                description: SSH configuration
+                type: croupier.datatypes.ssh_config
+                default: {}
             job_prefix:
                 description: Job name prefix for this HPC
                 default: "croupier"
@@ -227,16 +434,14 @@ node_types:
                 description: Prefix of the working directory instead of blueprint name
                 default: ""
                 type: string
-            monitor_period:
-                description: Seconds to check job status.
-                default: 60
-                type: integer
             monitoring_options:
                 description: Monitoring options
                 default: {}
+                type: croupier.datatypes.monitoring_options
             accounting_options:
                 description: Accounting options
                 default: {}
+                type: croupier.datatypes.accounting_options
             simulate:
                 description: Set to true to simulate job without sending it
                 type: boolean
@@ -245,6 +450,11 @@ node_types:
                 description: True to not clean all files at deployment removal
                 type: boolean
                 default: False
+            recurring_workflow:
+                description: True if the workflow is scheduled to run recurrently
+                type : boolean
+                default: False
+                required: False
             agent_config:
                 default:
                     install_method: none
@@ -255,8 +465,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
                         base_dir:
                             default: { get_property: [SELF, base_dir] }
                         workdir_prefix:
@@ -264,7 +474,9 @@ node_types:
                         monitoring_options:
                             default: { get_property: [SELF, monitoring_options] }
                         accounting_options:
-                            default: { get_property: [ SELF, accounting_options ] }
+                            default: { get_property: [SELF, accounting_options] }
+                        recurring_workflow:
+                            default: { get_property: [SELF, recurring_workflow] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 delete:
@@ -272,8 +484,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
                         skip:
                             default: { get_property: [SELF, skip_cleanup] }
                         simulate:
@@ -282,55 +494,19 @@ node_types:
                 start:
                     implementation: croupier.croupier_plugin.tasks.start_monitoring_hpc
                     inputs:
-                        config:
+                        config_infra:
                             default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
-                        external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
+                        monitoring_options:
+                            default: { fet_property: [SELF, monitoring_options]}
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:
                     implementation: croupier.croupier_plugin.tasks.stop_monitoring_hpc
                     inputs:
-                        config:
-                            default: { get_property: [SELF, config] }
-                        credentials:
-                            default: { get_property: [SELF, credentials] }
-                        external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [SELF, external_monitor_entrypoint],
-                                }
-                        external_monitor_port:
-                            default:
-                                { get_property: [SELF, external_monitor_port] }
-                        external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            SELF,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -340,6 +516,7 @@ node_types:
             deployment:
                 description: Deployment script and inputs
                 default: {}
+                type: croupier.datatypes.job_deployment_config
             job_options:
                 description: Job main command and options
                 type: croupier.data.job.Options
@@ -353,9 +530,11 @@ node_types:
             data_mover_options:
                 description: Data Mover options
                 default: {}
+                required: false
+                type: croupier.datatypes.data_mover_options
         interfaces:
             cloudify.interfaces.lifecycle:
-                start: # needs to be 'start' to have the wm credentials
+                start: # needs to be 'start' to have the wm ssh_config
                     implementation: croupier.croupier_plugin.tasks.bootstrap_job
                     inputs:
                         deployment:
@@ -363,6 +542,7 @@ node_types:
                             default: { get_property: [SELF, deployment] }
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
+                    max_retries: 0
                 stop:
                     implementation: croupier.croupier_plugin.tasks.revert_job
                     inputs:
@@ -379,6 +559,7 @@ node_types:
                             default: { get_property: [SELF, job_options] }
                         data_mover_options:
                             default: { get_property: [SELF, data_mover_options] }
+                    max_retries: 0
                 publish:
                     implementation: croupier.croupier_plugin.tasks.publish
                     inputs:
@@ -398,12 +579,13 @@ node_types:
                     inputs:
                         job_options:
                             default: { get_property: [SELF, job_options] }
+                delete_reservation:
+                    implementation: croupier.croupier_plugin.tasks.delete_reservation
 
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job
 
 # DATA MANAGEMENT
-
     croupier.nodes.DataTransfer:
         derived_from: cloudify.nodes.Root
         properties:
@@ -432,9 +614,112 @@ node_types:
                 description: 'URI of data source in Web'
                 type: string
 
+#VAULT
+    croupier.nodes.Vault:
+        derived_from: cloudify.nodes.Root
+        properties:
+            token:
+                type: string
+                required: true
+            user:
+                type: string
+                required: true
+            address:
+                type: string
+                required: false
+                default: ''
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.create_vault
+                    inputs:
+                        address:
+                            default: { get_property: [ SELF,address ] }
 
+    croupier.nodes.HPCExporter:
+        derived_from: cloudify.nodes.Root
+        properties:
+            address:
+                type: string
+                required: false
+                default: ''
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                create:
+                    implementation: croupier.croupier_plugin.tasks.create_monitor
+                    inputs:
+                        address:
+                            default: { get_property: [SELF,address] }
 
+    croupier.nodes.Data:
+        derived_from: cloudify.nodes.WebServer
+        properties:
+            data_urls:
+                description: list of URLs of the files to download to the HPC (ckan for example)
+                default: []
+            unzip_data:
+                description: True if the files need to be unzipped after downloading
+                type: boolean
+                default: False
+            dest_data:
+                description: Path where the data needs to be downloaded to. If left blank it will be the job workdir
+                type: string
+                default: ""
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                start:
+                    implementation: croupier.croupier_plugin.tasks.download_data
+                    max_retries: 0
+                    inputs:
+                        data_urls:
+                            default: { get_property: [SELF, data_urls] }
+                        unzip_data:
+                            default: { get_property: [ SELF, unzip_data ] }
+                        dest_data:
+                            default: { get_property: [ SELF, dest_data ] }
+            croupier.interfaces.lifecycle:
+                delete:
+                    implementation: croupier.croupier_plugin.tasks.delete_data
+                    max_retries: 0
 
+    croupier.nodes.ECMWFVerticalInterpolation:
+        derived_from: croupier.nodes.Data
+        properties:
+            ssh_config:
+                description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
+                type: croupier.datatypes.ssh_config
+            keycloak_credentials:
+                description: login credentials for hidalgo keycloak. Fields- user, pw
+                type: croupier.datatypes.keycloak_credentials
+            query:
+                description: ECMWF Query fields. Fields- params, date, time, area, max_steps, [ensemble], [memebers], [input], [keep_input], [algorithm]
+                type: croupier.datatypes.ecmwf_query
+            server_port:
+                type: string
+                default: 9984
+            unzip_data:
+                type: boolean
+                default: True
+            cloudify_address:
+                type: string
+                default: ''
+                required: False
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
+                    max_retries: 0
+                    inputs:
+                        query:
+                            default: { get_property: [SELF, query] }
+                        ssh_config:
+                            default: { get_property: [SELF, ssh_config] }
+                        keycloak_credentials:
+                            default: { get_property: [SELF, keycloak_credentials] }
+                        cloudify_address:
+                            default: { get_property: [SELF, cloudify_address] }
+                        server_port:
+                            default: { get_property: [SELF, port] }
 relationships:
     interface_contained_in:
         derived_from: cloudify.relationships.contained_in
@@ -443,56 +728,36 @@ relationships:
                 preconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface
                     inputs:
-                        config:
-                            default: { get_property: [SOURCE, config] }
-                        credentials:
-                            default: { get_property: [SOURCE, credentials] }
+                        ssh_config:
+                            default: { get_property: [SOURCE, ssh_config] }
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
-    job_managed_by_interface:
+
+    interface_monitored_by:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_interface_monitor
+
+    task_managed_by_interface:
         derived_from: cloudify.relationships.contained_in
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
                 preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.preconfigure_job
+                    implementation: croupier.croupier_plugin.tasks.preconfigure_task
                     inputs:
                         config:
                             default: { get_property: [TARGET, config] }
-                        credentials:
-                            default: { get_property: [TARGET, credentials] }
-                        external_monitor_entrypoint:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_entrypoint],
-                                }
-                        external_monitor_port:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_port],
-                                }
-                        external_monitor_type:
-                            default:
-                                {
-                                    get_property:
-                                        [TARGET, external_monitor_type],
-                                }
-                        external_monitor_orchestrator_port:
-                            default:
-                                {
-                                    get_property:
-                                        [
-                                            TARGET,
-                                            external_monitor_orchestrator_port,
-                                        ],
-                                }
+                        ssh_config:
+                            default: { get_property: [TARGET, ssh_config] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
-                        monitor_period:
-                            default: { get_property: [TARGET, monitor_period] }
+                        monitoring_options:
+                            default: { get_property: [TARGET, monitoring_options] }
                         simulate:
                             default: { get_property: [TARGET, simulate] }
+
     job_depends_on:
         derived_from: cloudify.relationships.depends_on
 
@@ -507,3 +772,23 @@ relationships:
 
     output:
         derived_from: cloudify.relationships.connected_to
+
+    job_needs_data:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.pass_data_info
+                    max_retries: 0
+
+    retrieve_credentials_from_vault:
+        derived_from: cloudify.relationships.depends_on
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.download_vault_credentials
+                    inputs:
+                        token:
+                            default: { get_property: [TARGET, token  ] }
+                        user:
+                            default: { get_property: [TARGET, user   ] }

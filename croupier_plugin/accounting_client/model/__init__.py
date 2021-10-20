@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2020 Atos Spain SA. All rights reserved.
 
 This file is part of Accounting and Billing component.
@@ -22,4 +22,4 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 
 __init__.py
-'''
+"""

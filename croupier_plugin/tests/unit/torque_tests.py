@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 HLRS. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: hpcgogol@hlrs.de
 
 torque_tests.py: Holds the Torque unit tests
-'''
+"""
 
 from builtins import map
 from builtins import range
@@ -161,7 +161,7 @@ class TestTorque(unittest.TestCase):
         response = self.wm._build_job_cancellation_call('test',
                                                         {},
                                                         self.logger)
-        self.assertEqual(response, "qselect -N test | xargs qdel")
+        self.assertEqual(response, "qdel")
 
     @unittest.skip("deprecated")
     def test_identifying_job_ids_call(self):
@@ -238,24 +238,6 @@ class TestTorque(unittest.TestCase):
             names.append(self.wm._get_random_name('base'))
 
         self.assertEqual(len(names), len(set(names)))
-
-    def test_parse_qstat_job_states(self):
-        """ Parse JobID from qstat """
-        parsed = self.wm._parse_qstat_tabular("""   test1 | S
-   test2   | C
-   test3   | R
-   test4   | W\n""")
-
-        self.assertDictEqual(parsed, {'test1': 'SUSPENDED',
-                                      'test2': 'COMPLETED',
-                                      'test3': 'RUNNING',
-                                      'test4': 'PENDING'})
-
-    def test_parse_clean_qstat(self):
-        """ Parse empty output from qstat. """
-        parsed = self.wm._parse_qstat_tabular("\n")
-
-        self.assertDictEqual(parsed, {})
 
 
 if __name__ == '__main__':

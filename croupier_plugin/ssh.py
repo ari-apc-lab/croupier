@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -26,7 +26,7 @@ ssh.py: Wrap of paramiko to send ssh commands
 Todo:
     * read stderr and return it
     * control SSH exceptions and return failures
-'''
+"""
 from __future__ import print_function
 from future import standard_library
 
@@ -42,7 +42,8 @@ import socket
 import _thread
 
 from croupier_plugin.utilities import shlex_quote
-from paramiko import SSHClient, RSAKey, client, ssh_exception
+from paramiko import RSAKey, client
+from paramiko.ssh_exception import SSHException
 
 try:
     import socketserver
@@ -132,13 +133,16 @@ class SshClient(object):
     """Represents a ssh client"""
     _client = None
 
-    def __init__(self, credentials):
+    def __init__(self, ssh_config):
         # Build a tunnel if necessary
         self._tunnel = None
-        self._host = credentials['host']
-        self._port = int(credentials['port']) if 'port' in credentials else 22
-        if 'tunnel' in credentials and credentials['tunnel']:
-            self._tunnel = SshForward(credentials)
+        self._host = ssh_config['host']
+        self._user = ssh_config['user']
+        self._port = int(ssh_config['port']) if 'port' in ssh_config else 22
+        self._passwd = ssh_config['password'] if 'password' in ssh_config else None
+        self._tunnel = None
+        if 'tunnel' in ssh_config and ssh_config['tunnel']:
+            self._tunnel = SshForward(ssh_config)
             self._host = "localhost"
             self._port = self._tunnel.port()
 
@@ -146,22 +150,19 @@ class SshClient(object):
         self._client.set_missing_host_key_policy(client.AutoAddPolicy())
 
         # Build the private key if provided
-        private_key = None
-        if 'private_key' in credentials and credentials['private_key']:
-            key_data = credentials['private_key']
+        self._private_key = None
+        if 'private_key' in ssh_config and ssh_config['private_key']:
+            key_data = ssh_config['private_key']
             if not isinstance(key_data, str):
                 key_data = str(key_data, "utf-8")
             key_file = io.StringIO()
             key_file.write(key_data)
             key_file.seek(0)
-            if 'private_key_password' in credentials and \
-                    credentials['private_key_password'] != "":
-                private_key_password = credentials['private_key_password']
+            if 'private_key_password' in ssh_config and ssh_config['private_key_password']:
+                self._private_key_password = ssh_config['private_key_password']
             else:
-                private_key_password = None
-            private_key = RSAKey.from_private_key(
-                key_file,
-                password=private_key_password)
+                self._private_key_password = None
+            self._private_key = RSAKey.from_private_key(key_file, password=self._private_key_password)
 
         # This switch allows to execute commands in a login shell.
         # By default commands are executed on the remote host.
@@ -170,32 +171,9 @@ class SshClient(object):
         #   https://stackoverflow.com/questions/32139904/ssh-via-paramiko-load-bashrc
         # @NOTE: think of SSHClient.invoke_shell()
         #        instead of SSHClient.exec_command()
-        self._login_shell = False
-        if 'login_shell' in credentials:
-            self._login_shell = credentials['login_shell']
+        self._login_shell = ssh_config['login_shell'] if 'login_shell' in ssh_config else False
 
-        retries = 5
-        passwd = credentials['password'] if 'password' in credentials else None
-        while True:
-            try:
-                self._client.connect(
-                    self._host,
-                    port=self._port,
-                    username=credentials['user'],
-                    pkey=private_key,
-                    password=passwd,
-                    look_for_keys=False
-                )
-            except ssh_exception.SSHException as err:
-                if retries > 0 and \
-                        str(err) == "Error reading SSH protocol banner":
-                    retries -= 1
-                    logging.getLogger("paramiko"). \
-                        warning("Retrying SSH connection: " + str(err))
-                    continue
-                else:
-                    raise err
-            break
+        self.open_connection()
 
     def get_transport(self):
         """Gets the transport object of the client (paramiko)"""
@@ -204,6 +182,27 @@ class SshClient(object):
     def is_open(self):
         """Check if connection is open"""
         return self._client is not None
+
+    def open_connection(self):
+        retries = 5
+        while True:
+            try:
+                self._client.connect(
+                    self._host,
+                    port=self._port,
+                    username=self._user,
+                    pkey=self._private_key,
+                    password=self._passwd,
+                    look_for_keys=False
+                )
+            except (SSHException, socket.error) as err:
+                if retries > 0 and str(err) == "Error reading SSH protocol banner":
+                    retries -= 1
+                    logging.getLogger("paramiko").warning("Retrying SSH connection: " + str(err))
+                    continue
+                else:
+                    raise err
+            break
 
     def close_connection(self):
         """Closes opened connection"""
@@ -251,9 +250,20 @@ class SshClient(object):
             else:
                 cmd = command
             # there is one channel per command
-            stdin, stdout, stderr = self._client.exec_command(
-                cmd,
-                timeout=exec_timeout)
+            retries = 3
+            while True:
+                try:
+                    stdin, stdout, stderr = self._client.exec_command(
+                        cmd,
+                        timeout=exec_timeout)
+                except (SSHException, socket.error) as se:
+                    if retries > 0:
+                        retries -= 1
+                        logging.getLogger("paramiko").warning("Retrying SSH connection: " + str(se))
+                        continue
+                    else:
+                        raise se
+                break
 
             if wait_result:
                 # get the shared channel for stdout/stderr/stdin
@@ -290,7 +300,7 @@ class SshClient(object):
                             # make sure to read stderr to prevent stall
                             stdout_chunks.append(stderr.channel.recv_stderr(len(c.in_stderr_buffer)))
                             got_chunk = True
-                    '''
+                    """
                     1) make sure that there are at least 2 cycles with no data
                         in the input buffers in order to not exit too early
                         (i.e. cat on a >200k file).
@@ -298,7 +308,7 @@ class SshClient(object):
                         received the exit code
                     3) check if input buffers are empty
                     4) exit the loop
-                    '''
+                    """
                     if (not got_chunk
                             and stdout.channel.exit_status_ready()
                             and not stderr.channel.recv_stderr_ready()
@@ -329,8 +339,7 @@ class SshClient(object):
                 return False
 
     @staticmethod
-    def check_ssh_client(ssh_client,
-                         logger):
+    def check_ssh_client(ssh_client, logger):
         if not isinstance(ssh_client, SshClient) or not ssh_client.is_open():
             logger.error("SSH Client can't be used")
             return False
@@ -340,13 +349,13 @@ class SshClient(object):
 class SshForward(object):
     """Represents a ssh port forwarding"""
 
-    def __init__(self, credentials):
-        self._client = SshClient(credentials['tunnel'])
+    def __init__(self, ssh_config):
+        self._client = SshClient(ssh_config['tunnel'])
         self._remote_port = \
-            int(credentials['port']) if 'port' in credentials else 22
+            int(ssh_config['port']) if 'port' in ssh_config else 22
 
         class SubHander(Handler):
-            chain_host = credentials['host']
+            chain_host = ssh_config['host']
             chain_port = self._remote_port
             ssh_transport = self._client.get_transport()
 

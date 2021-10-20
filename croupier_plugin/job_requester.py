@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 Atos Spain SA. All rights reserved.
 
 This file is part of Croupier.
@@ -22,7 +22,7 @@ license information in the project root.
          e-mail: javier.carnero@atos.net
 
 job_requester.py: Holds the functions that requests jobs information
-'''
+"""
 
 
 from builtins import object
@@ -42,7 +42,7 @@ class JobRequester(object):
         _last_time = {}
         _lock = Lock()
 
-        def request(self, monitor_jobs, logger):
+        def request(self, monitor_jobs, monitor_start_time, logger):
             """ Retrieves the status of every job"""
             states = {}
             audits = {}
@@ -58,27 +58,25 @@ class JobRequester(object):
                 self._last_time[host] = time.time()
 
                 if settings['type'] == "PROMETHEUS":  # external
-                    partial_states = self._get_prometheus(
+                    states, audits = self._get_prometheus(
                         host,
                         settings['config'],
                         settings['names'])
                 else:  # internal
-                    wm = InfrastructureInterface.factory(settings['type'])
+                    wm = InfrastructureInterface.factory(settings['type'], monitor_start_time)
                     if wm:
-                        partial_states, audits = wm.get_states(
+                        states, audits = wm.get_states(
                             settings['workdir'],
                             settings['config'],
                             settings['names'],
                             logger
                         )
                     else:
-                        partial_states = self._no_states(
+                        states, audits = self._no_states(
                             host,
                             settings['type'],
                             settings['names'],
                             logger)
-                states.update(partial_states)
-
             return states, audits
 
         def _get_prometheus(self, host, config, names):
@@ -113,9 +111,10 @@ class JobRequester(object):
                          "] on host '" + host
                          + "' will be considered FAILED.")
             states = {}
+            audits = {}
             for name in names:  # TODO cancel those jobs
                 states[name] = 'FAILED'
-            return states
+            return states, audits
 
     instance = None
 

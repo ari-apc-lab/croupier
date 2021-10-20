@@ -1,0 +1,235 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+#
+# blueprint_hpc_openstack.yaml
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+  # to speed things up, it is possible downloading this file,
+  - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+  - http://www.getcloudify.org/spec/openstack-plugin/2.14.7/plugin.yaml
+  # relative import of plugin.yaml that resides in the blueprint directory
+  - plugin.yaml
+
+inputs:
+  openstack_host:
+    default: ''
+    type: string
+  openstack_password:
+    type: string
+    required: true
+  tunnel_password:
+    type: string
+    required: true
+  tunnel_user:
+    type: string
+    required: true
+  vault_config:
+    default:
+      username: ''
+      token: ''
+    type: croupier.datatypes.vault_config
+
+node_templates:
+  hpc_interface:
+    type: croupier.nodes.InfrastructureInterface
+    properties:
+      config:
+          country_tz: Europe/Madrid
+          infrastructure_interface: SLURM
+      ssh_config:
+          host: ft2.cesga.es
+          get_credentials_from_vault: true
+      vault_config: { get_input: vault_config }
+      job_prefix: atos
+      base_dir: $HOME
+      monitoring_options:
+          monitor_period: 15
+      #simulate: True  # COMMENT to test against a real HPC
+      workdir_prefix: "hpc_openstack"
+      skip_cleanup: true
+
+  openstack_interface:
+    type: croupier.nodes.InfrastructureInterface
+    properties:
+      config:
+        infrastructure_interface: SHELL
+      ssh_config:
+        host: ''
+        password: ''
+        private_key: ''
+        private_key_password: ''
+        tunnel:
+          host: { get_input: openstack_host }
+          password: { get_input: tunnel_password }
+          user: { get_input: tunnel_user }
+        user: ubuntu
+      job_prefix: atos
+      workdir_prefix: "hybrid"
+    relationships:
+      - type: interface_contained_in
+        target: my_server
+
+  hpc_job:
+    type: croupier.nodes.Job
+    properties:
+      job_options:
+        commands:
+          - "touch test_$1.output"
+        arguments:
+          - script
+        nodes: 1
+        tasks: 1
+        tasks_per_node: 1
+        max_time: "00:01:00"
+        partition: cola_corta
+      skip_cleanup: True
+    relationships:
+      - type: task_managed_by_interface
+        target: hpc_interface
+
+  vm_job:
+    type: croupier.nodes.Job
+    properties:
+      job_options:
+        commands: ["touch single_vm.test"]
+        max_time: 00:01:00
+    relationships:
+      - type: task_managed_by_interface
+        target: openstack_interface
+      - type: job_depends_on
+        target: hpc_job
+
+  ########### OpenStack plugin ##########
+  croupier-network:
+    type: cloudify.openstack.nodes.Network
+    properties:
+      use_external_resource: true
+      resource_id: 00da93b2-9192-45d0-b777-6359fe8246b7
+      openstack_config: { get_input: openstack_config }
+
+
+  keypair:
+    type: cloudify.openstack.nodes.KeyPair
+    properties:
+      resource_id: "autokeypair_test"
+      private_key_path: { concat: [keys_repo/, { get_property: [SELF,resource_id] }] }
+      openstack_config:
+        auth_url: { concat: ['http://',{ get_input: openstack_host }, '/identity'] }
+        custom_configuration:
+          neutron_client:
+            endpoint_url: { concat: ['http://',{ get_input: openstack_host }, ':9696'] }
+          nova_client:
+            bypass_url: { concat: ['http://',{ get_input: openstack_host }, '/compute/v2.1'] }
+        logging:
+          groups:
+            cinder: 30
+            glance: 30
+            keystone: 30
+            neutron: 30
+            nova: 30
+          loggers:
+            keystoneauth.session: 30
+          use_cfy_logger: true
+        password: { get_input: openstack_password }
+        project_domain_name: default
+        project_name: admin
+        region: RegionOne
+        user_domain_name: Default
+        username: admin
+
+  my_floating_ip:
+   type: cloudify.openstack.nodes.FloatingIP
+   properties:
+      #use_external_resource: true
+      resource_id: "autoip_test"}
+      openstack_config:
+        auth_url: { concat: [ 'http://',{ get_input: openstack_host }, '/identity' ] }
+        custom_configuration:
+          neutron_client:
+            endpoint_url: { concat: [ 'http://',{ get_input: openstack_host }, ':9696' ] }
+          nova_client:
+            bypass_url: { concat: [ 'http://',{ get_input: openstack_host }, '/compute/v2.1' ] }
+        logging:
+          groups:
+            cinder: 30
+            glance: 30
+            keystone: 30
+            neutron: 30
+            nova: 30
+          loggers:
+            keystoneauth.session: 30
+          use_cfy_logger: true
+        password: { get_input: openstack_password }
+        project_domain_name: default
+        project_name: admin
+        region: RegionOne
+        user_domain_name: Default
+        username: admin
+      floatingip:
+        floating_network_name: external
+
+  my_server:
+    type: cloudify.openstack.nodes.Server
+    properties:
+      agent_config:
+        install_method: none
+      resource_id: cfy_test
+      image: 53818d97-4d3c-4f6d-9525-b04e83331353
+      flavor: '2'
+      openstack_config:
+        auth_url: { concat: [ 'http://',{ get_input: openstack_host }, '/identity' ] }
+        custom_configuration:
+          neutron_client:
+            endpoint_url: { concat: [ 'http://',{ get_input: openstack_host }, ':9696' ] }
+          nova_client:
+            bypass_url: { concat: [ 'http://',{ get_input: openstack_host }, '/compute/v2.1' ] }
+        logging:
+          groups:
+            cinder: 30
+            glance: 30
+            keystone: 30
+            neutron: 30
+            nova: 30
+          loggers:
+            keystoneauth.session: 30
+          use_cfy_logger: true
+        password: { get_input: openstack_password }
+        project_domain_name: default
+        project_name: admin
+        region: RegionOne
+        user_domain_name: Default
+        username: admin
+    relationships:
+    - type: cloudify.openstack.server_connected_to_keypair
+      target: keypair
+    - type: cloudify.relationships.connected_to
+      target: croupier-network
+    - type: cloudify.openstack.server_connected_to_floating_ip
+      target: my_floating_ip
+
+outputs:
+  single_job_name:
+    description: single job name in the VM
+    value: { get_attribute: [vm_job, job_name] }

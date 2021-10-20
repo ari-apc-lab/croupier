@@ -1,4 +1,4 @@
-'''
+"""
 Copyright (c) 2019 HLRS. All rights reserved.
 
 This file is part of Croupier.
@@ -26,7 +26,7 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 
 torque.py
-'''
+"""
 from __future__ import absolute_import
 
 from future import standard_library
@@ -41,13 +41,17 @@ import datetime, time
 
 
 class Pbspro(InfrastructureInterface):
-    """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
+    """ Holds the PBS functions. Acts similarly to the class `Slurm`."""
+
+    def _get_jobid(self, output):
+        return output.split(' ')[-1].strip()
 
     def _parse_job_settings(
             self,
             job_id,
             job_settings,
-            script=False):
+            script=False,
+            timezone=None):
         _settings = {'data': ''}
         if script:
             _prefix = '#PBS'
@@ -116,7 +120,7 @@ class Pbspro(InfrastructureInterface):
                 _add_setting('-q', shlex_quote(queue))
 
         if _check_job_settings_key('memory'):
-            _add_setting('-l', 'mem={}'.format(job_settings('memory')))
+            _add_setting('-l', 'mem={}'.format(job_settings['memory']))
 
         if _check_job_settings_key('mail_user'):
             _add_setting('-M', job_settings['mail_user'])
@@ -207,15 +211,15 @@ class Pbspro(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, workdir, credentials, job_names, logger):
+    def get_states(self, workdir, ssh_config, job_names, logger):
         return self._get_states_detailed(
             workdir,
-            credentials,
+            ssh_config,
             job_names,
             logger) if job_names else {}
 
     @staticmethod
-    def _get_states_detailed(workdir, credentials, job_names, logger):
+    def _get_states_detailed(workdir, ssh_config, job_names, logger):
         """
         Get job states by job names
 
@@ -236,7 +240,7 @@ class Pbspro(InfrastructureInterface):
         call = read_environment + "echo {} | xargs -n 1 qselect -x -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(credentials)
+        client = SshClient(ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -247,7 +251,7 @@ class Pbspro(InfrastructureInterface):
             return {}
 
         # get detailed information about jobs
-        call = read_environment + "qstat -x -w -f {}".format(' '.join(map(str, job_ids)))
+        call = read_environment + "qstat -x -f {}".format(' '.join(map(str, job_ids)))
 
         output, exit_code = client.execute_shell_command(
             call,
@@ -261,7 +265,7 @@ class Pbspro(InfrastructureInterface):
                 "cannot parse state response for job ids=[{}]".format(
                     ','.join(map(str, job_ids))))
             logger.warning(
-                "{err}\n`qstat -f` output to parse:\n\\[\n{text}\n\\]".format(
+                "{err}\n`qstat -x -f` output to parse:\n\\[\n{text}\n\\]".format(
                     err=str(e), text=output))
             # TODO: think whether error ignoring is better
             #       for the correct lifecycle
@@ -284,7 +288,7 @@ class Pbspro(InfrastructureInterface):
         jobs = {}
         audits = {}
         for job in Pbspro._tokenize_qstat_detailed(StringIO(qstat_output)):
-            name = job.get('Job_Name', '')
+            name = job.get("Job_Id", None)
             state_code = job.get('job_state', None)
             audit = {}
             if name and state_code:
