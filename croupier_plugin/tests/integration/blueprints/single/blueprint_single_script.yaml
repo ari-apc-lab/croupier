@@ -33,23 +33,27 @@ imports:
     - plugin.yaml
 
 inputs:
-    vault_config:
-        description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
-        default:
-            username: ''
-            token: ''
-        type: croupier.datatypes.vault_config
+    vault_token:
+        type: string
+    vault_user:
+        type: string
 
 node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_token }
     hpc_interface:
         type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
         properties:
             config:
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -77,7 +81,7 @@ node_templates:
                     - 'single'
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
 
 outputs:

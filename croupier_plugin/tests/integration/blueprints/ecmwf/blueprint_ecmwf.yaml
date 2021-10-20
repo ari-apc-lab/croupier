@@ -43,6 +43,7 @@ inputs:
         type: croupier.datatypes.ssh_config
 
 node_templates:
+
     hpc-vulcan:
         type: croupier.nodes.InfrastructureInterface
         properties:
@@ -66,7 +67,6 @@ node_templates:
             user: { get_input: vault_user }
             token: { get_input: vault_token}
 
-
     job1:
         type: croupier.nodes.Job
         properties:
@@ -76,7 +76,7 @@ node_templates:
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc-vulcan
             - type: job_needs_data
               target: weather_data
@@ -90,7 +90,7 @@ node_templates:
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc-vulcan
             - type: job_needs_data
               target: weather_data

@@ -31,10 +31,12 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
+    inputs:
     vault_token:
         type: string
 
 node_templates:
+
     hpc_exporter:
         type: croupier.nodes.HPCExporter
         properties:
@@ -77,7 +79,7 @@ node_templates:
                 max_time: '00:05:00'
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc
 
 outputs:

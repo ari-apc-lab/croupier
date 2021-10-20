@@ -32,21 +32,27 @@ imports:
     - plugin.yaml
 
 inputs:
-    vault_config:
-        default:
-            token: ''
-            username: ''
+    vault_token:
+        type: string
+    vault_user:
+        type: string
 
 node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_token }
     cesga_interface:
         type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
         properties:
             config:
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
             job_prefix: atos
             base_dir: "$HOME"
             monitoring_options:
@@ -68,7 +74,7 @@ node_templates:
                 scale: 4
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
 
     second_parallel_job:
@@ -84,7 +90,7 @@ node_templates:
                 scale: 2
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
             - type: job_depends_on
               target: first_job
@@ -109,7 +115,7 @@ node_templates:
                     - "script_"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
             - type: job_depends_on
               target: first_job
@@ -134,7 +140,7 @@ node_templates:
                     - "script_"
             skip_cleanup: True
         relationships:
-            - type: job_managed_by_interface
+            - type: task_managed_by_interface
               target: hpc_interface
             - type: job_depends_on
               target: second_parallel_job
