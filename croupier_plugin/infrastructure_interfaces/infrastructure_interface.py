@@ -591,7 +591,9 @@ class InfrastructureInterface(object):
 
         if self.__class__.__name__ == 'Shell':
             # Run in the background detached from terminal
-            _call = 'nohup sh -c "' + _call + '" &'
+            stdout = name + ".out"
+            stderr = name + ".err"
+            _call = 'nohup sh -c {0} > {1} 2> {2} &'.format(_call, stdout, stderr)
 
         response = {'call': _call}
 

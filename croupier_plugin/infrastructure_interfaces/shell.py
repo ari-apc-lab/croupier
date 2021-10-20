@@ -36,7 +36,7 @@ class Shell(infrastructure_interface.InfrastructureInterface):
 
     def _parse_job_settings(
             self,
-            job_id,
+            name,
             job_settings,
             script=False,
             timezone=None):
@@ -48,9 +48,13 @@ class Shell(infrastructure_interface.InfrastructureInterface):
             if 'arguments' in job_settings:
                 for arg in job_settings['arguments']:
                     _settings += ' '+arg
-            _settings += '; '
 
-            _settings += 'echo ' + job_id + ',$? >> croupier-monitor.data; '
+            stdout = name + ".out"
+            stderr = name + ".err"
+            _settings = 'nohup sh -c {0} > {1} 2> {2} &'.format(_settings, stdout, stderr)
+
+            _settings += '; '
+            _settings += 'echo ' + name + ',$? >> croupier-monitor.data; '
 
         return {'data': _settings}
 
