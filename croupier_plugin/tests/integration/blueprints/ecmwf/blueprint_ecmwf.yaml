@@ -39,8 +39,6 @@ inputs:
         type: string
     ecmwf_query:
         type: croupier.datatypes.ecmwf_query
-    ecmwf_ssh_credentials:
-        type: croupier.datatypes.ssh_config
 
 node_templates:
 
@@ -100,8 +98,8 @@ node_templates:
     weather_data:
         type: croupier.nodes.ECMWFVerticalInterpolation
         properties:
-            ssh_config: { get_input: ecmwf_ssh_credentials }
-            keycloak_credentials: { get_input: keycloak_credentials }
+            ssh_config:
+                host: 136.156.90.143
             query: { get_input: ecmwf_query }
         relationships:
             - type: data_target_infrastructure
