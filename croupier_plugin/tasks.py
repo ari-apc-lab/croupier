@@ -611,7 +611,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                 name,
                 job_options,
                 is_singularity,
-                ctx.logger,
+                ctx,
                 workdir=workdir,
                 context=context_vars)
         except Exception as ex:

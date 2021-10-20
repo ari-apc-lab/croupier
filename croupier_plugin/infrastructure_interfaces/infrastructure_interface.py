@@ -159,7 +159,7 @@ class InfrastructureInterface(object):
                    name,
                    job_settings,
                    is_singularity,
-                   logger,
+                   ctx,
                    workdir=None,
                    context=None,
                    timezone=None):
@@ -185,58 +185,59 @@ class InfrastructureInterface(object):
         @rtype string
         @return Slurm's job id sent. None if an error arise.
         """
-        if not SshClient.check_ssh_client(ssh_client, logger):
-            logger.error('check_ssh_client failed')
+        if not SshClient.check_ssh_client(ssh_client, ctx.logger):
+            ctx.logger.error('check_ssh_client failed')
             return False
 
         # Build script if there is no one, or Singularity
         # self.audit_inserted = False
-        if 'script' not in job_settings or is_singularity:
-            # generate script content
-            if is_singularity:
-                script_content = self._build_container_script(
-                    name,
-                    job_settings,
-                    workdir,
-                    ssh_client,
-                    logger)
-            else:
-                script_content = self._build_script(name, job_settings, workdir, ssh_client, logger)
 
-            if script_content is None:
-                logger.error('script_content is None')
-                return False
-
-            if not self.create_shell_script(
-                    ssh_client,
-                    name + ".script",
-                    script_content,
-                    logger,
-                    workdir=workdir):
-                logger.error('_create_shell_script failed')
-                return False
-
-            # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
-            settings = {
-                "script": name + ".script"
-            }
-
-            if 'arguments' in job_settings:
-                settings['arguments'] = job_settings['arguments']
-
-            if 'scale' in job_settings:
-                settings['scale'] = job_settings['scale']
-                if 'scale_max_in_parallel' in job_settings:
-                    settings['scale_max_in_parallel'] = \
-                        job_settings['scale_max_in_parallel']
+        # generate script content
+        if is_singularity:
+            script_content = self._build_container_script(
+                name,
+                job_settings,
+                workdir,
+                ssh_client,
+                ctx.logger)
+        elif 'script' in job_settings and job_settings['script']:
+            script = job_settings['script']
+            script_content = script if script[0] == '#' else ctx.get_resource(script)
         else:
-            settings = job_settings
+            script_content = self._build_script(name, job_settings, workdir, ssh_client, ctx.logger)
+
+        if script_content is None:
+            ctx.logger.error('script_content is None')
+            return False
+
+        if not self.create_shell_script(
+                ssh_client,
+                name + ".script",
+                script_content,
+                ctx.logger,
+                workdir=workdir):
+            ctx.logger.error('_create_shell_script failed')
+            return False
+
+        # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
+        settings = {
+            "script": name + ".script"
+        }
+
+        if 'arguments' in job_settings:
+            settings['arguments'] = job_settings['arguments']
+
+        if 'scale' in job_settings:
+            settings['scale'] = job_settings['scale']
+            if 'scale_max_in_parallel' in job_settings:
+                settings['scale_max_in_parallel'] = \
+                    job_settings['scale_max_in_parallel']
 
         # build the call to submit the job
         response = self._build_job_submission_call(name, settings, timezone=timezone)
 
         if 'error' in response:
-            logger.error(
+            ctx.logger.error(
                 "Couldn't build the call to send the job: " +
                 response['error'])
             return False
@@ -249,10 +250,10 @@ class InfrastructureInterface(object):
                 workdir=workdir,
                 wait_result=True)
             if exit_code != 0:
-                logger.error("Scale env vars mapping '" +
-                             scale_env_mapping_call +
-                             "' failed with code " +
-                             str(exit_code) + ":\n" + output)
+                ctx.logger.error("Scale env vars mapping '" +
+                                 scale_env_mapping_call +
+                                 "' failed with code " +
+                                 str(exit_code) + ":\n" + output)
                 return False
 
         # submit the job
@@ -264,8 +265,8 @@ class InfrastructureInterface(object):
             workdir=workdir,
             wait_result=True)
         if exit_code != 0:
-            logger.error("Job submission '" + call + "' exited with code " +
-                         str(exit_code) + ":\n" + output)
+            ctx.logger.error("Job submission '" + call + "' exited with code " +
+                             str(exit_code) + ":\n" + output)
             return False
 
         return self._get_jobid(output)
