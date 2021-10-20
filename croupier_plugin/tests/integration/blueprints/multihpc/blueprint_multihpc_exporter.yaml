@@ -31,12 +31,17 @@ imports:
     - plugin.yaml
 
 inputs:
-    vault_config:
-        default:
-            token: ''
-            username: ''
+    vault_token:
+        type: string
+    vault_user:
+        type: string
 
 node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_token }
     hpc_exporter:
         type: croupier.nodes.HPCExporter
 
@@ -52,8 +57,6 @@ node_templates:
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -63,6 +66,8 @@ node_templates:
         relationships:
             - type: interface_monitored_by
               target: hpc_exporter
+            - type: retrieve_credentials_from_vault
+                  target: vault
 
     sodalite_hpc:
         type: croupier.nodes.InfrastructureInterface
@@ -71,8 +76,6 @@ node_templates:
                 infrastructure_interface: TORQUE
             ssh_config:
                 host: sodalite-fe.hlrs.de
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -82,6 +85,8 @@ node_templates:
         relationships:
             - type: interface_monitored_by
               target: hpc_exporter
+            - type: retrieve_credentials_from_vault
+                  target: vault
 
     cesga_job:
         type: croupier.nodes.Job

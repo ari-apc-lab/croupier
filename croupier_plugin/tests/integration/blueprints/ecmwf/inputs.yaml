@@ -27,5 +27,11 @@
 # inputs.yaml
 
 
-vault_token: s.vHBFb0Tdz6krt0J4jEwqGLbu
+vault_token: ''
 vault_user: ''
+ecmwf_query:
+  params: u/v
+  date: 20211001
+  time: 00
+  area: 44/18/43/19
+  collection: hidalgo-test

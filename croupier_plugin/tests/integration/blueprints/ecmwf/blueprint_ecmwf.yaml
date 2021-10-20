@@ -30,22 +30,25 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin:croupier
+    - plugin.yaml
 
 inputs:
     vault_user:
         type: string
     vault_token:
         type: string
+    ecmwf_query:
+        type: croupier.datatypes.ecmwf_query
 
 node_templates:
-    hpc:
+
+    hpc-vulcan:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
                 infrastructure_interface: TORQUE
             ssh_config:
-                host: sodalite-fe.hlrs.de
+                host: hawk.hlrs.de
             job_prefix: ecmwf
             base_dir: "$HOME"
             monitoring_options:
@@ -62,7 +65,6 @@ node_templates:
             user: { get_input: vault_user }
             token: { get_input: vault_token}
 
-
     job1:
         type: croupier.nodes.Job
         properties:
@@ -73,7 +75,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: hpc
+              target: hpc-vulcan
             - type: job_needs_data
               target: weather_data
 
@@ -87,7 +89,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: hpc
+              target: hpc-vulcan
             - type: job_needs_data
               target: weather_data
             - type: job_depends_on
@@ -98,17 +100,10 @@ node_templates:
         properties:
             ssh_config:
                 host: 136.156.90.143
-            keycloak_credentials:
-                user: { get_input: vault_user }
-            query:
-                area: 45/18/44/19
-                params: u/v
-                date: 20210910
-                time: 00
-                collection: hidalgo-test
+            query: { get_input: ecmwf_query }
         relationships:
-            - type: task_managed_by_interface
-              target: hpc
+            - type: data_target_infrastructure
+              target: hpc-vulcan
             - type: retrieve_credentials_from_vault
               target: vault
 

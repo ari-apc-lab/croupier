@@ -45,15 +45,17 @@ inputs:
   tunnel_user:
     type: string
     required: true
-  vault_config:
-    default:
-      username: ''
-      token: ''
-    type: croupier.datatypes.vault_config
+  vault_token:
+        type: string
+  vault_user:
+      type: string
 
 node_templates:
   hpc_interface:
     type: croupier.nodes.InfrastructureInterface
+    relationships:
+        - type: retrieve_credentials_from_vault
+          target: vault
     properties:
       config:
           country_tz: Europe/Madrid
@@ -90,6 +92,8 @@ node_templates:
     relationships:
       - type: interface_contained_in
         target: my_server
+      - type: retrieve_credentials_from_vault
+        target: vault
 
   hpc_job:
     type: croupier.nodes.Job

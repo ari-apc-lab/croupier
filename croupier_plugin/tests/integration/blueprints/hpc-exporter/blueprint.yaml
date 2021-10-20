@@ -31,12 +31,14 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
+    inputs:
     vault_token:
         type: string
     vault_user:
         type: string
 
 node_templates:
+
     hpc_exporter:
         type: croupier.nodes.HPCExporter
 

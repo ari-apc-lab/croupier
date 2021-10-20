@@ -46,16 +46,18 @@ inputs:
   tunnel_user:
     type: string
     required: true
-  vault_config:
-    default:
-      username: ''
-      token: ''
-    type: croupier.datatypes.vault_config
+  vault_token:
+        type: string
+    vault_user:
+        type: string
 
 
 node_templates:
   openstack_interface:
     type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
     properties:
       config:
         infrastructure_interface: SHELL
