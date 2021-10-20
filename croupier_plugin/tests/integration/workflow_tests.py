@@ -25,7 +25,7 @@ license information in the project root.
          e-mail: jesus.gorronogoitia@atos.net
 @author: Jesus Ramos Rivas
          Atos Research & Innovation, Atos Spain S.A.
-         e-mail: jesus.ramos@atos.net
+         e-mail: jesus.2.ramos@atos.net
 
 workflow_tests.py
 """
