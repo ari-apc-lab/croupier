@@ -1,13 +1,13 @@
 cloudify-common==6.2.0
-pyyaml==5.4
+pyyaml>=5.4
 nose
 mock
 pycrypto
 wget
 requests
 networkx==1.9.1
-urllib3==1.26.5
+urllib3>=1.26.5
 cffi==1.14.5
 pytz
-cryptography==3.3.2
+cryptography>=3.3.2
 
