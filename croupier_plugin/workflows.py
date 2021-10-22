@@ -455,22 +455,22 @@ class ConfigureInterface(object):
 
     def configure(self):
         for instance in self.instances:
-            result = instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"run_jobs": True})
+            result = instance.execute_operation('configure', kwargs={"recurring": True})
             result.get()
 
 
-class ConfigureJob(object):
+class ConfigureTask(object):
     def __init__(self, node):
         self.instances = node.instances
 
     def configure(self):
         for instance in self.instances:
             for relationship_instance in instance.relationships:
-                relationship = relationship_instance.relationship
-                if relationship.is_derived_from("task_managed_by_interface"):
-                    result_configure = relationship_instance.execute_source_operation('preconfigure',
-                                                                                      kwargs={"run_jobs": True})
-                    result_configure.get()
+                result_preconfigure = relationship_instance.execute_source_operation('preconfigure',
+                                                                                     kwargs={"recurring": True})
+                result_preconfigure.get()
+            result_configure = instance.execute_source_operation('configure', kwargs={"recurring": True})
+            result_configure.get()
 
 
 def build_configure_graph(nodes):
@@ -479,8 +479,8 @@ def build_configure_graph(nodes):
     for node in nodes:
         if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
             interfaces.append(ConfigureInterface(node))
-        elif 'croupier.nodes.Job' in node.type_hierarchy:
-            jobs.append(ConfigureJob(node))
+        elif 'croupier.nodes.Job' or 'croupier.nodes.Data' in node.type_hierarchy:
+            jobs.append(ConfigureTask(node))
 
     return jobs, interfaces
 

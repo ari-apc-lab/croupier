@@ -159,10 +159,10 @@ def configure_execution(
     ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
     ctx.instance.runtime_properties['accounting_options'] = accounting_options
     ctx.instance.runtime_properties['infrastructure_host'] = ssh_config['host']
-    if recurring_workflow and "run_jobs" not in kwargs:
+    if recurring_workflow and "recurring" not in kwargs:
         ctx.logger.info(
-            "Configuration of infrastructure interfaces in the case of recurring workflows happens during run_jobs")
-    elif not recurring_workflow and "run_jobs" in kwargs and kwargs["run_jobs"]:
+            "Configuration of infrastructure interfaces in the case of recurring workflows happens during croupier_configure")
+    elif not recurring_workflow and "recurring" in kwargs and kwargs["recurring"]:
         pass
     elif not simulate:
         ctx.logger.info('Connecting to infrastructure interface..')
@@ -400,7 +400,7 @@ def preconfigure_task(
     """ Match the job with its ssh_config """
     ctx.logger.info('Preconfiguring job..')
 
-    if "run_jobs" not in kwargs:
+    if "recurring" not in kwargs:
         if 'ssh_config' not in ctx.target.instance.runtime_properties:
             ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
         else:
@@ -421,12 +421,13 @@ def preconfigure_task(
             ctx.source.instance.runtime_properties['monitoring_id'] = \
                 ctx.target.instance.runtime_properties['monitoring_id']
 
-    elif ctx.target.node.properties['recurring_workflow'] and kwargs["run_jobs"]:
+    elif ctx.target.node.properties['recurring_workflow'] and kwargs["recurring"]:
         ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 
 @operation
-def bootstrap_job(
+def configure_job(
+        job_options,
         deployment,
         skip_cleanup,
         **kwargs):  # pylint: disable=W0613
@@ -434,7 +435,18 @@ def bootstrap_job(
     if not deployment:
         return
 
-    ctx.logger.info('Bootstraping job..')
+    if 'reservation' in job_options:
+        reservation_id = job_options['reservation']
+        if 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
+            timezone = ctx.instance.runtime_properties['timezone']
+            reservation_id = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
+            job_options['reservation'] = reservation_id
+        ctx.instance.runtime_properties['reservation'] = reservation_id
+        ctx.logger.info('Using reservation ID ' + reservation_id)
+    if ctx.instance.runtime_properties['recurring_workflow'] and deployment['recurring_bootstrap'] \
+            and "recurring" not in kwargs:
+        ctx.logger.info('Recurring Bootstrap selected, job bootstrap will happen during croupier_configure')
+    ctx.logger.info('Bootstrapping job..')
     simulate = ctx.instance.runtime_properties['simulate']
 
     if not simulate and 'bootstrap' in deployment and deployment['bootstrap']:

@@ -382,14 +382,16 @@ node_types:
                 type: croupier.datatypes.data_mover_options
         interfaces:
             cloudify.interfaces.lifecycle:
-                start: # needs to be 'start' to have the wm ssh_config
-                    implementation: croupier.croupier_plugin.tasks.bootstrap_job
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.configure_job
                     inputs:
                         deployment:
                             description: Deployment scripts and inputs
                             default: { get_property: [SELF, deployment] }
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
+                        job_options:
+                            default: { get_property: [SELF, job_options] }
                     max_retries: 0
                 stop:
                     implementation: croupier.croupier_plugin.tasks.revert_job
@@ -485,7 +487,7 @@ node_types:
                 default: ""
         interfaces:
             cloudify.interfaces.lifecycle:
-                start:
+                configure:
                     implementation: croupier.croupier_plugin.tasks.download_data
                     max_retries: 0
                     inputs:
@@ -583,7 +585,7 @@ relationships:
         derived_from: cloudify.relationships.depends_on
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                postconfigure:
+                preconfigure:
                     implementation: croupier.croupier_plugin.tasks.pass_data_info
                     max_retries: 0
 
