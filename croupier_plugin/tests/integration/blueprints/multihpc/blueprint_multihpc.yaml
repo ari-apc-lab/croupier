@@ -67,16 +67,14 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: TORQUE
-                ssh_config:
-                    host: sodalite-fe.hlrs.de
-                    get_credentials_from_vault: true
-                vault_config: { get_input: vault_config }
-                job_prefix: atos
-                base_dir: $HOME
-                monitoring_options:
-                    monitor_period: 15
-                skip_cleanup: true
-                workdir_prefix: "multihpc"
+            ssh_config:
+                host: sodalite-fe.hlrs.de
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "multihpc"
 
     cesga_job:
         type: croupier.nodes.Job
