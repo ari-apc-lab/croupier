@@ -600,6 +600,7 @@ def build_configure_graph(nodes):
 
     return jobs, interfaces
 
+
 def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
     root_nodes, job_instances_map = build_graph(ctx.nodes)

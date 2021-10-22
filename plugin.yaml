@@ -255,15 +255,6 @@ data_types:
                 required: false
                 default: ''
 
-workflows:
-    run_jobs:
-        mapping: croupier.croupier_plugin.workflows.run_jobs
-    croupier_install:
-        mapping: croupier.croupier_plugin.workflows.croupier_install
-    croupier_configure:
-        mapping: croupier.croupier_plugin.workflows.croupier_configure
-
-data_types:
     croupier.data.infrastructure.Config:
         properties:
             country_tz:
@@ -410,6 +401,13 @@ data_types:
                 type: croupier.data.dm.Credentials
                 required: false
 
+workflows:
+    run_jobs:
+        mapping: croupier.croupier_plugin.workflows.run_jobs
+    croupier_install:
+        mapping: croupier.croupier_plugin.workflows.croupier_install
+    croupier_configure:
+        mapping: croupier.croupier_plugin.workflows.croupier_configure
 
 node_types:
     croupier.nodes.InfrastructureInterface:
