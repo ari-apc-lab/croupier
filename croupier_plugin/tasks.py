@@ -82,17 +82,20 @@ def create_vault(address, **kwargs):
 def download_vault_credentials(token, user, **kwargs):
     address = ctx.target.instance.runtime_properties['address']
 
-    if 'ssh_config' in ctx.source.node.properties:
-        ssh_config = ctx.source.node.properties['ssh_config']
-        ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address)
-        ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
-        ctx.logger.info("Vault credentials downloaded")
+    try:
+        if 'ssh_config' in ctx.source.node.properties:
+            ssh_config = ctx.source.node.properties['ssh_config']
+            ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address)
+            ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
+            ctx.logger.info("Vault credentials downloaded")
 
-    if 'keycloak_credentials' in ctx.source.node.properties:
-        keycloak_credentials = ctx.source.node.properties['keycloak_credentials']
-        keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address)
-        ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
-        ctx.logger.info("Keycloak credentials downloaded")
+        if 'keycloak_credentials' in ctx.source.node.properties:
+            keycloak_credentials = ctx.source.node.properties['keycloak_credentials']
+            keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address)
+            ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
+            ctx.logger.info("Keycloak credentials downloaded")
+    except Exception as exp:
+        raise NonRecoverableError("Failed trying to get credentials from Vault")
 
 
 @operation

@@ -41,7 +41,7 @@ node_templates:
         type: croupier.nodes.Vault
         properties:
             token: { get_input: vault_token }
-            user: { get_input: vault_token }
+            user: { get_input: vault_user }
     cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         relationships:
@@ -88,7 +88,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: cola_corta
+                partition: cola-corta
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
