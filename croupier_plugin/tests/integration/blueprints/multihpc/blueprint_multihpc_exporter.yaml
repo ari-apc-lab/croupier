@@ -41,7 +41,7 @@ node_templates:
         type: croupier.nodes.Vault
         properties:
             token: { get_input: vault_token }
-            user: { get_input: vault_token }
+            user: { get_input: vault_user }
     hpc_exporter:
         type: croupier.nodes.HPCExporter
     cesga_hpc:
@@ -61,7 +61,7 @@ node_templates:
             - type: interface_monitored_by
               target: hpc_exporter
             - type: retrieve_credentials_from_vault
-                  target: vault
+              target: vault
 
     sodalite_hpc:
         type: croupier.nodes.InfrastructureInterface
@@ -94,7 +94,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: cola_corta
+                partition: cola-corta
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
@@ -117,6 +117,8 @@ node_templates:
         relationships:
             - type: task_managed_by_interface
               target: sodalite_hpc
+            - type: job_depends_on
+              target: cesga_job
 
 outputs:
     cesga_job_name:
