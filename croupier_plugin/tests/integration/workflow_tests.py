@@ -35,14 +35,14 @@ import errno
 import yaml
 from cloudify.test_utils import workflow_test
 
+
 class TestPlugin(unittest.TestCase):
     """ Test workflows class """
-
 
     def load_inputs(self, *args, **kwargs):
         """ Parse inputs yaml file """
         if args:
-            folder = args[0]
+            folder = ''.join(args)
             path = os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', folder, 'inputs.yaml')
         else:
             path = os.path.join('croupier_plugin', 'tests', 'integration', 'inputs.yaml')
@@ -100,6 +100,16 @@ class TestPlugin(unittest.TestCase):
         copy_plugin_yaml=True,
         inputs='load_inputs')
     def test_single(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # ------------------------------ Single No Vault --------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'no-vault.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='single')
+    def test_single_no_vault(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------

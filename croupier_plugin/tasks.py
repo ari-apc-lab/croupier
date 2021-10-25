@@ -154,7 +154,6 @@ def configure_execution(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Creates the working directory for the execution """
-
     # Registering accounting and monitoring options
     ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
     ctx.instance.runtime_properties['accounting_options'] = accounting_options
@@ -179,7 +178,6 @@ def configure_execution(
                 "Infrastructure Interface '" +
                 interface_type +
                 "' not supported.")
-
         if 'ssh_config' in ctx.instance.runtime_properties:
             ssh_config = ctx.instance.runtime_properties['ssh_config']
         try:
@@ -576,13 +574,8 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     name = kwargs['name']
     is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.type_hierarchy
 
-    if 'reservation' in job_options:
-        reservation_id = job_options['reservation']
-        if 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
-            timezone = ctx.instance.runtime_properties['timezone']
-            reservation_id = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
-            job_options['reservation'] = reservation_id
-        ctx.instance.runtime_properties['reservation'] = reservation_id
+    if 'reservation' in ctx.instance.runtime_properties:
+        job_options['reservation'] = ctx.instance.runtime_properties['reservation']
 
     if not simulate:
         # Do data download (from Cloud to HPC) if requested
