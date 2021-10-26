@@ -31,7 +31,7 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     - http://www.getcloudify.org/spec/openstack-plugin/2.14.7/plugin.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
 
 inputs:
   openstack_host:
@@ -46,11 +46,10 @@ inputs:
   tunnel_user:
     type: string
     required: true
-  vault_config:
-    default:
-      username: ''
-      token: ''
-    type: croupier.datatypes.vault_config
+  vault_token:
+    type: string
+  vault_user:
+    type: string
 
 
 node_templates:

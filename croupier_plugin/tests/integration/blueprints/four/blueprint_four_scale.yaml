@@ -29,13 +29,13 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
 
 inputs:
-    vault_config:
-        default:
-            token: ''
-            username: ''
+    vault_token:
+        type: string
+    vault_user:
+        type: string
 
 node_templates:
     cesga_hpc:
@@ -45,8 +45,7 @@ node_templates:
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
+
             job_prefix: atos
             base_dir: "$HOME"
             monitoring_options:
@@ -54,12 +53,20 @@ node_templates:
             skip_cleanup: true
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "four_scale"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
 
     first_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                partition: cola_corta
+                partition: cola-corta
                 commands: ["touch job1_$SCALE_INDEX.test"]
                 nodes: 1
                 tasks: 1
@@ -75,7 +82,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                partition: cola_corta
+                partition: cola-corta
                 commands: ["touch job2_$SCALE_INDEX.test"]
                 nodes: 1
                 tasks: 1
@@ -93,14 +100,14 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                script: "touch.script"
+                remote_script: "touch.script"
                 arguments:
                     - "job3_\\$SCALE_INDEX.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-                partition: cola_corta
+                partition: cola-corta
                 scale: 2
             deployment:
                 bootstrap: "scripts/create_script.sh"
@@ -118,14 +125,14 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                script: "touch.script"
+                remote_script: "touch.script"
                 arguments:
                     - "job4_\\$SCALE_INDEX.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-                partition: cola_corta
+                partition: cola-corta
                 scale: 4
             deployment:
                 bootstrap: "scripts/create_script.sh"

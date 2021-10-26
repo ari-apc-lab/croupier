@@ -27,15 +27,13 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
 
 inputs:
-    vault_config:
-        description: Data for the vault instance that contains the hpc ssh_config. Address, token and username
-        default:
-            username: ''
-            token: ''
-        type: croupier.datatypes.vault_config
+    vault_token:
+        type: string
+    vault_user:
+        type: string
 
 node_templates:
     cesga_hpc:
@@ -45,19 +43,26 @@ node_templates:
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
+
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: false
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
 
     job1:
         type: croupier.nodes.Job
         properties:
             job_options:
-                partition: cola_corta
+                partition: cola-corta
                 commands: ["touch fourth_example_1.test"]
                 nodes: 1
                 tasks: 1
@@ -72,7 +77,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                partition: cola_corta
+                partition: cola-corta
                 commands: ["touch fourth_example_2.test"]
                 nodes: 1
                 tasks: 1
@@ -89,14 +94,14 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                script: "touch.script"
+                remote_script: "touch.script"
                 arguments:
                     - "fourth_example_3.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-                partition: cola_corta
+                partition: cola-corta
             deployment:
                 bootstrap: "scripts/create_script.sh"
                 revert: "scripts/delete_script.sh"
@@ -113,14 +118,14 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                script: "touch.script"
+                remote_script: "touch.script"
                 arguments:
                     - "fourth_example_4.test"
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-                partition: cola_corta
+                partition: cola-corta
             deployment:
                 bootstrap: "scripts/create_script.sh"
                 revert: "scripts/delete_script.sh"

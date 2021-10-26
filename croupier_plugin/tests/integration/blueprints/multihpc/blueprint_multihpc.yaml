@@ -28,13 +28,13 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
 
 inputs:
-    vault_config:
-        default:
-            token: ''
-            username: ''
+    vault_token:
+        type: string
+    vault_user:
+        type: string''
 
 node_templates:
     cesga_hpc:
@@ -44,15 +44,20 @@ node_templates:
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
-                get_credentials_from_vault: true
-            vault_config: { get_input: vault_config }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
             workdir_prefix: "multihpc"
-
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
     sodalite_hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
@@ -68,6 +73,9 @@ node_templates:
                     monitor_period: 15
                 skip_cleanup: true
                 workdir_prefix: "multihpc"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
 
     cesga_job:
         type: croupier.nodes.Job
@@ -81,7 +89,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: cola_corta
+                partition: cola-corta
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface

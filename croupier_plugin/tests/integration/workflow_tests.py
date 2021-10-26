@@ -127,6 +127,19 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ---------------------------- Single Shell Script ------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'blueprint_single_shell_script.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'single', 'scripts', 'execute.sh'), 'scripts')
+        ],
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_single_shell_script(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ------------------------------ Single Scale -----------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(

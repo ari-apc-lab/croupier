@@ -27,4 +27,5 @@
 # inputs.yaml
 
 
-vault_token: s.vHBFb0Tdz6krt0J4jEwqGLbu
+vault_token:
+vault_user:
