@@ -192,32 +192,29 @@ class InfrastructureInterface(object):
         # self.audit_inserted = False
 
         # generate script content
-        if is_singularity:
-            script_content = self._build_container_script(
-                name,
-                job_settings,
-                ssh_client)
-        elif 'script' in job_settings and job_settings['script']:
-            script = job_settings['script']
-            script_content = script if script[0] == '#' else context.get_resource(script)
+        if 'remote_script' in job_settings and job_settings['remote_script']:
+            settings = job_settings
+            settings["script"] = job_settings['remote_script']
         else:
-            script_content = self._build_script(name, job_settings, ssh_client)
+            if is_singularity:
+                script_content = self._build_container_script(name, job_settings, ssh_client)
+            elif 'script' in job_settings and job_settings['script']:
+                script_content = job_settings['script']
+            elif 'local_script' in job_settings:
+                script_content = context.get_resource(job_settings['local_script'])
+            else:
+                script_content = self._build_script(name, job_settings, ssh_client)
 
-        if script_content is None:
-            self.logger.error('script_content is None')
-            return False
+            if script_content is None:
+                self.logger.error('script_content is None')
+                return False
 
-        if not self.create_shell_script(
-                ssh_client,
-                name + ".script",
-                script_content):
-            self.logger.error('_create_shell_script failed')
-            return False
+            if not self.create_shell_script(ssh_client, name + ".script", script_content):
+                self.logger.error('_create_shell_script failed')
+                return False
 
-        # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
-        settings = {
-            "script": name + ".script"
-        }
+            # @TODO: use more general type names (e.g., BATCH/INLINE, etc)
+            settings = {"script": name + ".script"}
 
         if 'arguments' in job_settings:
             settings['arguments'] = job_settings['arguments']
@@ -225,40 +222,30 @@ class InfrastructureInterface(object):
         if 'scale' in job_settings:
             settings['scale'] = job_settings['scale']
             if 'scale_max_in_parallel' in job_settings:
-                settings['scale_max_in_parallel'] = \
-                    job_settings['scale_max_in_parallel']
+                settings['scale_max_in_parallel'] = job_settings['scale_max_in_parallel']
 
         # build the call to submit the job
         response = self._build_job_submission_call(name, settings, ssh_client, timezone=timezone)
 
         if 'error' in response:
-            self.logger.error(
-                "Couldn't build the call to send the job: " +
-                response['error'])
+            self.logger.error("Couldn't build the call to send the job: " + response['error'])
             return False
 
         # prepare the scale env variables
         if 'scale_env_mapping_call' in response:
             scale_env_mapping_call = response['scale_env_mapping_call']
-            output, exit_code = ssh_client.execute_shell_command(
-                scale_env_mapping_call,
-                workdir=self.workdir,
-                wait_result=True)
+            output, exit_code = ssh_client.execute_shell_command(scale_env_mapping_call, workdir=self.workdir,
+                                                                 wait_result=True)
             if exit_code != 0:
-                self.logger.error("Scale env vars mapping '" +
-                                  scale_env_mapping_call +
-                                  "' failed with code " +
+                self.logger.error("Scale env vars mapping '" + scale_env_mapping_call + "' failed with code " +
                                   str(exit_code) + ":\n" + output)
                 return False
 
         # submit the job
         call = response['call']
 
-        output, exit_code = ssh_client.execute_shell_command(
-            call,
-            env=environment,
-            workdir=self.workdir,
-            wait_result=True)
+        output, exit_code = ssh_client.execute_shell_command(call, env=environment, workdir=self.workdir,
+                                                             wait_result=True)
         if exit_code != 0:
             self.logger.error("Job submission '" + call + "' exited with code " + str(exit_code) + ":\n" + output)
             return False
@@ -271,12 +258,7 @@ class InfrastructureInterface(object):
         """
         return None
 
-    def clean_job_aux_files(self,
-                            ssh_client,
-                            name,
-                            job_options,
-                            is_singularity,
-                            logger):
+    def clean_job_aux_files(self, ssh_client, name, is_singularity):
         """
         Cleans no more needed job files in the HPC
 
@@ -284,27 +266,19 @@ class InfrastructureInterface(object):
         @param ssh_client: ssh client connected to an HPC login node
         @type name: string
         @param name: name of the job
-        @type job_settings: dictionary
-        @param job_settings: dictionary with the job options
         @type is_singularity: bool
         @param is_singularity: True if the job is in a container
         @rtype string
         @return Slurm's job name stopped. None if an error arise.
         """
-        if not SshClient.check_ssh_client(ssh_client, logger):
+        if not SshClient.check_ssh_client(ssh_client, self.logger):
             return False
 
         if is_singularity:
-            return ssh_client.execute_shell_command(
-                "rm " + name + ".script",
-                workdir=self.workdir)
+            return ssh_client.execute_shell_command("rm " + name + ".script", workdir=self.workdir)
         return True
 
-    def stop_job(self,
-                 ssh_client,
-                 name,
-                 job_options,
-                 is_singularity):
+    def stop_job(self, ssh_client, name, job_options, is_singularity):
         """
         Stops a job from the HPC
 
@@ -535,10 +509,8 @@ class InfrastructureInterface(object):
                 not isinstance(name, basestring):
             return {'error': "Incorrect inputs"}
 
-        if 'commands' not in job_settings and \
-                'script' not in job_settings:
-            return {'error': "'commands' or 'script' " +
-                             "must be defined in job settings"}
+        if 'commands' and 'remote_script' and 'local_script' and 'script' not in job_settings:
+            return {'error': "'commands', 'script', 'local_script' or 'remote_script' must be defined in job options"}
 
         # Build single line command
         _call = ''
@@ -597,7 +569,7 @@ class InfrastructureInterface(object):
                     scale_count=self._get_envar(
                         'SCALE_COUNT', job_settings['scale']),
                     scale_max=self._get_envar('SCALE_MAX', scale_max),
-                    script=job_settings['script'].split()[0])  # file name only
+                    script=job_settings['remote_script'].split()[0])  # file name only
 
             response['scale_env_mapping_call'] = scale_env_mapping_call
 

@@ -108,7 +108,7 @@ def get_job_metrics(job_name, ssh_client, workdir, monitor_start_time_str, logge
         workdir=workdir,
         wait_result=True)
     if exit_code == 0:
-        audits = _parse_audit_metrics(output, logger)
+        audits = _parse_audit_metrics(output)
     else:
         logger.error("Failed to get job metrics")
     return audits

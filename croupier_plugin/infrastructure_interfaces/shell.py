@@ -32,7 +32,10 @@ from croupier_plugin.infrastructure_interfaces import infrastructure_interface
 class Shell(infrastructure_interface.InfrastructureInterface):
 
     def _get_jobid(self, output):
-        return output.split(' ')[-1].strip()
+        if output:
+            return output.split(' ')[-1].strip()
+        else:
+            return "NO_RESPONSE"
 
     def _build_job_submission_call(self, name, job_settings, ssh_client, timezone):
         """
@@ -55,7 +58,7 @@ class Shell(infrastructure_interface.InfrastructureInterface):
                               "nohup ./{name}.script >{name}.out 2>{name}.err &\n" \
                               "pid=$!\n" \
                               "wait $pid\n" \
-                              "exit_code=$?" \
+                              "exit_code=$?\n" \
                               "echo {name},$exit_code >> croupier-monitor.dat". format(name=name)
         call_name = name + "_call.sh"
         if not self.create_shell_script(ssh_client, call_name, call_script_content):

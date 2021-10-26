@@ -63,8 +63,8 @@ class JobRequester(object):
                         settings['config'],
                         settings['names'])
                 else:  # internal
-                    wm = InfrastructureInterface.factory(settings['type'], monitor_start_time, logger,
-                                                         settings['workdir'])
+                    workdir = settings['workdir']
+                    wm = InfrastructureInterface.factory(settings['type'], logger, workdir, monitor_start_time)
                     if wm:
                         states, audits = wm.get_states(settings['config'], settings['names'])
                     else:
