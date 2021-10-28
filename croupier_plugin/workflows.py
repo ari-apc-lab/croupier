@@ -455,7 +455,7 @@ class ConfigureInterface(object):
 
     def configure(self):
         for instance in self.instances:
-            result = instance.execute_operation('configure', kwargs={"recurring": True})
+            result = instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"recurring": True})
             result.get()
 
 
@@ -466,10 +466,12 @@ class ConfigureTask(object):
     def configure(self):
         for instance in self.instances:
             for relationship_instance in instance.relationships:
-                result_preconfigure = relationship_instance.execute_source_operation('preconfigure',
+                result_preconfigure = relationship_instance.execute_source_operation('cloudify.interfaces.lifecycle.'
+                                                                                     'preconfigure',
                                                                                      kwargs={"recurring": True})
                 result_preconfigure.get()
-            result_configure = instance.execute_source_operation('configure', kwargs={"recurring": True})
+            result_configure = instance.execute_source_operation('cloudify.interfaces.lifecycle.configure',
+                                                                 kwargs={"recurring": True})
             result_configure.get()
 
 
