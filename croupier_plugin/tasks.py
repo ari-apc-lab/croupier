@@ -685,8 +685,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
 
     try:
         name = kwargs['name']
-        is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
-            type_hierarchy
+        is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.type_hierarchy
 
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
@@ -696,16 +695,8 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
-                raise NonRecoverableError(
-                    "Infrastructure Interface '" +
-                    interface_type +
-                    "' not supported.")
-            is_stopped = wm.stop_job(client,
-                                     name,
-                                     job_options,
-                                     is_singularity,
-                                     ctx.logger,
-                                     workdir=workdir)
+                raise NonRecoverableError( "Infrastructure Interface '" + interface_type + "' not supported.")
+            is_stopped = wm.stop_job(client, name, job_options, is_singularity)
 
             client.close_connection()
         else:
@@ -713,13 +704,10 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             is_stopped = True
 
         if is_stopped:
-            ctx.logger.info(
-                'Job ' + name + ' (' + ctx.instance.id + ') stopped.')
+            ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') stopped.')
         else:
-            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id +
-                             ') not stopped.')
-            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id +
-                                      ') not stopped.')
+            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
+            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
     except Exception as exp:
         ctx.logger.error('Something happened when trying to stop:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 

@@ -261,6 +261,17 @@ class TestPlugin(unittest.TestCase):
     def test_ecmwf(self, cfy_local):
         self.run_test(cfy_local)
 
+    # -------------------------------------------------------------------------------
+    # -------------------------------- ITAINNOVA ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'itainnova', 'blueprint.yaml'),
+        resources_to_copy=[(os.path.join('blueprints', 'itainnova', 'scripts', 'bootstrap.sh'), 'scripts')],
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='itainnova')
+    def test_itainnova(self, cfy_local):
+        self.run_test(cfy_local)
+
 
 if __name__ == '__main__':
     unittest.main()
