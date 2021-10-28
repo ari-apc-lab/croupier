@@ -470,8 +470,8 @@ class ConfigureTask(object):
                                                                                      'preconfigure',
                                                                                      kwargs={"recurring": True})
                 result_preconfigure.get()
-            result_configure = instance.execute_source_operation('cloudify.interfaces.lifecycle.configure',
-                                                                 kwargs={"recurring": True})
+            result_configure = instance.execute_operation('cloudify.interfaces.lifecycle.configure',
+                                                           kwargs={"recurring": True})
             result_configure.get()
 
 
