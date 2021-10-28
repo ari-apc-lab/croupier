@@ -60,11 +60,13 @@ class TestPlugin(unittest.TestCase):
         return inputs
 
     # Run every test
-    def run_test(self, cfy_local, revoke_vault_token=False):
+    def run_test(self, cfy_local, revoke_vault_token=False, recurring=False):
         if revoke_vault_token:
             cfy_local.execute('croupier_install', task_retries=0)
         else:
             cfy_local.execute('install', task_retries=0)
+        if recurring:
+            cfy_local.execute('croupier_configure', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
 
@@ -271,6 +273,16 @@ class TestPlugin(unittest.TestCase):
         inputs='load_inputs', input_func_args='itainnova')
     def test_itainnova(self, cfy_local):
         self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # -------------------------------- RECURRING ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'blueprint_recurring.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_recurring(self, cfy_local):
+        self.run_test(cfy_local, recurring=True)
 
 
 if __name__ == '__main__':

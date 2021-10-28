@@ -509,7 +509,10 @@ class InfrastructureInterface(object):
                 not isinstance(name, basestring):
             return {'error': "Incorrect inputs"}
 
-        if 'commands' and 'remote_script' and 'local_script' and 'script' not in job_settings:
+        if 'commands' not in job_settings \
+                and 'remote_script' not in job_settings \
+                and 'local_script' not in job_settings \
+                and 'script' not in job_settings:
             return {'error': "'commands', 'script', 'local_script' or 'remote_script' must be defined in job options"}
 
         # Build single line command

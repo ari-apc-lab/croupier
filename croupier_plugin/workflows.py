@@ -465,13 +465,16 @@ class ConfigureTask(object):
 
     def configure(self):
         for instance in self.instances:
+            ctx.logger.info("Preconfiguring relationships")
             for relationship_instance in instance.relationships:
-                result_preconfigure = relationship_instance.execute_source_operation('cloudify.interfaces.lifecycle.'
+                result_preconfigure = relationship_instance.execute_source_operation('cloudify.interfaces.'
+                                                                                     'relationship_lifecycle.'
                                                                                      'preconfigure',
                                                                                      kwargs={"recurring": True})
                 result_preconfigure.get()
+            ctx.logger.info("Configuring instance " + instance.id)
             result_configure = instance.execute_operation('cloudify.interfaces.lifecycle.configure',
-                                                           kwargs={"recurring": True})
+                                                          kwargs={"recurring": True})
             result_configure.get()
 
 
@@ -481,7 +484,7 @@ def build_configure_graph(nodes):
     for node in nodes:
         if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
             interfaces.append(ConfigureInterface(node))
-        elif 'croupier.nodes.Job' or 'croupier.nodes.Data' in node.type_hierarchy:
+        elif 'croupier.nodes.Job' in node.type_hierarchy or 'croupier.nodes.Data' in node.type_hierarchy:
             jobs.append(ConfigureTask(node))
 
     return jobs, interfaces
