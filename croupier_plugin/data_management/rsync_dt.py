@@ -23,8 +23,11 @@ class RSyncDataTransfer(DataTransfer):
             #  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i <key_file>"  <files to copy>  <user>@<HPC remote server>:<target folder>
             #  Copy key in temporary file and destroy it (whatsoever) after usage (or failure)
             #  Invoke command in target infrastructure
+            #  TODO in some HPC frontends (e.g. MN4) external access is blocked, therefore the data transfer should go through Croupier server proxy
+
             dt_command = None
             key_file = None
+            target_key_filepath = None
 
             # Source DS
             from_source_type = self.dt_config['fromSource']['type']
@@ -67,7 +70,7 @@ class RSyncDataTransfer(DataTransfer):
                     target_key_filepath = key_file.name.split('/')[-1]
                     # Transfer key_file
                     ftp_client.sendKeyFile(ssh_client, key_filepath, target_key_filepath)
-                    dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i {key_file}"  {ds_source}  ' \
+                    dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}"  {ds_source}  ' \
                                  '{username}@{target_endpoint}:{ds_target}'.format(
                         username=target_username, key_file=target_key_filepath,
                         target_endpoint=to_target_infra_endpoint,
@@ -78,7 +81,7 @@ class RSyncDataTransfer(DataTransfer):
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
 
             if exit_code != 0:
-                raise CommandExecutionError("Failed executing data transfer: exit code " + str(exit_code))
+                raise CommandExecutionError("Failed executing rsync data transfer: exit code " + str(exit_code) + " and msg: " + exit_msg)
 
         except Exception as exp:
             raise CommandExecutionError(

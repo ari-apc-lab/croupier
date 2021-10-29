@@ -173,9 +173,9 @@ class TestPlugin(unittest.TestCase):
     # -------------------------------------------------------------------------------
 
     @workflow_test(
-        os.path.join('blueprints', 'multihpc-dm', 'blueprint_multihpc.yaml'),
+        os.path.join('blueprints', 'multihpc-dm', 'blueprint_multihpc_dm.yaml'),
         copy_plugin_yaml=True,
-        inputs='load_inputs')
+        inputs='load_inputs', input_func_args='multihpc-dm')
     def test_multihpc_dm(self, cfy_local):
         self.run_test(cfy_local)
 

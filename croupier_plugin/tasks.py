@@ -65,17 +65,21 @@ accounting_client = AccountingClient()
 def create_vault(address, **kwargs):
     if not address:
         ctx.logger.info("No address provided, getting vault address from croupier's config file")
-        config = configparser.RawConfigParser()
-        config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
-        config.read(config_file)
-        try:
-            address = config.get('Vault', 'vault_address')
-            if address is None:
-                raise NonRecoverableError('Could not find Vault address in the croupier config file.')
-
-        except configparser.NoSectionError:
-            raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
+        address = getVaultAddressFromConfiguration()
     ctx.instance.runtime_properties['address'] = address if address.startswith('http') else 'http://' + address
+
+
+def getVaultAddressFromConfiguration():
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+    config.read(config_file)
+    try:
+        address = config.get('Vault', 'vault_address')
+        if address is None:
+            raise NonRecoverableError('Could not find Vault address in the croupier config file.')
+        return address
+    except configparser.NoSectionError:
+        raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
 
 
 @operation()
@@ -96,6 +100,55 @@ def download_vault_credentials(token, user, **kwargs):
             ctx.logger.info("Keycloak credentials downloaded")
     except Exception as exp:
         raise NonRecoverableError("Failed trying to get credentials from Vault")
+
+
+def findVaultNode(node_templates):
+    for node in node_templates:
+        if node['type'] == 'croupier.nodes.Vault':
+            return node
+    return None
+
+
+@operation
+def configure_data_source(located_at,  **kwargs):
+    # Configure DataAccessInfrastructure credentials if retrieved from Vault
+    ctx.logger.info('Configuring data source infrastructure' + located_at['endpoint'])
+    try:
+        if 'credentials' in located_at:
+            if 'retrieve_credentials_from_vault' in located_at['credentials']:
+                if located_at['credentials']['retrieve_credentials_from_vault']:
+                    ssh_config = {'host': located_at['endpoint']}
+                    # Find Vault node to get token, user, address
+                    node_templates = ctx.blueprint._context['storage'].plan.node_templates
+                    vault_node = findVaultNode(node_templates)
+                    # Raise exception if Vault node not present
+                    if not vault_node:
+                        raise NonRecoverableError('Retrieve credentials from Vault was enabled for '
+                                                  'DataSourceInfrastructure but no Vault node could be found in '
+                                                  'blueprint')
+                    token = vault_node['properties']['token']
+                    user = vault_node['properties']['user']
+                    vault_address = vault_node['properties']['address']
+                    # Get address from configuration if empty
+                    if not vault_address:
+                        ctx.logger.info("No address provided, getting vault address from croupier's config file")
+                        vault_address = getVaultAddressFromConfiguration()
+                        vault_address = vault_address \
+                            if vault_address.startswith('http') \
+                            else 'http://' + vault_address
+                    ssh_config = vault.download_ssh_credentials(ssh_config, token, user, vault_address)
+                    # Set credentials in data source infrastructure
+                    located_at['credentials']['username'] = ssh_config['user']
+                    if 'password' in ssh_config and ssh_config['password']:
+                        located_at['credentials']['password'] = ssh_config['password']
+                    if 'private_key' in ssh_config and ssh_config['private_key']:
+                        located_at['credentials']['key'] = ssh_config['private_key']
+                    if 'private_key_password' in ssh_config and ssh_config['private_key_password']:
+                        located_at['credentials']['key_password'] = ssh_config['private_key_password'] \
+
+                    ctx.instance.runtime_properties['located_at'] = located_at
+    except Exception as exp:
+        raise NonRecoverableError("Configuration of data source: " + ctx.instance.id + ' from Vault failed')
 
 
 @operation
@@ -803,6 +856,11 @@ def publish(publish_list, data_mover_options, **kwargs):
         published = True
         if not simulate:
             # Do data upload (from HPC to Cloud) if requested
+            # Data Movement
+            if 'outputs' in kwargs and kwargs['outputs']:
+                dm.processDataTransfer(kwargs['outputs'])
+
+            # TODO Integrate former GridFTP based data mover in Data Movement Transfer
             if len(data_mover_options) > 0 and \
                     'upload' in data_mover_options and data_mover_options['upload']:
                 if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:

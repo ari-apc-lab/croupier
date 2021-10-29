@@ -18,8 +18,8 @@ def isToTargetRelationship(relationship):
 
 
 def isDataManagementNode(node):
-    return not ('croupier.nodes.Job' in node.type_hierarchy or
-                'croupier.nodes.InfrastructureInterface' in node.type_hierarchy)
+    return ('croupier.nodes.DataTransfer' in node.type_hierarchy or
+            'croupier.nodes.DataSource' in node.type_hierarchy)
 
 
 def isDataTransferNode(node):
@@ -148,11 +148,23 @@ def getOutputRelationships(job):
     return outputs
 
 
-def createDataSourceNode(output, dt_instances=None):
+def getInstanceRuntimeProperty(node, property):
+    if node.instances:
+        instance = next(node.instances)
+        if instance._node_instance.runtime_properties and property in instance._node_instance.runtime_properties:
+            return instance._node_instance.runtime_properties[property]
+    return None
+
+
+def createDataSourceNode(ds, dt_instances=None):
     dsNode = {}
-    dsNode['id'] = output.id
-    dsNode['type'] = output.type
-    dsNode['properties'] = output.properties
+    dsNode['id'] = ds.id
+    dsNode['type'] = ds.type
+    dsNode['properties'] = ds.properties
+    # Get credentials read from Vault (if provided)
+    runtime_located_at = getInstanceRuntimeProperty(ds, 'located_at')
+    if runtime_located_at:
+        dsNode['properties']['located_at']['credentials'] = runtime_located_at['credentials']
     data_transfer_instances = []
     if dt_instances:
         for dt_instance in dt_instances:

@@ -149,7 +149,8 @@ class JobGraphInstance(TaskGraphInstance):
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
         self.instance.send_event('Queuing job..')
-        result = self.instance.execute_operation('croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
+        result = self.instance.execute_operation(
+            'croupier.interfaces.lifecycle.queue', kwargs={"name": self.name, "inputs": self.node.inputs})
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
@@ -172,7 +173,8 @@ class JobGraphInstance(TaskGraphInstance):
 
         self.instance.send_event('Publishing job outputs..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.publish',
-                                                 kwargs={"name": self.name, "audit": self.audit})
+                                                 kwargs={"name": self.name, "audit": self.audit,
+                                                         "outputs": self.parent_node.outputs})
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.instance.send_event('..outputs sent for publication')
@@ -449,6 +451,7 @@ class GraphNode(object):
 
         self.status = 'CANCELLED'
 
+
 class Monitor(object):
     """Monitor the instances"""
 
@@ -514,8 +517,8 @@ class Monitor(object):
                 raise exp
             else:
                 self.continued_errors += 1
-                count = str(self.continued_errors)+"/"+str(Monitor.MAX_ERRORS)
-                self.logger.warning("Error when monitoring jobs ("+count+"): " + str(exp))
+                count = str(self.continued_errors) + "/" + str(Monitor.MAX_ERRORS)
+                self.logger.warning("Error when monitoring jobs (" + count + "): " + str(exp))
 
         # We wait to slow down the loop
         sys.stdout.flush()  # necessary to output work properly with sleep
@@ -547,6 +550,8 @@ def build_graph(nodes):
     nodes_map = {}
     root_nodes = []
     for node in nodes:
+        if dm.isDataManagementNode(node):  # Ignore nodes defined for data management for building the graph
+            continue
         new_node = GraphNode(node, job_instances_map, root_nodes)
         nodes_map[node.id] = new_node
         # check if it is root node
@@ -558,6 +563,9 @@ def build_graph(nodes):
     # then set relationships
     for _, child in nodes_map.items():
         for relationship in child.cfy_node.relationships:
+            if dm.isDataManagementRelationship(
+                    relationship):  # Ignore nodes defined for data management for building the graph
+                continue
             parent = nodes_map[relationship.target_node.id]
             parent.add_child(child)
             child.add_parent(parent)
@@ -658,7 +666,6 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
 
 @workflow
 def croupier_install(**kwargs):
-
     # deployment_id = ctx.nodes[0].properties['resource_config']['deployment']['id']
     # rest_client = get_rest_client()
     # rest_client.executions.start(deployment_id, "install")
@@ -742,9 +749,3 @@ def gather_data(**kwargs):  # pylint: disable=W0613
 def run_jobs_force_get_data(**kwargs):  # pylint: disable=W0613
     execute_jobs(force_data=True, skip_jobs=False)
 """
-
-
-
-
-
-

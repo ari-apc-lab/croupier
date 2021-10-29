@@ -42,7 +42,7 @@ import socket
 import _thread
 
 from croupier_plugin.utilities import shlex_quote
-from paramiko import RSAKey, client
+from paramiko import SSHClient, RSAKey, client, ssh_exception
 from paramiko.ssh_exception import SSHException
 
 try:

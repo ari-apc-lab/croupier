@@ -21,7 +21,7 @@
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.gorronogoitia@atos.net
 #
-# blueprint_single_two_hpcs.yaml
+# blueprint_multihpc_dm.yaml
 
 
 tosca_definitions_version: cloudify_dsl_1_3
