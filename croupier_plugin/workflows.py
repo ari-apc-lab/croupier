@@ -178,8 +178,7 @@ class DataGraphInstance(TaskGraphInstance):
         self.name = instance.id
         self.completed = False
         self.source_urls = self.runtime_properties['data_urls'] \
-            if 'data_urls' in self.runtime_properties else []
-        ctx.logger.info(self.source_urls)
+            if 'data_urls' in self.runtime_properties else self.node.cfy_node.properties['data_urls']
 
     def launch(self):
         self.instance.execute_operation('cloudify.interfaces.delete')
@@ -198,7 +197,7 @@ class DataGraphInstance(TaskGraphInstance):
     def update_properties(self):
         super().update_properties()
         self.source_urls = self.runtime_properties['data_urls'] \
-            if 'data_urls' in self.runtime_properties else []
+            if 'data_urls' in self.runtime_properties else self.node.cfy_node.properties['data_urls']
 
 
 class GraphNode(object):
@@ -476,6 +475,10 @@ class ConfigureTask(object):
             result_configure = instance.execute_operation('cloudify.interfaces.lifecycle.configure',
                                                           kwargs={"recurring": True})
             result_configure.get()
+            if 'croupier.nodes.Data' in instance.node.type_hierarchy:
+                result_start = instance.execute_operation('cloudify.interfaces.lifecycle.start',
+                                                          kwargs={"recurring": True})
+                result_start.get()
 
 
 def build_configure_graph(nodes):
@@ -492,6 +495,7 @@ def build_configure_graph(nodes):
 
 def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
+    success = True
     root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
@@ -533,6 +537,7 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     if monitor.is_something_executing():
         ctx.logger.info("Cancelling jobs...")
         cancel_all(monitor.get_executions_iterator())
+        success = False
 
     deleted_reservations = []
     for instance_name in job_instances_map:
@@ -541,6 +546,8 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
             instance.delete_reservation()
             deleted_reservations.append(instance.reservation)
 
+    if not success:
+        raise api.ExecutionCancelled()
     ctx.logger.info("------------------Workflow Finished-----------------------")
     return
 
@@ -592,20 +599,19 @@ def croupier_install(**kwargs):
 
 @workflow
 def croupier_configure(**kwargs):
-    job_instances, interface_instances = build_configure_graph(ctx.nodes)
+    task_instances, interface_instances = build_configure_graph(ctx.nodes)
 
     for interface in interface_instances:
         interface.configure()
 
-    for job in job_instances:
-        job.configure()
+    for task in task_instances:
+        task.configure()
 
 
 def cancel_all(executions):
     """Cancel all pending or running jobs"""
     for _, exec_node in executions:
         exec_node.cancel_all_instances()
-    raise api.ExecutionCancelled()
 
 
 def wait_tasks_to_finish(tasks_result_list):

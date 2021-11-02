@@ -432,6 +432,7 @@ def configure_job(
     if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
             and 'recurring_bootstrap' in deployment and deployment['recurring_bootstrap'] and "recurring" not in kwargs:
         ctx.logger.info('Recurring Bootstrap selected, job bootstrap will happen during croupier_configure')
+        return
     ctx.logger.info('Bootstrapping job..')
     simulate = ctx.instance.runtime_properties['simulate']
 
@@ -790,6 +791,10 @@ def publish(publish_list, data_mover_options, **kwargs):
 
 @operation
 def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudify_address, server_port, **kwargs):
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+            and "recurring" not in kwargs:
+        ctx.logger.info('Recurring workflow, ecmwf data will be generated during croupier_configure')
+        return
     ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
     server_host = cloudify_address if cloudify_address else requests.get('https://api.ipify.org').text
     if "keycloak_credentials" in ctx.instance.runtime_properties:
@@ -864,17 +869,22 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudi
 
 @operation
 def download_data(unzip_data, dest_data, data_urls, **kwargs):
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+            and "recurring" not in kwargs:
+        ctx.logger.info('Recurring workflow, data will be downloaded during croupier_configure')
+        return
     ctx.logger.info('Downloading data...')
     simulate = ctx.instance.runtime_properties['simulate']
-
-    if not simulate and 'data_urls' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['data_urls']:
+    if 'data_urls' in ctx.instance.runtime_properties:
+        data_urls = ctx.instance.runtime_properties['data_urls']
+    if not simulate and data_urls:
         if 'data_urls' in ctx.instance.runtime_properties:
             data_urls.extend(ctx.instance.runtime_properties['data_urls'])
         ssh_config = ctx.instance.runtime_properties['ssh_config']
         workdir = dest_data if dest_data else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = data_download_unzip_script() if unzip_data  else data_download_script()
+        script = data_download_unzip_script() if unzip_data else data_download_script()
         skip_cleanup = False
         if deploy_job(script, data_urls, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
@@ -1048,12 +1058,23 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
 
 
 def data_download_script():
-    return '#!/bin/bash\nfor url in "$@"\ndo\n  wget "$url"\ndone'
+    return '#!/bin/bash\n' \
+           'for url in "$@"\n' \
+           'do\n' \
+           '  filename=$(basename "$url")' \
+           '  wget "$url" >> ${0##*/}_${filename}.out 2>>${0##*/}_${filename}.err\n' \
+           'done'
 
 
 def data_download_unzip_script():
-    return '#!/usr/bin/env bash\nfor url in "$@"\ndo\n  wget "$url"\n  filename=$(basename "$url")\n  unzip ' \
-           '"$filename"\n  rm "$filename"\ndone '
+    return '#!/usr/bin/env bash\n' \
+           'for url in "$@"\n' \
+           'do\n' \
+           '  filename=$(basename "$url")\n' \
+           '  wget "$url" >> ${0##*/}_${filename}.out 2>>${0##*/}_${filename}.err\n' \
+           '  unzip "$filename"\n' \
+           '  rm "$filename"\n' \
+           'done '
 
 
 def data_delete_script():
