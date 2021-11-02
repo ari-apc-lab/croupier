@@ -38,14 +38,15 @@ inputs:
         type: string
     difficulty:
         type: string
-    phenology_model_location:
+    phenology_model_url:
+        type: string
+    phenology_model_filename:
         type: string
     output_file_location:
         type: string
 
 
 node_templates:
-
     vault:
         type: croupier.nodes.Vault
         properties:
@@ -63,7 +64,7 @@ node_templates:
             ssh_config:
                 host: ft2.cesga.es
             job_prefix: ''
-            base_dir: $STORE/ATOS-WORKSHOP
+            base_dir: $GRAPEVINE/ATOS-WORKSHOP
             monitoring_options:
                 monitor_period: 15
                 deployment_label: ITAINNOVA
@@ -79,16 +80,27 @@ node_templates:
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:01:00'
+                max_time: '00:30:00'
                 partition: cola-corta
                 queue: batch
             deployment:
                 bootstrap: "scripts/bootstrap.sh"
-                inputs: 
+                inputs:
                     - { get_input: difficulty }
-                    - { get_input: phenology_model_location } 
+                    - { get_input: phenology_model_filename }
                     - { get_input: output_file_location }
             skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: cesga_hpc
+            - type: job_needs_data
+              target: phenology_model
+
+    phenology_model:
+        type: croupier.nodes.Data
+        properties:
+            data_urls:
+                - { get_input: phenology_model_url }
         relationships:
             - type: task_managed_by_interface
               target: cesga_hpc
