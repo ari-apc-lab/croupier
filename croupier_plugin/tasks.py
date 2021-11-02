@@ -1061,7 +1061,7 @@ def data_download_script():
     return '#!/bin/bash\n' \
            'for url in "$@"\n' \
            'do\n' \
-           '  filename=$(basename "$url")' \
+           '  filename=$(basename "$url")\n' \
            '  wget "$url" >> ${0##*/}_${filename}.out 2>>${0##*/}_${filename}.err\n' \
            'done'
 

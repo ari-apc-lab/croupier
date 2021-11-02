@@ -454,8 +454,11 @@ class ConfigureInterface(object):
 
     def configure(self):
         for instance in self.instances:
-            result = instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"recurring": True})
-            result.get()
+            ctx.logger.info("Configuring instance " + instance.id)
+            operation = 'cloudify.interfaces.lifecycle.configure'
+            if operation in instance.node.operations:
+                result_configure = instance.execute_operation(operation, kwargs={"recurring": True})
+                result_configure.get()
 
 
 class ConfigureTask(object):
@@ -465,20 +468,30 @@ class ConfigureTask(object):
     def configure(self):
         for instance in self.instances:
             ctx.logger.info("Preconfiguring relationships")
-            for relationship_instance in instance.relationships:
-                result_preconfigure = relationship_instance.execute_source_operation('cloudify.interfaces.'
-                                                                                     'relationship_lifecycle.'
-                                                                                     'preconfigure',
-                                                                                     kwargs={"recurring": True})
-                result_preconfigure.get()
+            operation = 'cloudify.interfaces.relationship_lifecycle.preconfigure'
+            for rel_instance in instance.relationships:
+                result_preconfigure = rel_instance.execute_source_operation(operation, kwargs={"recurring": True})
+                if isinstance(result_preconfigure, tasks.WorkflowTaskResult):
+                    result_preconfigure.get()
+
             ctx.logger.info("Configuring instance " + instance.id)
-            result_configure = instance.execute_operation('cloudify.interfaces.lifecycle.configure',
-                                                          kwargs={"recurring": True})
-            result_configure.get()
+            operation = 'cloudify.interfaces.lifecycle.configure'
+            result_configure = instance.execute_operation(operation, kwargs={"recurring": True})
+            if isinstance(result_configure, tasks.WorkflowTaskResult):
+                result_configure.get()
+
+            ctx.logger.info("Postconfiguring relationships")
+            operation = 'cloudify.interfaces.relationship_lifecycle.postconfigure'
+            for rel_instance in instance.relationships:
+                result_postconfigure = rel_instance.execute_source_operation(operation, kwargs={"recurring": True})
+                if isinstance(result_postconfigure, tasks.WorkflowTaskResult):
+                    result_postconfigure.get()
+
+            operation = 'cloudify.interfaces.lifecycle.start'
             if 'croupier.nodes.Data' in instance.node.type_hierarchy:
-                result_start = instance.execute_operation('cloudify.interfaces.lifecycle.start',
-                                                          kwargs={"recurring": True})
-                result_start.get()
+                result_start = instance.execute_operation(operation, kwargs={"recurring": True})
+                if isinstance(result_start, tasks.WorkflowTaskResult):
+                    result_start.get()
 
 
 def build_configure_graph(nodes):
