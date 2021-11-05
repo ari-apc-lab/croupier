@@ -177,6 +177,7 @@ def createDataTransferNode(dt_instance):
     dtNode = {}
     dtNode['id'] = dt_instance.id
     dtNode['transfer_protocol'] = dt_instance.properties['transfer_protocol']
+    dtNode['use_proxy'] = dt_instance.properties['use_proxy']
     for relationship in dt_instance.relationships:
         if isFromSourceRelationship(relationship):
             dtNode['fromSource'] = createDataSourceNode(relationship.target_node)

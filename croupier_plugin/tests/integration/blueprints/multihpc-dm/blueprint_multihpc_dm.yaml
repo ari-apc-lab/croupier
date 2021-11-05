@@ -179,6 +179,7 @@ node_templates:
         type: croupier.nodes.DataTransfer
         properties:
             transfer_protocol: RSync
+            use_proxy: true
         relationships:
             - type: from_source
               target: alice_out
