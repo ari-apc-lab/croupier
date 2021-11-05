@@ -284,6 +284,16 @@ class TestPlugin(unittest.TestCase):
     def test_recurring(self, cfy_local):
         self.run_test(cfy_local, recurring=True)
 
+    # -------------------------------------------------------------------------------
+    # --------------------------------- THREDDS- ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'thredds', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_thredds(self, cfy_local):
+        self.run_test(cfy_local, recurring=True)
+
 
 if __name__ == '__main__':
     unittest.main()

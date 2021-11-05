@@ -74,8 +74,6 @@ node_templates:
         relationships:
             - type: task_managed_by_interface
               target: hpc
-            - type: job_needs_data
-              target: weather_data
 
     job2:
         type: croupier.nodes.Job
