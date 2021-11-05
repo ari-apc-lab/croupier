@@ -161,8 +161,7 @@ class SshClient(object):
             call += "cd " + workdir + " && "
 
         call += cmd
-        return self.send_command(call,
-                                 wait_result=wait_result)
+        return self.send_command(call, wait_result=wait_result)
 
     def send_command(self,
                      command,
@@ -182,9 +181,7 @@ class SshClient(object):
             retries = 3
             while True:
                 try:
-                    stdin, stdout, stderr = self._client.exec_command(
-                        cmd,
-                        timeout=exec_timeout)
+                    stdin, stdout, stderr = self._client.exec_command(cmd, timeout=exec_timeout)
                 except (SSHException, socket.error) as se:
                     if retries > 0:
                         retries -= 1

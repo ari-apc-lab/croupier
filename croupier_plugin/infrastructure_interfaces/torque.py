@@ -191,7 +191,7 @@ class Torque(InfrastructureInterface):
 
         return _settings
 
-    def _add_audit(self, job_id, job_settings, script=False, ssh_client=None, workdir=None, logger=None):
+    def _add_audit(self, job_id, job_settings, script=False, ssh_client=None):
         if script:
             # Read script and add audit header
             pattern = re.compile('([a-zA-Z-9_]*).script')
@@ -199,25 +199,25 @@ class Torque(InfrastructureInterface):
 
             audit_instruction = "echo ProcessorsPerNode=$(( 1 + $(cat /proc/cpuinfo | grep processor | " \
                                 "tail -n1 | cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit"\
-                .format(job_id=job_id, workdir=workdir)
+                .format(job_id=job_id, workdir=self.workdir)
 
             # Remove previous audit line
             command = "cd {workdir}; sed -i '/ProcessorsPerNode/d' {script_name}" \
-                .format(workdir=workdir, script_name=script_name, audit_instruction=audit_instruction)
-            result = execute_ssh_command(command, workdir, ssh_client, logger)
+                .format(workdir=self.workdir, script_name=script_name, audit_instruction=audit_instruction)
+            result = execute_ssh_command(command, self.workdir, ssh_client, self.logger)
 
             # Add audit line
             command = "cd {workdir}; sed -i -e '$a{audit_instruction}' {script_name}"\
-                .format(workdir=workdir, script_name=script_name, audit_instruction=audit_instruction)
-            result = execute_ssh_command(command, workdir, ssh_client, logger)
+                .format(workdir=self.workdir, script_name=script_name, audit_instruction=audit_instruction)
+            result = execute_ssh_command(command, self.workdir, ssh_client, self.logger)
         else:
             # Add audit entry
             job_settings['data'] += \
                 "\necho ProcessorsPerNode =$((1 + $(cat /proc/cpuinfo | grep processor | tail -n1 | " \
-                "cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit\n\n".format(job_id=job_id, workdir=workdir)
+                "cut -d':' -f2 | xargs))) > {workdir}/{job_id}.audit\n\n".format(job_id=job_id, workdir=self.workdir)
         return job_settings
 
-    def _build_job_cancellation_call(self, name, job_settings, logger):
+    def _build_job_cancellation_call(self, name, job_settings):
         return r"qselect -N {} | xargs qdel".format(shlex_quote(name))
 
     def _get_envar(self, envar, default):
@@ -228,15 +228,12 @@ class Torque(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, workdir, ssh_config, job_names, logger):
+    def get_states(self, ssh_config, job_names):
         return self._get_states_detailed(
-            workdir,
             ssh_config,
-            job_names,
-            logger) if job_names else {}
+            job_names) if job_names else {}
 
-    @staticmethod
-    def _get_states_detailed(workdir, ssh_config, job_names, logger):
+    def _get_states_detailed(self, ssh_config, job_names):
         """
         Get job states by job ids
 
@@ -259,7 +256,7 @@ class Torque(InfrastructureInterface):
 
         output, exit_code = client.execute_shell_command(
             call,
-            workdir=workdir,
+            workdir=self.workdir,
             wait_result=True)
         job_ids = Torque._parse_qselect(output)
         if not job_ids:
@@ -270,16 +267,16 @@ class Torque(InfrastructureInterface):
 
         output, exit_code = client.execute_shell_command(
             call,
-            workdir=workdir,
+            workdir=self.workdir,
             wait_result=True)
         client.close_connection()
         try:
             job_states, audits = Torque._parse_qstat_detailed(output)
         except SyntaxError as e:
-            logger.warning(
+            self.logger.warning(
                 "cannot parse state response for job ids=[{}]".format(
                     ','.join(map(str, job_ids))))
-            logger.warning(
+            self.logger.warning(
                 "{err}\n`qstat -f` output to parse:\n\\[\n{text}\n\\]".format(
                     err=str(e), text=output))
             # TODO: think whether error ignoring is better
@@ -418,7 +415,7 @@ class Torque(InfrastructureInterface):
     }
 
     @staticmethod
-    def _get_states_tabular(ssh_client, job_names, logger):
+    def _get_states_tabular(ssh_client, job_names):
         """
         Get job states by job names
 

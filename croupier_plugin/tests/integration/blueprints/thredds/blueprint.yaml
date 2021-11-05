@@ -17,18 +17,17 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Jesús Gorroñogoitia
+# @author: Jeus Ramos Rivas
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: jesus.gorronogoitia@atos.net
+#          e-mail: jesus.2.ramos@atos.net
 #
-# blueprint_single.yaml
-
+# blueprint_four.yaml
 
 tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     # to speed things up, it is possible downloading this file,
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    - http://www.getcloudify.org/spec/cloudify/6.2.0/types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
 
@@ -43,8 +42,9 @@ node_templates:
         type: croupier.nodes.Vault
         properties:
             token: { get_input: vault_token }
-            user: { get_input: vault_token }
-    cesga_interface:
+            user: { get_input: vault_user }
+
+    cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
         relationships:
             - type: retrieve_credentials_from_vault
@@ -54,27 +54,30 @@ node_templates:
                 infrastructure_interface: SLURM
             ssh_config:
                 host: ft2.cesga.es
-            job_prefix: atos
-            base_dir: $HOME
+            job_prefix: ''
+            base_dir: $GRAPEVINE/ATOS-WORKSHOP
             monitoring_options:
                 monitor_period: 15
+                deployment_label: THREDDS
             skip_cleanup: true
-            #simulate: True  # COMMENT to test against a real HPC
-            workdir_prefix: "easy"
-    easy_job:
+            #simulate: True # COMMENT to test against a real HPC
+            workdir_prefix: "THREDDS"
+
+    job:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "ls"
-                max_time: '00:05:00'
+                    - module load miniconda3/4.7.10
+                    - conda activate $GRAPEVINE/THREDDS_EXAMPLE/thredds
+                    - python /mnt/netapp_ext2/Grapevine/THREDDS_EXAMPLE/get_data_thredds.py
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:30:00'
                 partition: cola-corta
+                queue: batch
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: cesga_hpc
-
-outputs:
-    single_job_name:
-        description: easy job calculation
-        value: { get_attribute: [easy_job, job_name] }

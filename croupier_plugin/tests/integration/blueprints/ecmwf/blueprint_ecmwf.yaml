@@ -30,25 +30,22 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
     vault_user:
         type: string
     vault_token:
         type: string
-    ecmwf_query:
-        type: croupier.datatypes.ecmwf_query
 
 node_templates:
-
-    hpc-vulcan:
+    hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
                 infrastructure_interface: TORQUE
             ssh_config:
-                host: hawk.hlrs.de
+                host: sodalite-fe.hlrs.de
             job_prefix: ecmwf
             base_dir: "$HOME"
             monitoring_options:
@@ -75,9 +72,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: hpc-vulcan
-            - type: job_needs_data
-              target: weather_data
+              target: hpc
 
     job2:
         type: croupier.nodes.Job
@@ -89,7 +84,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: hpc-vulcan
+              target: hpc
             - type: job_needs_data
               target: weather_data
             - type: job_depends_on
@@ -100,10 +95,17 @@ node_templates:
         properties:
             ssh_config:
                 host: 136.156.90.143
-            query: { get_input: ecmwf_query }
+            keycloak_credentials:
+                user: { get_input: vault_user }
+            query:
+                area: 45/18/44/19
+                params: u/v
+                date: 20210910
+                time: 00
+                collection: hidalgo-test
         relationships:
-            - type: data_target_infrastructure
-              target: hpc-vulcan
+            - type: task_managed_by_interface
+              target: hpc
             - type: retrieve_credentials_from_vault
               target: vault
 

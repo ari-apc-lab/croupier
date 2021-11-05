@@ -31,7 +31,7 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     - http://www.getcloudify.org/spec/openstack-plugin/2.14.7/plugin.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
   openstack_host:
@@ -47,17 +47,14 @@ inputs:
     type: string
     required: true
   vault_token:
-        type: string
-    vault_user:
-        type: string
+    type: string
+  vault_user:
+    type: string
 
 
 node_templates:
   openstack_interface:
     type: croupier.nodes.InfrastructureInterface
-        relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
     properties:
       config:
         infrastructure_interface: SHELL
@@ -76,6 +73,8 @@ node_templates:
     relationships:
     - type: interface_contained_in
       target: my_server
+    - type: retrieve_credentials_from_vault
+      target: vault
 
   vm_job:
     type: croupier.nodes.Job

@@ -154,15 +154,14 @@ def configure_execution(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Creates the working directory for the execution """
-
     # Registering accounting and monitoring options
     ctx.instance.runtime_properties['monitoring_options'] = monitoring_options
     ctx.instance.runtime_properties['accounting_options'] = accounting_options
     ctx.instance.runtime_properties['infrastructure_host'] = ssh_config['host']
-    if recurring_workflow and "run_jobs" not in kwargs:
+    if recurring_workflow and "recurring" not in kwargs:
         ctx.logger.info(
-            "Configuration of infrastructure interfaces in the case of recurring workflows happens during run_jobs")
-    elif not recurring_workflow and "run_jobs" in kwargs and kwargs["run_jobs"]:
+            "Configuration of infrastructure interfaces in the case of recurring workflows happens during croupier_configure")
+    elif not recurring_workflow and "recurring" in kwargs and kwargs["recurring"]:
         pass
     elif not simulate:
         ctx.logger.info('Connecting to infrastructure interface..')
@@ -170,45 +169,32 @@ def configure_execution(
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
         interface_type = config['infrastructure_interface']
-        ctx.logger.info(' - manager: {interface_type}'.format(
-            interface_type=interface_type))
-
-        wm = InfrastructureInterface.factory(interface_type)
+        ctx.logger.info(' - manager: {interface_type}'.format(interface_type=interface_type))
+        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir_prefix)
         if not wm:
-            raise NonRecoverableError(
-                "Infrastructure Interface '" +
-                interface_type +
-                "' not supported.")
-
+            raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
         if 'ssh_config' in ctx.instance.runtime_properties:
             ssh_config = ctx.instance.runtime_properties['ssh_config']
         try:
             client = SshClient(ssh_config)
         except Exception as exp:
-            raise NonRecoverableError(
-                "Failed trying to connect to infrastructure interface: " + str(exp))
+            raise NonRecoverableError("Failed trying to connect to infrastructure interface: " + str(exp))
 
         # TODO: use command according to wm
-        _, exit_code = client.execute_shell_command(
-            'uname',
-            wait_result=True)
+        _, exit_code = client.execute_shell_command('uname',wait_result=True)
 
         if exit_code != 0:
             client.close_connection()
-            raise NonRecoverableError(
-                "Failed executing on the infrastructure: exit code " +
-                str(exit_code))
+            raise NonRecoverableError("Failed executing on the infrastructure: exit code " +str(exit_code))
 
         ctx.instance.runtime_properties['login'] = exit_code == 0
 
         prefix = workdir_prefix if workdir_prefix else ctx.blueprint.name
 
-        workdir = wm.create_new_workdir(client, base_dir, prefix, ctx.logger)
+        workdir = wm.create_new_workdir(client, base_dir, prefix)
         client.close_connection()
         if workdir is None:
-            raise NonRecoverableError(
-                "failed to create the working directory, base dir: " +
-                base_dir)
+            raise NonRecoverableError("failed to create the working directory, base dir: " + base_dir)
         ctx.instance.runtime_properties['workdir'] = workdir
 
         # Register Croupier instance in Accounting if not done before
@@ -239,7 +225,7 @@ def cleanup_execution(
     if not simulate:
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = config['infrastructure_interface']
-        wm = InfrastructureInterface.factory(interface_type)
+        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -398,9 +384,9 @@ def preconfigure_task(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Match the job with its ssh_config """
-    ctx.logger.info('Preconfiguring job..')
+    ctx.logger.info('Preconfiguring task..')
 
-    if "run_jobs" not in kwargs:
+    if "recurring" not in kwargs:
         if 'ssh_config' not in ctx.target.instance.runtime_properties:
             ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
         else:
@@ -421,12 +407,13 @@ def preconfigure_task(
             ctx.source.instance.runtime_properties['monitoring_id'] = \
                 ctx.target.instance.runtime_properties['monitoring_id']
 
-    elif ctx.target.node.properties['recurring_workflow'] and kwargs["run_jobs"]:
+    elif ctx.target.node.properties['recurring_workflow'] and kwargs["recurring"]:
         ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
 
 
 @operation
-def bootstrap_job(
+def configure_job(
+        job_options,
         deployment,
         skip_cleanup,
         **kwargs):  # pylint: disable=W0613
@@ -434,7 +421,19 @@ def bootstrap_job(
     if not deployment:
         return
 
-    ctx.logger.info('Bootstraping job..')
+    if 'reservation' in job_options:
+        reservation_id = job_options['reservation']
+        if 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
+            timezone = ctx.instance.runtime_properties['timezone']
+            reservation_id = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
+            job_options['reservation'] = reservation_id
+        ctx.instance.runtime_properties['reservation'] = reservation_id
+        ctx.logger.info('Using reservation ID ' + reservation_id)
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+            and 'recurring_bootstrap' in deployment and deployment['recurring_bootstrap'] and "recurring" not in kwargs:
+        ctx.logger.info('Recurring Bootstrap selected, job bootstrap will happen during croupier_configure')
+        return
+    ctx.logger.info('Bootstrapping job..')
     simulate = ctx.instance.runtime_properties['simulate']
 
     if not simulate and 'bootstrap' in deployment and deployment['bootstrap']:
@@ -443,16 +442,8 @@ def bootstrap_job(
         workdir = ctx.instance.runtime_properties['workdir']
         name = "bootstrap_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-
-        if deploy_job(
-                deployment['bootstrap'],
-                inputs,
-                ssh_config,
-                interface_type,
-                workdir,
-                name,
-                ctx.logger,
-                skip_cleanup):
+        bootstrap = deployment['bootstrap']
+        if deploy_job(bootstrap, inputs, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('..job bootstraped')
         else:
             ctx.logger.error('Job not bootstraped')
@@ -480,16 +471,8 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
             workdir = ctx.instance.runtime_properties['workdir']
             name = "revert_" + ctx.instance.id + ".sh"
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-
-            if deploy_job(
-                    deployment['revert'],
-                    inputs,
-                    ssh_config,
-                    interface_type,
-                    workdir,
-                    name,
-                    ctx.logger,
-                    skip_cleanup):
+            revert = deployment['revert']
+            if deploy_job(revert, inputs, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
                 ctx.logger.info('..job reverted')
             else:
                 ctx.logger.error('Job not reverted')
@@ -504,32 +487,18 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
         ctx.logger.warning('Job was not reverted as it was not configured')
 
 
-def deploy_job(script,
-               inputs,
-               ssh_config,
-               interface_type,
-               workdir,
-               name,
-               logger,
-               skip_cleanup):  # pylint: disable=W0613
+def deploy_job(script, inputs, ssh_config, interface_type, workdir, name, logger, skip_cleanup):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH ssh_config as input """
 
-    wm = InfrastructureInterface.factory(interface_type)
+    wm = InfrastructureInterface.factory(interface_type, logger, workdir)
     if not wm:
-        raise NonRecoverableError(
-            "Infrastructure Interface '" +
-            interface_type +
-            "' not supported.")
+        raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
 
     # Execute the script and manage the output
     success = False
     client = SshClient(ssh_config)
     script_content = script if script[0] == '#' else ctx.get_resource(script)
-    if wm.create_shell_script(client,
-                              name,
-                              script_content,
-                              logger,
-                              workdir=workdir):
+    if wm.create_shell_script(client, name, script_content):
         call = "./" + name
         for dinput in inputs:
             str_input = str(dinput)
@@ -537,10 +506,7 @@ def deploy_job(script,
                 call += ' "' + str_input + '"'
             else:
                 call += ' ' + str_input
-        _, exit_code = client.execute_shell_command(
-            call,
-            workdir=workdir,
-            wait_result=True)
+        _, exit_code = client.execute_shell_command(call, workdir=workdir, wait_result=True)
         if exit_code != 0:
             logger.warning("failed to deploy job: call '" + call + "', exit code " + str(exit_code))
         else:
@@ -564,13 +530,8 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
     name = kwargs['name']
     is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.type_hierarchy
 
-    if 'reservation' in job_options:
-        reservation_id = job_options['reservation']
-        if 'recurrent_reservation' in job_options and job_options['recurrent_reservation']:
-            timezone = ctx.instance.runtime_properties['timezone']
-            reservation_id = datetime.now(tz=pytz.timezone(timezone)).strftime(reservation_id)
-            job_options['reservation'] = reservation_id
-        ctx.instance.runtime_properties['reservation'] = reservation_id
+    if 'reservation' in ctx.instance.runtime_properties:
+        job_options['reservation'] = ctx.instance.runtime_properties['reservation']
 
     if not simulate:
         # Do data download (from Cloud to HPC) if requested
@@ -592,13 +553,10 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
-        wm = InfrastructureInterface.factory(interface_type)
+        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
         if not wm:
             client.close_connection()
-            raise NonRecoverableError(
-                "Infrastructure Interface '" +
-                interface_type +
-                "' not supported.")
+            raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
         context_vars = {
             'CFY_EXECUTION_ID': ctx.execution_id,
             'CFY_JOB_NAME': name
@@ -606,14 +564,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
         ctx.logger.info('Submitting the job ...')
 
         try:
-            jobid = wm.submit_job(
-                client,
-                name,
-                job_options,
-                is_singularity,
-                ctx.logger,
-                workdir=workdir,
-                context=context_vars)
+            jobid = wm.submit_job(client, name, job_options, is_singularity, ctx, context_vars)
         except Exception as ex:
             ctx.logger.error('Job could not be submitted because error ' + str(ex))
             raise ex
@@ -653,7 +604,7 @@ def delete_reservation(**kwargs):
     interface_type = ctx.instance.runtime_properties['infrastructure_interface']
     client = SshClient(ctx.instance.runtime_properties['ssh_config'])
     deletion_path = ctx.instance.runtime_properties['reservation_deletion_path']
-    wm = InfrastructureInterface.factory(interface_type)
+    wm = InfrastructureInterface.factory(interface_type, ctx.logger, '')
     if not wm:
         client.close_connection()
         raise NonRecoverableError(
@@ -703,16 +654,11 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
             client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
-            wm = InfrastructureInterface.factory(interface_type)
+            wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
-            is_clean = wm.clean_job_aux_files(client,
-                                              name,
-                                              job_options,
-                                              is_singularity,
-                                              ctx.logger,
-                                              workdir=workdir)
+            is_clean = wm.clean_job_aux_files(client, name, is_singularity)
 
             client.close_connection()
         else:
@@ -740,27 +686,18 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
 
     try:
         name = kwargs['name']
-        is_singularity = 'croupier.nodes.SingularityJob' in ctx.node. \
-            type_hierarchy
+        is_singularity = 'croupier.nodes.SingularityJob' in ctx.node.type_hierarchy
 
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
             client = SshClient(ctx.instance.runtime_properties['ssh_config'])
 
-            wm = InfrastructureInterface.factory(interface_type)
+            wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
-                raise NonRecoverableError(
-                    "Infrastructure Interface '" +
-                    interface_type +
-                    "' not supported.")
-            is_stopped = wm.stop_job(client,
-                                     name,
-                                     job_options,
-                                     is_singularity,
-                                     ctx.logger,
-                                     workdir=workdir)
+                raise NonRecoverableError( "Infrastructure Interface '" + interface_type + "' not supported.")
+            is_stopped = wm.stop_job(client, name, job_options, is_singularity)
 
             client.close_connection()
         else:
@@ -768,13 +705,10 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             is_stopped = True
 
         if is_stopped:
-            ctx.logger.info(
-                'Job ' + name + ' (' + ctx.instance.id + ') stopped.')
+            ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') stopped.')
         else:
-            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id +
-                             ') not stopped.')
-            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id +
-                                      ') not stopped.')
+            ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
+            raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
     except Exception as exp:
         ctx.logger.error('Something happened when trying to stop:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
@@ -857,6 +791,10 @@ def publish(publish_list, data_mover_options, **kwargs):
 
 @operation
 def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudify_address, server_port, **kwargs):
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+            and "recurring" not in kwargs:
+        ctx.logger.info('Recurring workflow, ecmwf data will be generated during croupier_configure')
+        return
     ALGORITHMS = ["sequential", "semi_parallel", "fully_parallel"]
     server_host = cloudify_address if cloudify_address else requests.get('https://api.ipify.org').text
     if "keycloak_credentials" in ctx.instance.runtime_properties:
@@ -931,17 +869,22 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudi
 
 @operation
 def download_data(unzip_data, dest_data, data_urls, **kwargs):
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+            and "recurring" not in kwargs:
+        ctx.logger.info('Recurring workflow, data will be downloaded during croupier_configure')
+        return
     ctx.logger.info('Downloading data...')
     simulate = ctx.instance.runtime_properties['simulate']
-
-    if not simulate and 'data_urls' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['data_urls']:
+    if 'data_urls' in ctx.instance.runtime_properties:
+        data_urls = ctx.instance.runtime_properties['data_urls']
+    if not simulate and data_urls:
         if 'data_urls' in ctx.instance.runtime_properties:
             data_urls.extend(ctx.instance.runtime_properties['data_urls'])
         ssh_config = ctx.instance.runtime_properties['ssh_config']
         workdir = dest_data if dest_data else ctx.instance.runtime_properties['workdir']
         name = "data_download_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = data_download_unzip_script() if unzip_data  else data_download_script()
+        script = data_download_unzip_script() if unzip_data else data_download_script()
         skip_cleanup = False
         if deploy_job(script, data_urls, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
             ctx.logger.info('...data downloaded')
@@ -1115,12 +1058,23 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
 
 
 def data_download_script():
-    return '#!/bin/bash\nfor url in "$@"\ndo\n  wget "$url"\ndone'
+    return '#!/bin/bash\n' \
+           'for url in "$@"\n' \
+           'do\n' \
+           '  filename=$(basename "$url")\n' \
+           '  wget "$url" >> ${0##*/}_${filename}.out 2>>${0##*/}_${filename}.err\n' \
+           'done'
 
 
 def data_download_unzip_script():
-    return '#!/usr/bin/env bash\nfor url in "$@"\ndo\n  wget "$url"\n  filename=$(basename "$url")\n  unzip ' \
-           '"$filename"\n  rm "$filename"\ndone '
+    return '#!/usr/bin/env bash\n' \
+           'for url in "$@"\n' \
+           'do\n' \
+           '  filename=$(basename "$url")\n' \
+           '  wget "$url" >> ${0##*/}_${filename}.out 2>>${0##*/}_${filename}.err\n' \
+           '  unzip "$filename"\n' \
+           '  rm "$filename"\n' \
+           'done '
 
 
 def data_delete_script():

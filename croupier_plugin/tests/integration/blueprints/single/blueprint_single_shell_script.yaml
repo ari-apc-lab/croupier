@@ -17,11 +17,11 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Jesús Gorroñogoitia
+# @author: Javier Carnero
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: jesus.gorronogoitia@atos.net
+#          e-mail: javier.carnero@atos.net
 #
-# blueprint_single.yaml
+# blueprint_single_script.yaml
 
 
 tosca_definitions_version: cloudify_dsl_1_3
@@ -39,42 +39,41 @@ inputs:
         type: string
 
 node_templates:
-    vault:
-        type: croupier.nodes.Vault
-        properties:
-            token: { get_input: vault_token }
-            user: { get_input: vault_token }
-    cesga_interface:
+
+    hpc_interface:
         type: croupier.nodes.InfrastructureInterface
-        relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
         properties:
             config:
-                infrastructure_interface: SLURM
+                infrastructure_interface: SHELL
             ssh_config:
                 host: ft2.cesga.es
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 15
-            skip_cleanup: true
+            skip_cleanup: false
             #simulate: True  # COMMENT to test against a real HPC
-            workdir_prefix: "easy"
-    easy_job:
+            workdir_prefix: "single_script"
+            relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
+
+    single_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                commands:
-                - "ls"
-                max_time: '00:05:00'
-                partition: cola-corta
+                local_script: "scripts/execute.sh"
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: cesga_hpc
+              target: hpc_interface
 
 outputs:
     single_job_name:
-        description: easy job calculation
-        value: { get_attribute: [easy_job, job_name] }
+        description: single job name in the HPC
+        value: { get_attribute: [single_job, job_name] }

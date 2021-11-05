@@ -30,7 +30,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
     vault_token:
@@ -69,7 +69,7 @@ node_templates:
                 pre:
                     - { mpi_load_command }
                     - { singularity_load_command }
-                partition: cola_corta
+                partition: cola-corta
                 image: { singularity_image_storage } "/" { singularity_image_filename }
                 volumes:
                     - { scratch_voulume_mount_point }
