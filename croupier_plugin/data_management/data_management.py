@@ -83,7 +83,7 @@ def removeDataTransferInstancesConnectedToJob(job_node, nodes, root_nodes):
 
 def removeDTFromInputForAllJobs(dt_id, input_id, root_nodes):
     jobs = []
-    for node in root_nodes:
+    for _ in root_nodes:
         findJobsConnectedToInput(input_id, root_nodes, jobs)
     for job in jobs:
         removeDataTransferInJobInput(dt_id, job, input_id)
@@ -148,19 +148,16 @@ def getOutputRelationships(job):
     return outputs
 
 
-def getInstanceRuntimeProperty(node, property):
+def getInstanceRuntimeProperty(node, _property):
     if node.instances:
         instance = next(node.instances)
-        if instance._node_instance.runtime_properties and property in instance._node_instance.runtime_properties:
-            return instance._node_instance.runtime_properties[property]
+        if instance._node_instance.runtime_properties and _property in instance._node_instance.runtime_properties:
+            return instance._node_instance.runtime_properties[_property]
     return None
 
 
 def createDataSourceNode(ds, dt_instances=None):
-    dsNode = {}
-    dsNode['id'] = ds.id
-    dsNode['type'] = ds.type
-    dsNode['properties'] = ds.properties
+    dsNode = {'id': ds.id, 'type': ds.type, 'properties': ds.properties}
     # Get credentials read from Vault (if provided)
     runtime_located_at = getInstanceRuntimeProperty(ds, 'located_at')
     if runtime_located_at:
@@ -174,10 +171,8 @@ def createDataSourceNode(ds, dt_instances=None):
 
 
 def createDataTransferNode(dt_instance):
-    dtNode = {}
-    dtNode['id'] = dt_instance.id
-    dtNode['transfer_protocol'] = dt_instance.properties['transfer_protocol']
-    dtNode['use_proxy'] = dt_instance.properties['use_proxy']
+    dtNode = {'id': dt_instance.id, 'transfer_protocol': dt_instance.properties['transfer_protocol'],
+              'use_proxy': dt_instance.properties['use_proxy']}
     for relationship in dt_instance.relationships:
         if isFromSourceRelationship(relationship):
             dtNode['fromSource'] = createDataSourceNode(relationship.target_node)
@@ -187,9 +182,7 @@ def createDataTransferNode(dt_instance):
 
 
 def ssh_credentials(host, dm_credentials):
-    credentials = {}
-    credentials['host'] = host
-    credentials['user'] = dm_credentials['username']
+    credentials = {'host': host, 'user': dm_credentials['username']}
     if 'password' in dm_credentials:
         credentials['password'] = dm_credentials['password']
     if 'key' in dm_credentials:
@@ -223,8 +216,8 @@ class DataTransfer:
             from croupier_plugin.data_management.rsync_dt import RSyncDataTransfer
             return RSyncDataTransfer(dt_config)
         elif dt_config['transfer_protocol'].upper() == "HTTP":
-            from croupier_plugin.data_management.http_dt import WGetDataTransfer
-            return WGetDataTransfer(dt_config)
+            from croupier_plugin.data_management.http_dt import HttpDataTransfer
+            return HttpDataTransfer(dt_config)
 
     def process(self):
         raise NotImplementedError(

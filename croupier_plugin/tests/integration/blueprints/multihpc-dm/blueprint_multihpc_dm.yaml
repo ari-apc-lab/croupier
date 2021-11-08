@@ -36,19 +36,41 @@ inputs:
         type: string
     vault_user:
         type: string
+
 ################ Data Management ################
-    cesga_data_access_infra:
-        description: 'Data access infrastructure for CESGA'
+    hpc1_data_access_infra:
+        description: 'Data access infrastructure for HPC1'
         type: croupier.data.dm.DataAccessInfrastructure
 
     cloud_data_access_infra:
         description: 'Data access infrastructure for Cloud'
         type: croupier.data.dm.DataAccessInfrastructure
 
-    sodalite_data_access_infra:
-        description: 'Data access infrastructure for SODALITE'
+    hpc2_data_access_infra:
+        description: 'Data access infrastructure for HPC2'
         type: croupier.data.dm.DataAccessInfrastructure
 
+############## HPC Infrastructures ##############
+    hpc1_host:
+        type: string
+
+    hpc1_scheduler:
+        type: string
+
+    hpc1_queue:
+        type: string
+
+    hpc2_host:
+        type: string
+
+    hpc2_scheduler:
+        type: string
+
+    hpc2_queue:
+        type: string
+
+
+#################### WORKFLOW ###################
 node_templates:
     vault:
         type: croupier.nodes.Vault
@@ -56,13 +78,13 @@ node_templates:
             token: { get_input: vault_token }
             user: { get_input: vault_user }
 
-    cesga_hpc:
+    hpc1:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: SLURM
+                infrastructure_interface: { get_input: hpc1_scheduler }
             ssh_config:
-                host: ft2.cesga.es
+                host: { get_input: hpc1_host }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -73,13 +95,13 @@ node_templates:
             - type: retrieve_credentials_from_vault
               target: vault
 
-    sodalite_hpc:
+    hpc2:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: TORQUE
+                infrastructure_interface: { get_input: hpc2_scheduler }
             ssh_config:
-                host: sodalite-fe.hlrs.de
+                host: { get_input: hpc2_host }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -90,12 +112,12 @@ node_templates:
             - type: retrieve_credentials_from_vault
               target: vault
 
-    cesga_job:
+    job1:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "module load python/3.6.8"
+                - "module load python"
                 - "~/croupier/dm_test/unzip.py -i ~/cantrbry.zip -o ~/croupier/dm_test/cantbry/"
                 arguments:
                 - script
@@ -103,22 +125,22 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: cola-corta
+                partition: { get_input: hpc1_queue }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: cesga_hpc
+              target: hpc1
             - type: input
               target: canterbury_corpus_in
             - type: output
               target: alice_out
 
-    sodalite_job:
+    job2:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                    - "module load python/3.6.8"
+                    - "module load python"
                     - "~/croupier/dm_test/word_count.py -i ~/croupier/dm_test/alice.txt -o ~/croupier/dm_test/alice.output"
                 arguments:
                     - script
@@ -126,13 +148,13 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                queue: batch
+                queue: { get_input: hpc2_queue }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: sodalite_hpc
+              target: hpc2
             - type: job_depends_on
-              target: cesga_job
+              target: job1
             - type: input
               target: alice_in
 
@@ -142,8 +164,8 @@ node_templates:
     canterbury_corpus_in:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/cantrbry.zip
-            located_at: { get_input: cesga_data_access_infra }
+            filepath: ~/cantrbry2.zip
+            located_at: { get_input: hpc1_data_access_infra }
 
     canterbury_corpus_web:
         type: croupier.nodes.WebDataSource
@@ -155,20 +177,21 @@ node_templates:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ~/croupier/dm_test/alice.txt
-            located_at: { get_input: sodalite_data_access_infra }
+            located_at: { get_input: hpc2_data_access_infra }
 
     #OUTPUTS
     alice_out:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ~/croupier/dm_test/cantbry/alice29.txt
-            located_at: { get_input: cesga_data_access_infra }
+            located_at: { get_input: hpc1_data_access_infra }
 
     # DATA TRANSFER
     dt_http:
         type: croupier.nodes.DataTransfer
         properties:
             transfer_protocol: HTTP
+            use_proxy: true # TODO Move this flog to target Data Source specification
         relationships:
             - type: from_source
               target: canterbury_corpus_web
@@ -189,9 +212,9 @@ node_templates:
 # END DATA MANAGEMENT
 
 outputs:
-    cesga_job_name:
+    job1_name:
         description: single job name in the HPC
-        value: { get_attribute: [cesga_job, job_name] }
-    sodalite_job_name:
+        value: { get_attribute: [job1, job_name] }
+    job2_name:
         description: single job name in the HPC
-        value: { get_attribute: [ sodalite_job, job_name ] }
+        value: { get_attribute: [ job2, job_name ] }

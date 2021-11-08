@@ -189,7 +189,7 @@ class RSyncDataTransfer(DataTransfer):
                 target_username = to_target_infra_credentials['username']
                 target_key = to_target_infra_credentials['key']
                 # Save key in temporary file
-                with tempfile.NamedTemporaryFile(delete=False) as key_file:
+                with tempfile.NamedTemporaryFile() as key_file:
                     key_file.write(bytes(target_key, 'utf-8'))
                     key_file.flush()
                     key_filepath = key_file.name
@@ -214,10 +214,5 @@ class RSyncDataTransfer(DataTransfer):
             raise CommandExecutionError(
                 "Failed trying to connect to data source infrastructure: " + str(exp))
         finally:
-            if target_key_filepath:
-                # TODO Remove remote key temporary file
-                #   Investigate how to execute data transfer without copying the key file remotely
-                if target_key_filepath and os.path.exists(target_key_filepath):
-                    ftp_client.removeFile(target_key_filepath)
             ftp_client.close_connection()
             ssh_client.close_connection()
