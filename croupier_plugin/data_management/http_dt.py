@@ -36,7 +36,10 @@ class HttpDataTransfer(DataTransfer):
         super().__init__(data_transfer_config)
 
     def process(self):
-        if self.dt_config['use_proxy']:
+        use_proxy = False
+        if 'internet_access' in self.dt_config['toTarget']['properties']['located_at']:
+            use_proxy = self.dt_config['toTarget']['properties']['located_at']['internet_access']
+        if use_proxy:
             self.process_http_transfer_with_proxy()
         else:
             self.process_http_transfer()

@@ -164,7 +164,7 @@ node_templates:
     canterbury_corpus_in:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/cantrbry2.zip
+            filepath: ~/cantrbry.zip
             located_at: { get_input: hpc1_data_access_infra }
 
     canterbury_corpus_web:
@@ -191,7 +191,6 @@ node_templates:
         type: croupier.nodes.DataTransfer
         properties:
             transfer_protocol: HTTP
-            use_proxy: true # TODO Move this flog to target Data Source specification
         relationships:
             - type: from_source
               target: canterbury_corpus_web
@@ -202,7 +201,6 @@ node_templates:
         type: croupier.nodes.DataTransfer
         properties:
             transfer_protocol: RSync
-            use_proxy: true
         relationships:
             - type: from_source
               target: alice_out
