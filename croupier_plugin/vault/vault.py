@@ -24,8 +24,11 @@ def revoke_token(vault_token,vault_address):
                 "content": response.json()}
 
 
-def download_keycloak_credentials(keycloak_credentials, vault_token, vault_user, vault_address):
-    secret_endpoint = vault_address + "/v1/keycloak/" + vault_user
+def download_keycloak_credentials(keycloak_credentials, vault_token, vault_user, vault_address, cubbyhole):
+    if cubbyhole:
+        secret_endpoint = vault_address + "/v1/cubbyhole/keycloak"
+    else:
+        secret_endpoint = vault_address + "/v1/keycloak/" + vault_user
     secret = get_secret(vault_token, secret_endpoint)
     if "error" not in secret:
         keycloak_credentials["user"] = vault_user
@@ -37,9 +40,14 @@ def download_keycloak_credentials(keycloak_credentials, vault_token, vault_user,
                                   "\n Content: " + str(secret["content"]))
 
 
-def download_ssh_credentials(ssh_config, vault_token, vault_user, vault_address):
+def download_ssh_credentials(ssh_config, vault_token, vault_user, vault_address, cubbyhole):
     host = ssh_config['host']
-    secret_endpoint = vault_address + "/v1/ssh/" + vault_user + "/" + host
+
+    if cubbyhole:
+        secret_endpoint = vault_address + "/v1/cubbyhole/ssh/" + host
+    else:
+        secret_endpoint = vault_address + "/v1/ssh/" + vault_user + "/" + host
+
     secret = get_secret(vault_token, secret_endpoint)
     if "error" not in secret:
         ssh_config["password"] = secret["ssh_password"] if "ssh_password" in secret else ""

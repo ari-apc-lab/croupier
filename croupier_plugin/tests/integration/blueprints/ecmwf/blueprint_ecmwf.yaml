@@ -37,6 +37,8 @@ inputs:
         type: string
     vault_token:
         type: string
+    hpc:
+        type: string
 
 node_templates:
     hpc:
@@ -45,7 +47,7 @@ node_templates:
             config:
                 infrastructure_interface: TORQUE
             ssh_config:
-                host: sodalite-fe.hlrs.de
+                host: { get_input: hpc }
             job_prefix: ecmwf
             base_dir: "$HOME"
             monitoring_options:

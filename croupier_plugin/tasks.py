@@ -78,18 +78,21 @@ def create_vault(address, **kwargs):
 
 
 @operation()
-def download_vault_credentials(token, user, **kwargs):
+def download_vault_credentials(token, user, cubbyhole, **kwargs):
     address = ctx.target.instance.runtime_properties['address']
+
+    if not cubbyhole and not user:
+        raise NonRecoverableError("If cubbyhole is false, a user must be provided to download Vault credentials")
 
     if 'ssh_config' in ctx.source.node.properties:
         ssh_config = ctx.source.node.properties['ssh_config']
-        ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address)
+        ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address, cubbyhole)
         ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
         ctx.logger.info("Vault credentials downloaded")
 
     if 'keycloak_credentials' in ctx.source.node.properties:
         keycloak_credentials = ctx.source.node.properties['keycloak_credentials']
-        keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address)
+        keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address, cubbyhole)
         ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
         ctx.logger.info("Keycloak credentials downloaded")
 
