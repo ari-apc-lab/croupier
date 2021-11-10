@@ -405,6 +405,12 @@ data_types:
                 description: 'Credentials to access the data access infrastructure'
                 type: croupier.data.dm.Credentials
                 required: false
+            internet_access:
+                description: 'Whether of not this DM infrastructure has external access to Internet'
+                type: boolean
+                required: false
+                default: false
+
 
 workflows:
     run_jobs:
@@ -595,7 +601,6 @@ node_types:
             transfer_protocol:
                 description: 'protocol to transfer data from source to target'
                 type: string
-
     croupier.nodes.DataSource:
         derived_from: cloudify.nodes.Root
         properties:

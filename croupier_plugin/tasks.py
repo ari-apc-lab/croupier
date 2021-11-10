@@ -91,14 +91,15 @@ def download_vault_credentials(token, user, **kwargs):
             ssh_config = ctx.source.node.properties['ssh_config']
             ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address)
             ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
-            ctx.logger.info("Vault credentials downloaded")
+            ctx.logger.info("SSH credentials downloaded from Vault for host {0}".format(ssh_config['host']))
 
         if 'keycloak_credentials' in ctx.source.node.properties:
             keycloak_credentials = ctx.source.node.properties['keycloak_credentials']
             keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address)
             ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
-            ctx.logger.info("Keycloak credentials downloaded")
+            ctx.logger.info("Keycloak credentials downloaded from Vault for user {0}".format(user))
     except Exception as exp:
+        ctx.logger.error("Failed trying to get credentials from Vault for user: {0}".format(user))
         raise NonRecoverableError("Failed trying to get credentials from Vault")
 
 
@@ -112,7 +113,7 @@ def findVaultNode(node_templates):
 @operation
 def configure_data_source(located_at,  **kwargs):
     # Configure DataAccessInfrastructure credentials if retrieved from Vault
-    ctx.logger.info('Configuring data source infrastructure' + located_at['endpoint'])
+    ctx.logger.info('Configuring data source infrastructure: ' + located_at['endpoint'])
     try:
         if 'credentials' in located_at:
             if 'retrieve_credentials_from_vault' in located_at['credentials']:
@@ -131,7 +132,7 @@ def configure_data_source(located_at,  **kwargs):
                     vault_address = vault_node['properties']['address']
                     # Get address from configuration if empty
                     if not vault_address:
-                        ctx.logger.info("No address provided, getting vault address from croupier's config file")
+                        ctx.logger.info("No vault address provided, getting vault address from croupier's config file")
                         vault_address = getVaultAddressFromConfiguration()
                         vault_address = vault_address \
                             if vault_address.startswith('http') \
@@ -148,6 +149,7 @@ def configure_data_source(located_at,  **kwargs):
 
                     ctx.instance.runtime_properties['located_at'] = located_at
     except Exception as exp:
+        ctx.logger.error("Configuration of data source {0} from Vault failed".format(ctx.instance.id))
         raise NonRecoverableError("Configuration of data source: " + ctx.instance.id + ' from Vault failed')
 
 
@@ -157,12 +159,13 @@ def preconfigure_interface(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Get interface config from infrastructure """
-    ctx.logger.info('Preconfiguring infrastructure interface..')
 
     if not simulate:
         credentials_modified = False
 
         if 'ip' in ctx.target.instance.runtime_properties:
+            ctx.logger.info('Preconfiguring infrastructure interface for {0}'.
+                            format(ctx.target.instance.runtime_properties['ip']))
             ssh_config['host'] = \
                 ctx.target.instance.runtime_properties['ip']
             credentials_modified = True
@@ -222,7 +225,7 @@ def configure_execution(
     elif not recurring_workflow and "run_jobs" in kwargs and kwargs["run_jobs"]:
         pass
     elif not simulate:
-        ctx.logger.info('Connecting to infrastructure interface..')
+        ctx.logger.info('Connecting to infrastructure interface {0}'.format(ctx.instance.id))
         if 'infrastructure_interface' not in config:
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
@@ -242,6 +245,7 @@ def configure_execution(
         try:
             client = SshClient(ssh_config)
         except Exception as exp:
+            ctx.logger.error('Error Connecting to infrastructure interface {0}: {1}'.format(ctx.instance.id, exp))
             raise NonRecoverableError(
                 "Failed trying to connect to infrastructure interface: " + str(exp))
 
@@ -455,7 +459,7 @@ def preconfigure_task(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Match the job with its ssh_config """
-    ctx.logger.info('Preconfiguring job..')
+    ctx.logger.info('Preconfiguring job {0}'.format(ctx.source.instance.id))
 
     if "run_jobs" not in kwargs:
         if 'ssh_config' not in ctx.target.instance.runtime_properties:
@@ -491,7 +495,7 @@ def bootstrap_job(
     if not deployment:
         return
 
-    ctx.logger.info('Bootstraping job..')
+    ctx.logger.info('Bootstraping job {0}'.format(ctx.instance.id))
     simulate = ctx.instance.runtime_properties['simulate']
 
     if not simulate and 'bootstrap' in deployment and deployment['bootstrap']:
@@ -527,7 +531,7 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
     if not deployment:
         return
 
-    ctx.logger.info('Reverting job..')
+    ctx.logger.info('Reverting job {0}'.format(ctx.instance.id))
     try:
         simulate = ctx.instance.runtime_properties['simulate']
 
@@ -558,7 +562,7 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
                 ctx.logger.info('..nothing to revert')
     except KeyError:
         # The job wasn't configured properly, so there was no bootstrap
-        ctx.logger.warning('Job was not reverted as it was not configured')
+        ctx.logger.warning('Job {0} was not reverted as it was not configured'.format(ctx.instance.id))
 
 
 def deploy_job(script,
@@ -615,7 +619,7 @@ def deploy_job(script,
 @operation
 def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W0613
     """ Sends a job to the infrastructure interface """
-    ctx.logger.info('Executing send_job task')
+    ctx.logger.info('Executing send_job task {0}'.format(ctx.instance.id))
     simulate = ctx.instance.runtime_properties['simulate']
 
     name = kwargs['name']
@@ -664,7 +668,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
             'CFY_EXECUTION_ID': ctx.execution_id,
             'CFY_JOB_NAME': name
         }
-        ctx.logger.info('Submitting the job ...')
+        ctx.logger.info('Submitting the job {0}'.format(ctx.instance.id))
 
         try:
             jobid = wm.submit_job(
@@ -676,7 +680,7 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
                 workdir=workdir,
                 context=context_vars)
         except Exception as ex:
-            ctx.logger.error('Job could not be submitted because error ' + str(ex))
+            ctx.logger.error('Job {0} could not be submitted because error {1}'.format(ctx.instance.id, str(ex)))
             raise ex
         client.close_connection()
     else:
@@ -752,7 +756,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
         simulate = ctx.instance.runtime_properties['simulate']
     except KeyError:
         # The job wasn't configured properly, so no cleanup needed
-        ctx.logger.error('Job was not cleaned up as it was not configured')
+        ctx.logger.error('Job {0} was not cleaned up as it was not configured'.format(ctx.instance.id))
         return
 
     try:
@@ -796,7 +800,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         simulate = ctx.instance.runtime_properties['simulate']
     except KeyError:
         # The job wasn't configured properly, no need to be stopped
-        ctx.logger.error('Job was not stopped as it was not configured properly.')
+        ctx.logger.error('Job {0} was not stopped as it was not configured properly.'.format(ctx.instance.id))
         return
 
     try:
@@ -837,7 +841,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id +
                                       ') not stopped.')
     except Exception as exp:
-        ctx.logger.error('Something happened when trying to stop:' + '\n' + traceback.format_exc() + '\n' + str(exp))
+        ctx.logger.error('Something happened when trying to stop job:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -847,7 +851,7 @@ def publish(publish_list, data_mover_options, **kwargs):
         simulate = ctx.instance.runtime_properties['simulate']
     except KeyError:
         # The job wasn't configured properly, no need to publish
-        ctx.logger.warning('Job outputs where not published as the job was not configured properly.')
+        ctx.logger.warning('Job {0} outputs where not published as the job was not configured properly.'.format(ctx.instance.id))
         return
 
     try:
@@ -1137,6 +1141,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
                 user = User(username)
                 user = accounting_client.add_user(user)
             except Exception as err:
+                ctx.logger.error('User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
                 raise Exception(
                     'User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
 
@@ -1144,10 +1149,12 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
         server = ctx.instance.runtime_properties['ssh_config']['host']
         infra = accounting_client.get_infrastructure_by_server(server)
         if infra is None:
+            ctx.logger.error('Infrastructure not registered in Accounting for server {}'.format(server))
             raise Exception('Infrastructure not registered in Accounting for server {}'.format(server))
         cpu_resources = accounting_client.get_resources_by_type(infra.provider_id, infra.id, ResourceType.CPU)
         # Note: there should be ony one cpu_resource registered for target HPC infrastructure
         if len(cpu_resources) == 0:
+            ctx.logger.error('CPU resource not registered in Accounting for server {}'.format(server))
             raise Exception('CPU resource not registered in Accounting for server {}'.format(server))
         cpu_resource = cpu_resources[0]
 
