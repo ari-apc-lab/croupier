@@ -12,12 +12,26 @@ class RSyncDataTransfer(DataTransfer):
 
     def process(self):
         use_proxy = False
+        rsync_source_to_target = False
+        source_internet_access = False
+        target_internet_access = False
+
+        if 'internet_access' in self.dt_config['fromSource']['properties']['located_at']:
+            source_internet_access = self.dt_config['fromSource']['properties']['located_at']['internet_access']
         if 'internet_access' in self.dt_config['toTarget']['properties']['located_at']:
-            use_proxy = self.dt_config['toTarget']['properties']['located_at']['internet_access']
+            target_internet_access = self.dt_config['toTarget']['properties']['located_at']['internet_access']
+
+        if source_internet_access:
+            rsync_source_to_target = True
+        elif target_internet_access:
+            rsync_source_to_target = False
+        else:
+            use_proxy = True
+
         if use_proxy:
             self.process_rsync_transfer_with_proxy()
         else:
-            self.process_rsync_transfer()
+            self.process_rsync_transfer(rsync_source_to_target)
 
     '''
         Rsync data transfer executed from Croupier server
@@ -139,7 +153,7 @@ class RSyncDataTransfer(DataTransfer):
     Rsync data transfer executed from source data server
     '''
 
-    def process_rsync_transfer(self):
+    def process_rsync_transfer(self, rsync_source_to_target):
         ssh_client = None
         ftp_client = None
 
@@ -155,7 +169,6 @@ class RSyncDataTransfer(DataTransfer):
             # infrastructure
 
             dt_command = None
-            target_key_filepath = None
 
             # Source DS
             from_source_type = self.dt_config['fromSource']['type']
@@ -173,38 +186,75 @@ class RSyncDataTransfer(DataTransfer):
             to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
             to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
 
-            credentials = ssh_credentials(from_source_infra_endpoint, from_source_infra_credentials)
+            if rsync_source_to_target:
+                credentials = ssh_credentials(from_source_infra_endpoint, from_source_infra_credentials)
+            else:
+                credentials = ssh_credentials(to_target_infra_endpoint, to_target_infra_credentials)
+
             ssh_client = SshClient(credentials)
             ftp_client = SFtpClient(credentials)
 
-            if "username" in to_target_infra_credentials and "password" in to_target_infra_credentials:
-                # NOTE rsync authentication with username/password requires sshpass which it is not installed
-                # some HPC frontends
-                target_username = to_target_infra_credentials['username']
-                target_password = to_target_infra_credentials['password']
-                dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no -o ' \
-                             'IdentitiesOnly=yes -l {username}" {ds_source}  {target_endpoint}:{ds_target}'.format(
-                                username=target_username, password=target_password,
-                                target_endpoint=to_target_infra_endpoint, ds_source=from_source_data_url,
-                                ds_target=to_target_data_url
-                                )
-            elif "username" in to_target_infra_credentials and "key" in to_target_infra_credentials:
-                target_username = to_target_infra_credentials['username']
-                target_key = to_target_infra_credentials['key']
-                # Save key in temporary file
-                with tempfile.NamedTemporaryFile() as key_file:
-                    key_file.write(bytes(target_key, 'utf-8'))
-                    key_file.flush()
-                    key_filepath = key_file.name
-                    target_key_filepath = key_file.name.split('/')[-1]
-                    # Transfer key_file
-                    ftp_client.sendKeyFile(ssh_client, key_filepath, target_key_filepath)
-                    dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}"  {ds_source}  ' \
-                                 '{username}@{target_endpoint}:{ds_target}'.format(
-                                    username=target_username, key_file=target_key_filepath,
-                                    target_endpoint=to_target_infra_endpoint,
-                                    ds_source=from_source_data_url, ds_target=to_target_data_url
-                                    )
+            if rsync_source_to_target:
+                if "username" in to_target_infra_credentials and "password" in to_target_infra_credentials:
+                    # NOTE rsync authentication with username/password requires sshpass which it is not installed
+                    # some HPC frontends
+                    target_username = to_target_infra_credentials['username']
+                    target_password = to_target_infra_credentials['password']
+                    dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no ' \
+                                 '-o IdentitiesOnly=yes -l {username}" {ds_source}  {target_endpoint}:{ds_target}'\
+                        .format(
+                            username=target_username, password=target_password,
+                            target_endpoint=to_target_infra_endpoint, ds_source=from_source_data_url,
+                            ds_target=to_target_data_url
+                        )
+                elif "username" in to_target_infra_credentials and "key" in to_target_infra_credentials:
+                    target_username = to_target_infra_credentials['username']
+                    target_key = to_target_infra_credentials['key']
+                    # Save key in temporary file
+                    with tempfile.NamedTemporaryFile() as key_file:
+                        key_file.write(bytes(target_key, 'utf-8'))
+                        key_file.flush()
+                        key_filepath = key_file.name
+                        target_key_filepath = key_file.name.split('/')[-1]
+                        # Transfer key_file
+                        ftp_client.sendKeyFile(ssh_client, key_filepath, target_key_filepath)
+                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}" {ds_source} ' \
+                                     '{username}@{target_endpoint}:{ds_target}'.format(
+                                        username=target_username, key_file=target_key_filepath,
+                                        target_endpoint=to_target_infra_endpoint,
+                                        ds_source=from_source_data_url, ds_target=to_target_data_url
+                                        )
+            else:
+                if "username" in from_source_infra_credentials and "password" in from_source_infra_credentials:
+                    # NOTE rsync authentication with username/password requires sshpass which it is not installed
+                    # some HPC frontends
+
+                    source_username = from_source_infra_credentials['username']
+                    source_password = from_source_infra_credentials['password']
+                    dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no ' \
+                                 '-o IdentitiesOnly=yes -l {username}" {source_endpoint}:{ds_source} {ds_target}'\
+                        .format(
+                            username=source_username, password=source_password,
+                            source_endpoint=from_source_infra_endpoint, ds_source=from_source_data_url,
+                            ds_target=to_target_data_url
+                        )
+                elif "username" in from_source_infra_credentials and "key" in from_source_infra_credentials:
+                    source_username = from_source_infra_credentials['username']
+                    source_key = from_source_infra_credentials['key']
+                    # Save key in temporary file
+                    with tempfile.NamedTemporaryFile() as key_file:
+                        key_file.write(bytes(source_key, 'utf-8'))
+                        key_file.flush()
+                        key_filepath = key_file.name
+                        source_key_filepath = key_file.name.split('/')[-1]
+                        # Transfer key_file
+                        ftp_client.sendKeyFile(ssh_client, key_filepath, source_key_filepath)
+                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}" ' \
+                                     '{username}@{source_endpoint}:{ds_source} {ds_target}'.format(
+                                        username=source_username, key_file=source_key_filepath,
+                                        source_endpoint=from_source_infra_endpoint,
+                                        ds_source=from_source_data_url, ds_target=to_target_data_url
+                                        )
 
             # Execute data transfer command
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)

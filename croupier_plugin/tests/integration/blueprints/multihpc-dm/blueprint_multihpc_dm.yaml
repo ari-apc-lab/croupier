@@ -118,7 +118,7 @@ node_templates:
             job_options:
                 commands:
                 - "module load python"
-                - "~/croupier/dm_test/unzip.py -i ~/cantrbry.zip -o ~/croupier/dm_test/cantbry/"
+                - "python ~/croupier/dm_test/unzip.py -i ~/cantrbry.zip -o ~/croupier/dm_test/cantbry/"
                 arguments:
                 - script
                 nodes: 1
@@ -141,7 +141,7 @@ node_templates:
             job_options:
                 commands:
                     - "module load python"
-                    - "~/croupier/dm_test/word_count.py -i ~/croupier/dm_test/alice.txt -o ~/croupier/dm_test/alice.output"
+                    - "python ~/croupier/dm_test/word_count.py -i ~/croupier/dm_test/alice.txt -o ~/croupier/dm_test/alice.output"
                 arguments:
                     - script
                 nodes: 1
