@@ -10,7 +10,7 @@ class DataMoverProxy(object):
     my_servers = {}
     logger = None
 
-    def __init__(self, data_mover_options, logger):
+    def __init__(self, data_mover_options, source_gridftp_server, target_gridftp_server, logger):
         # Read data_mover_options
         self.hpc_user_id = ctx.instance.runtime_properties['ssh_config']['user']
         self.hpc_user_ssh_credentials = ctx.instance.runtime_properties['ssh_config']['private_key']
@@ -28,24 +28,31 @@ class DataMoverProxy(object):
             self.grid_usercert = data_mover_options['grid_usercert']
         if 'grid_certpass' in data_mover_options:
             self.grid_cert_passwd = data_mover_options['grid_certpass']
-        if 'download' in data_mover_options:
+        if 'download' in data_mover_options and data_mover_options['download']:
             self.download = True
             if 'source' in data_mover_options['download']:
                 self.download_source = data_mover_options['download']["source"]
                 self.download_target = data_mover_options['download']["target"]
-        if 'upload' in data_mover_options:
+        if 'upload' in data_mover_options and data_mover_options['upload']:
             self.upload = True
             if 'source' in data_mover_options['upload']:
                 self.upload_source = data_mover_options['upload']["source"]
                 self.upload_target = data_mover_options['upload']["target"]
-        self.set_servers(data_mover_options)
+        # self.set_default_servers(data_mover_options)
+        self.add_server(source_gridftp_server)
+        self.add_server(target_gridftp_server)
         self.logger = logger
 
         # gridproxy is not initialized if userkey=="" or usercert==""
         self.mydatamover = DataMover(self.my_servers, self.create_ws, self.hpc_user_ssh_credentials, self.ws_name,
                                      self.ws_lifetime, self.grid_userkey, self.grid_usercert, self.grid_cert_passwd)
 
-    def set_servers(self, data_mover_options):
+    def add_server(self, server):
+        self.my_servers[server['name']] = GridFTPServer(
+            server['name'], server['user'], server['ws_basepath'], server['gridftp_port'], server['gripftp_server'],
+            server['ssh_server'], server['user'] + "-" + server['ws_name'] + "/" if server['ws_name'] is not None else "")
+
+    def set_default_servers(self, data_mover_options):
         if ('hpc_target' in data_mover_options and data_mover_options['hpc_target']) == 'HAWK':
             if self.hpc_user_id is not None and self.ws_name:
                 self.my_servers["HAWK"] = GridFTPServer(

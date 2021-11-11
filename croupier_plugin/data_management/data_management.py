@@ -192,7 +192,7 @@ def ssh_credentials(host, dm_credentials):
     return credentials
 
 
-def processDataTransfer(inouts):
+def processDataTransfer(inouts, logger):
     # For each inout in inouts
     # For each data transfer object in inout
     # execute data_transfer
@@ -200,23 +200,27 @@ def processDataTransfer(inouts):
     for inout in inouts:
         if 'dt_instances' in inout:
             for dt_config in inout['dt_instances']:
-                dt = DataTransfer.factory(dt_config)
+                dt = DataTransfer.factory(dt_config, logger)
                 dt.process()
 
 
 class DataTransfer:
-    def __init__(self, data_transfer_config):
+    def __init__(self, data_transfer_config, logger):
         self.dt_config = data_transfer_config
+        self.logger = logger
         # Based on data transfer type, use the Factory to create an specialized DataTransfer instance
 
     @staticmethod
-    def factory(dt_config):
+    def factory(dt_config, logger):
         if dt_config['transfer_protocol'].upper() == "RSYNC":
             from croupier_plugin.data_management.rsync_dt import RSyncDataTransfer
-            return RSyncDataTransfer(dt_config)
+            return RSyncDataTransfer(dt_config, logger)
         elif dt_config['transfer_protocol'].upper() == "HTTP":
             from croupier_plugin.data_management.http_dt import HttpDataTransfer
-            return HttpDataTransfer(dt_config)
+            return HttpDataTransfer(dt_config, logger)
+        elif dt_config['transfer_protocol'].upper() == "GRIDFTP":
+            from croupier_plugin.data_management.gridftp_dt import GridFTPDataTransfer
+            return GridFTPDataTransfer(dt_config, logger)
 
     def process(self):
         raise NotImplementedError(
