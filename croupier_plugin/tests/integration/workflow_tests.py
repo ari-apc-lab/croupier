@@ -64,11 +64,13 @@ class TestPlugin(unittest.TestCase):
         return inputs
 
     # Run every test
-    def run_test(self, cfy_local, revoke_vault_token=False):
+    def run_test(self, cfy_local, revoke_vault_token=False, recurring=False):
         if revoke_vault_token:
             cfy_local.execute('croupier_install', task_retries=0)
         else:
             cfy_local.execute('install', task_retries=0)
+        if recurring:
+            cfy_local.execute('croupier_configure', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
 
@@ -107,6 +109,16 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ------------------------------ Single No Vault --------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'no-vault.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='single')
+    def test_single_no_vault(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ------------------------------- Single Script ---------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(
@@ -118,6 +130,19 @@ class TestPlugin(unittest.TestCase):
         copy_plugin_yaml=True,
         inputs='load_inputs')
     def test_single_script(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # ---------------------------- Single Shell Script ------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'blueprint_single_shell_script.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'single', 'scripts', 'execute.sh'), 'scripts')
+        ],
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_single_shell_script(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -263,6 +288,37 @@ class TestPlugin(unittest.TestCase):
         inputs='load_inputs', input_func_args='ecmwf')
     def test_ecmwf(self, cfy_local):
         self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # -------------------------------- ITAINNOVA ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'itainnova', 'blueprint.yaml'),
+        resources_to_copy=[(os.path.join('blueprints', 'itainnova', 'scripts', 'bootstrap.sh'), 'scripts')],
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='itainnova')
+    def test_itainnova(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # -------------------------------- RECURRING ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'blueprint_recurring.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_recurring(self, cfy_local):
+        self.run_test(cfy_local, recurring=True)
+
+    # -------------------------------------------------------------------------------
+    # --------------------------------- THREDDS- ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'thredds', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_thredds(self, cfy_local):
+        self.run_test(cfy_local, recurring=True)
 
 
 if __name__ == '__main__':

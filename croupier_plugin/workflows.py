@@ -273,8 +273,7 @@ class DataGraphInstance(TaskGraphInstance):
         self.name = instance.id
         self.completed = False
         self.source_urls = self.runtime_properties['data_urls'] \
-            if 'data_urls' in self.runtime_properties else []
-        ctx.logger.info(self.source_urls)
+            if 'data_urls' in self.runtime_properties else self.node.cfy_node.properties['data_urls']
 
     def launch(self):
         self.instance.execute_operation('cloudify.interfaces.delete')
@@ -293,7 +292,7 @@ class DataGraphInstance(TaskGraphInstance):
     def update_properties(self):
         super().update_properties()
         self.source_urls = self.runtime_properties['data_urls'] \
-            if 'data_urls' in self.runtime_properties else []
+            if 'data_urls' in self.runtime_properties else self.node.cfy_node.properties['data_urls']
 
 
 class GraphNode(object):
@@ -579,22 +578,44 @@ class ConfigureInterface(object):
 
     def configure(self):
         for instance in self.instances:
-            result = instance.execute_operation('cloudify.interfaces.lifecycle.configure', kwargs={"run_jobs": True})
-            result.get()
+            ctx.logger.info("Configuring instance " + instance.id)
+            operation = 'cloudify.interfaces.lifecycle.configure'
+            if operation in instance.node.operations:
+                result_configure = instance.execute_operation(operation, kwargs={"recurring": True})
+                result_configure.get()
 
 
-class ConfigureJob(object):
+class ConfigureTask(object):
     def __init__(self, node):
         self.instances = node.instances
 
     def configure(self):
         for instance in self.instances:
-            for relationship_instance in instance.relationships:
-                relationship = relationship_instance.relationship
-                if relationship.is_derived_from("task_managed_by_interface"):
-                    result_configure = relationship_instance.execute_source_operation('preconfigure',
-                                                                                      kwargs={"run_jobs": True})
-                    result_configure.get()
+            ctx.logger.info("Preconfiguring relationships")
+            operation = 'cloudify.interfaces.relationship_lifecycle.preconfigure'
+            for rel_instance in instance.relationships:
+                result_preconfigure = rel_instance.execute_source_operation(operation, kwargs={"recurring": True})
+                if isinstance(result_preconfigure, tasks.WorkflowTaskResult):
+                    result_preconfigure.get()
+
+            ctx.logger.info("Configuring instance " + instance.id)
+            operation = 'cloudify.interfaces.lifecycle.configure'
+            result_configure = instance.execute_operation(operation, kwargs={"recurring": True})
+            if isinstance(result_configure, tasks.WorkflowTaskResult):
+                result_configure.get()
+
+            ctx.logger.info("Postconfiguring relationships")
+            operation = 'cloudify.interfaces.relationship_lifecycle.postconfigure'
+            for rel_instance in instance.relationships:
+                result_postconfigure = rel_instance.execute_source_operation(operation, kwargs={"recurring": True})
+                if isinstance(result_postconfigure, tasks.WorkflowTaskResult):
+                    result_postconfigure.get()
+
+            operation = 'cloudify.interfaces.lifecycle.start'
+            if 'croupier.nodes.Data' in instance.node.type_hierarchy:
+                result_start = instance.execute_operation(operation, kwargs={"recurring": True})
+                if isinstance(result_start, tasks.WorkflowTaskResult):
+                    result_start.get()
 
 
 def build_configure_graph(nodes):
@@ -603,14 +624,15 @@ def build_configure_graph(nodes):
     for node in nodes:
         if 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy:
             interfaces.append(ConfigureInterface(node))
-        elif 'croupier.nodes.Job' in node.type_hierarchy:
-            jobs.append(ConfigureJob(node))
+        elif 'croupier.nodes.Job' in node.type_hierarchy or 'croupier.nodes.Data' in node.type_hierarchy:
+            jobs.append(ConfigureTask(node))
 
     return jobs, interfaces
 
 
 def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
+    success = True
     root_nodes, job_instances_map = build_graph(ctx.nodes)
     monitor = Monitor(job_instances_map, ctx.logger)
 
@@ -652,6 +674,7 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     if monitor.is_something_executing():
         ctx.logger.info("Cancelling jobs...")
         cancel_all(monitor.get_executions_iterator())
+        success = False
 
     deleted_reservations = []
     for instance_name in job_instances_map:
@@ -660,6 +683,8 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
             instance.delete_reservation()
             deleted_reservations.append(instance.reservation)
 
+    if not success:
+        raise api.ExecutionCancelled()
     ctx.logger.info("------------------Workflow Finished-----------------------")
     return
 
@@ -710,20 +735,19 @@ def croupier_install(**kwargs):
 
 @workflow
 def croupier_configure(**kwargs):
-    job_instances, interface_instances = build_configure_graph(ctx.nodes)
+    task_instances, interface_instances = build_configure_graph(ctx.nodes)
 
     for interface in interface_instances:
         interface.configure()
 
-    for job in job_instances:
-        job.configure()
+    for task in task_instances:
+        task.configure()
 
 
 def cancel_all(executions):
     """Cancel all pending or running jobs"""
     for _, exec_node in executions:
         exec_node.cancel_all_instances()
-    raise api.ExecutionCancelled()
 
 
 def wait_tasks_to_finish(tasks_result_list):

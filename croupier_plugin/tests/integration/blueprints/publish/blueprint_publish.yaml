@@ -30,7 +30,7 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
 
 inputs:
     vault_token:
@@ -61,6 +61,14 @@ node_templates:
             skip_cleanup: true
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "publish"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
 
     single_job:
         type: croupier.nodes.Job
@@ -74,7 +82,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: cola_corta
+                partition: cola-corta
             publish:
                 - dataset:
                       config: { }

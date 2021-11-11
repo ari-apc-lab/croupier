@@ -17,15 +17,16 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Javier Carnero
+# @author: Jesus Ramos Rivas
 #          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: javier.carnero@atos.net
-# @author: Jesus Gorronogoitia
-#          Atos Research & Innovation, Atos Spain S.A.
-#          e-mail: jesus.gorronogoitia@atos.net
+#          e-mail: jesus.2.ramos@atos.net
 #
 # inputs.yaml
 
 
 vault_token:
 vault_user:
+difficulty: Easy
+phenology_model_url:
+phenology_model_filename: fenologia_vid_procesado.csv
+output_file_location: $GRAPEVINE/ATOS-WORKSHOP/Datos/out.csv

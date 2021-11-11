@@ -28,7 +28,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
     vault_token:
@@ -70,6 +70,7 @@ node_templates:
                 infrastructure_interface: TORQUE
             ssh_config:
                 host: sodalite-fe.hlrs.de
+
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -80,7 +81,7 @@ node_templates:
             - type: interface_monitored_by
               target: hpc_exporter
             - type: retrieve_credentials_from_vault
-                  target: vault
+              target: vault
 
     cesga_job:
         type: croupier.nodes.Job
@@ -99,6 +100,8 @@ node_templates:
         relationships:
             - type: task_managed_by_interface
               target: cesga_hpc
+            - type: retrieve_credentials_from_vault
+              target: vault
 
     sodalite_job:
         type: croupier.nodes.Job

@@ -200,7 +200,7 @@ class Pbspro(InfrastructureInterface):
     #     self.audit_inserted = True
     #     return job_settings
 
-    def _build_job_cancellation_call(self, name, job_settings, logger):
+    def _build_job_cancellation_call(self, name, job_settings):
         return r"qselect -N {} | xargs qdel".format(shlex_quote(name))
 
     def _get_envar(self, envar, default):
@@ -211,15 +211,10 @@ class Pbspro(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, workdir, ssh_config, job_names, logger):
-        return self._get_states_detailed(
-            workdir,
-            ssh_config,
-            job_names,
-            logger) if job_names else {}
+    def get_states(self, job_names):
+        return self._get_states_detailed(job_names) if job_names else {}
 
-    @staticmethod
-    def _get_states_detailed(workdir, ssh_config, job_names, logger):
+    def _get_states_detailed(self, job_names):
         """
         Get job states by job names
 
@@ -240,11 +235,11 @@ class Pbspro(InfrastructureInterface):
         call = read_environment + "echo {} | xargs -n 1 qselect -x -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(ssh_config)
+        client = SshClient(self.ssh_config)
 
         output, exit_code = client.execute_shell_command(
             call,
-            workdir=workdir,
+            workdir=self.workdir,
             wait_result=True)
         job_ids = Pbspro._parse_qselect(output)
         if not job_ids:
@@ -255,16 +250,16 @@ class Pbspro(InfrastructureInterface):
 
         output, exit_code = client.execute_shell_command(
             call,
-            workdir=workdir,
+            workdir=self.workdir,
             wait_result=True)
         client.close_connection()
         try:
             job_states, audits = Pbspro._parse_qstat_detailed(output)
         except SyntaxError as e:
-            logger.warning(
+            self.logger.warning(
                 "cannot parse state response for job ids=[{}]".format(
                     ','.join(map(str, job_ids))))
-            logger.warning(
+            self.logger.warning(
                 "{err}\n`qstat -x -f` output to parse:\n\\[\n{text}\n\\]".format(
                     err=str(e), text=output))
             # TODO: think whether error ignoring is better
@@ -404,8 +399,7 @@ class Pbspro(InfrastructureInterface):
         -12: "TIMEOUT",  # OVERLIMIT_CPUT Job exceeded a CPU time limit
     }
 
-    @staticmethod
-    def _get_states_tabular(ssh_client, job_names, logger):
+    def _get_states_tabular(self, ssh_client, job_names):
         """
         Get job states by job names
 

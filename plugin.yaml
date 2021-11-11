@@ -539,14 +539,16 @@ node_types:
                 default: False
         interfaces:
             cloudify.interfaces.lifecycle:
-                start: # needs to be 'start' to have the wm ssh_config
-                    implementation: croupier.croupier_plugin.tasks.bootstrap_job
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.configure_job
                     inputs:
                         deployment:
                             description: Deployment scripts and inputs
                             default: { get_property: [SELF, deployment] }
                         skip_cleanup:
                             default: { get_property: [SELF, skip_cleanup] }
+                        job_options:
+                            default: { get_property: [SELF, job_options] }
                     max_retries: 0
                 stop:
                     implementation: croupier.croupier_plugin.tasks.revert_job
@@ -641,11 +643,16 @@ node_types:
                 required: true
             user:
                 type: string
-                required: true
+                required: false
+                default: ''
             address:
                 type: string
                 required: false
                 default: ''
+            cubbyhole:
+                type: boolean
+                required: false
+                default: false
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
@@ -703,7 +710,7 @@ node_types:
     croupier.nodes.ECMWFVerticalInterpolation:
         derived_from: croupier.nodes.Data
         properties:
-            ssh_config:
+            ssh_config_ECMWF:
                 description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
                 type: croupier.datatypes.ssh_config
             keycloak_credentials:
@@ -731,7 +738,7 @@ node_types:
                         query:
                             default: { get_property: [SELF, query] }
                         ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                            default: { get_property: [SELF, ssh_config_ECMWF] }
                         keycloak_credentials:
                             default: { get_property: [SELF, keycloak_credentials] }
                         cloudify_address:
@@ -795,7 +802,7 @@ relationships:
         derived_from: cloudify.relationships.depends_on
         source_interfaces:
             cloudify.interfaces.relationship_lifecycle:
-                postconfigure:
+                preconfigure:
                     implementation: croupier.croupier_plugin.tasks.pass_data_info
                     max_retries: 0
 
@@ -810,3 +817,5 @@ relationships:
                             default: { get_property: [TARGET, token  ] }
                         user:
                             default: { get_property: [TARGET, user   ] }
+                        cubbyhole:
+                            default: { get_property: [TARGET, cubbyhole ] }

@@ -28,7 +28,7 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
     vault_token:
@@ -44,9 +44,6 @@ node_templates:
             user: { get_input: vault_user }
     cesga_hpc:
         type: croupier.nodes.InfrastructureInterface
-        relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
         properties:
             config:
                 infrastructure_interface: SLURM
@@ -58,7 +55,9 @@ node_templates:
                 monitor_period: 15
             skip_cleanup: true
             workdir_prefix: "multihpc"
-
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
     sodalite_hpc:
         type: croupier.nodes.InfrastructureInterface
         relationships:
