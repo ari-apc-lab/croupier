@@ -180,6 +180,17 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ---------------------------------- GridFTP-DM -----------------------------------
+    # -------------------------------------------------------------------------------
+
+    @workflow_test(
+        os.path.join('blueprints', 'gridftp', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='gridftp')
+    def test_gridftp_dm(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ----------------------------- MultiHPC Exporter -------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(

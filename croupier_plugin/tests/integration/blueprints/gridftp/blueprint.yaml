@@ -1,0 +1,168 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint_multihpc_dm.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    - plugin.yaml
+
+inputs:
+####################### VAULT ###################
+    vault_token:
+        type: string
+    vault_user:
+        type: string
+
+################ Data Management ################
+    hpc_data_access_infra:
+        description: 'Data access infrastructure for HPC'
+        type: croupier.data.dm.GridFTPDataAccessInfrastructure
+
+    remote_data_access_infra:
+        description: 'Data access infrastructure for Remote'
+        type: croupier.data.dm.GridFTPDataAccessInfrastructure
+
+############## HPC Infrastructures ##############
+    hpc_host:
+        type: string
+
+    hpc_scheduler:
+        type: string
+
+    hpc_queue:
+        type: string
+
+#################### WORKFLOW ###################
+node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
+
+    hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc_scheduler }
+            ssh_config:
+                host: { get_input: hpc_host }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "gridftp-dt"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "touch gridftp_job.output"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                partition: { get_input: hpc_queue }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+            - type: input
+              target: job_in
+            - type: output
+              target: job_out
+
+
+    # BEGIN DATA MANAGEMENT
+
+    #INPUTS
+    remote_in:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ./input_concatenated_files.geojson
+            located_at: { get_input: remote_data_access_infra }
+
+    job_in:
+        type: croupier.nodes.HPCDataSource
+        properties:
+            filepath: agroclimatic_zones_scenario_inputs/
+            workspace:
+              name: ws_agroclimatic
+              create: False
+              lifetime: 30
+            located_at: { get_input: hpc_data_access_infra }
+
+    #OUTPUTS
+    job_out:
+        type: croupier.nodes.HPCDataSource
+        properties:
+            filepath: ./output_concatenated_files.geojson
+            workspace:
+              name: ws_agroclimatic
+            located_at: { get_input: hpc_data_access_infra }
+
+    remote_out:
+      type: croupier.nodes.FileDataSource
+      properties:
+        filepath: agroclimatic_zones_scenario_outputs/j.gorronogoitia/frostdates/j.gorronogoitia_output_concatenated_files.geojson
+        located_at: { get_input: remote_data_access_infra }
+
+    # DATA TRANSFER
+    dt_gridftp_download:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: GridFTP
+        relationships:
+            - type: from_source
+              target: remote_in
+            - type: to_target
+              target: job_in
+
+    dt_gridftp_upload:
+      type: croupier.nodes.DataTransfer
+      properties:
+        transfer_protocol: GridFTP
+      relationships:
+        - type: from_source
+          target: job_out
+        - type: to_target
+          target: remote_out
+
+# END DATA MANAGEMENT
+
+outputs:
+    job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [job, job_name] }
+

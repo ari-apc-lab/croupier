@@ -617,7 +617,7 @@ def deploy_job(script,
 
 
 @operation
-def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W0613
+def send_job(job_options, **kwargs):  # pylint: disable=W0613
     """ Sends a job to the infrastructure interface """
     ctx.logger.info('Executing send_job task {0}'.format(ctx.instance.id))
     simulate = ctx.instance.runtime_properties['simulate']
@@ -635,22 +635,22 @@ def send_job(job_options, data_mover_options, **kwargs):  # pylint: disable=W061
 
     if not simulate:
         if 'inputs' in kwargs and kwargs['inputs']:
-            dm.processDataTransfer(kwargs['inputs'])
+            dm.processDataTransfer(kwargs['inputs'], ctx.logger)
 
-        # Do data download (from Cloud to HPC) if requested
-        # TODO integrate GridFTP data mover with about processDataTransfer
-        if len(data_mover_options) > 0 and \
-                'download' in data_mover_options and data_mover_options['download']:
-            if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
-                try:
-                    dmp = DataMoverProxy(data_mover_options, ctx.logger)
-                    source = data_mover_options['cloud_target']
-                    destination = data_mover_options['hpc_target']
-                    source_input = data_mover_options['download']['source']
-                    dest_output = data_mover_options['download']['target']
-                    dmp.move_data(source, destination, source_input, dest_output)
-                except Exception as exp:
-                    ctx.logger.error("Error using data mover: {}".format(str(exp)))
+        # # Do data download (from Cloud to HPC) if requested
+        # # TODO integrate GridFTP data mover with about processDataTransfer
+        # if len(data_mover_options) > 0 and \
+        #         'download' in data_mover_options and data_mover_options['download']:
+        #     if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
+        #         try:
+        #             dmp = DataMoverProxy(data_mover_options, ctx.logger)
+        #             source = data_mover_options['cloud_target']
+        #             destination = data_mover_options['hpc_target']
+        #             source_input = data_mover_options['download']['source']
+        #             dest_output = data_mover_options['download']['target']
+        #             dmp.move_data(source, destination, source_input, dest_output)
+        #         except Exception as exp:
+        #             ctx.logger.error("Error using data mover: {}".format(str(exp)))
 
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -862,21 +862,21 @@ def publish(publish_list, data_mover_options, **kwargs):
             # Do data upload (from HPC to Cloud) if requested
             # Data Movement
             if 'outputs' in kwargs and kwargs['outputs']:
-                dm.processDataTransfer(kwargs['outputs'])
+                dm.processDataTransfer(kwargs['outputs'], ctx.logger)
 
-            # TODO Integrate former GridFTP based data mover in Data Movement Transfer
-            if len(data_mover_options) > 0 and \
-                    'upload' in data_mover_options and data_mover_options['upload']:
-                if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
-                    try:
-                        dmp = DataMoverProxy(data_mover_options, ctx.logger)
-                        source = data_mover_options['hpc_target']
-                        destination = data_mover_options['cloud_target']
-                        source_input = data_mover_options['upload']['source']
-                        dest_output = data_mover_options['upload']['target']
-                        dmp.move_data(source, destination, source_input, dest_output)
-                    except Exception as exp:
-                        ctx.logger.error('Error using data mover: {}:\n' + traceback.format_exc() + '\n' + str(exp))
+            # # TODO Integrate former GridFTP based data mover in Data Movement Transfer
+            # if len(data_mover_options) > 0 and \
+            #         'upload' in data_mover_options and data_mover_options['upload']:
+            #     if 'hpc_target' in data_mover_options and 'cloud_target' in data_mover_options:
+            #         try:
+            #             dmp = DataMoverProxy(data_mover_options, ctx.logger)
+            #             source = data_mover_options['hpc_target']
+            #             destination = data_mover_options['cloud_target']
+            #             source_input = data_mover_options['upload']['source']
+            #             dest_output = data_mover_options['upload']['target']
+            #             dmp.move_data(source, destination, source_input, dest_output)
+            #         except Exception as exp:
+            #             ctx.logger.error('Error using data mover: {}:\n' + traceback.format_exc() + '\n' + str(exp))
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['ssh_config'])

@@ -32,8 +32,8 @@ def isFile(path):
 
 
 class HttpDataTransfer(DataTransfer):
-    def __init__(self, data_transfer_config):
-        super().__init__(data_transfer_config)
+    def __init__(self, data_transfer_config, logger):
+        super().__init__(data_transfer_config, logger)
 
     def process(self):
         use_proxy = False

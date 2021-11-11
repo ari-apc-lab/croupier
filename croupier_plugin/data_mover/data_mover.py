@@ -187,10 +187,10 @@ class DataMover(object):
         hlrs_workspace = Workspaces()
 
         i = 0
-        print (" len(my_server) " + str(len(my_server)))
+        print(" len(my_server) " + str(len(my_server)))
         if new_ws:
-            if 'HAWK' in my_server:
-                hpc_server = my_server["HAWK"]
+            if 'gridftp-fr1.hww.de' in my_server:
+                hpc_server = my_server['gridftp-fr1.hww.de']
             if new_ws:
                 new_wspath = hlrs_workspace.create_ws(hpc_server.get_user_id(), hpc_server.get_SSH_HOST(),
                                                       user_ssh_credentials, ws_name, ws_lifetime)
