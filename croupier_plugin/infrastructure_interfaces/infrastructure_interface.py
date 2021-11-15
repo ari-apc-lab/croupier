@@ -112,7 +112,8 @@ def state_int_to_str(value):
 
 def state_str_to_int(value):
     """state on its string value to its int value"""
-    return JOBSTATESDICT[value]
+    state = value.split()[0]
+    return JOBSTATESDICT[state]
 
 
 def get_prevailing_state(state1, state2):
