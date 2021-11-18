@@ -122,7 +122,8 @@ def execute_ssh_command(command, workdir, ssh_client, logger):
     return True
 
 
-def start_time_tostr(start_time):
+def start_time_tostr(start_time, timezone):
+    start_time = start_time.astimezone(pytz.timezone(timezone))
     return start_time.strftime("%m/%d/%y-%H:%M:%S")
 
 
@@ -280,16 +281,13 @@ class Slurm(InfrastructureInterface):
     # Monitor
     def get_states(self, ssh_config, job_names):
 
-        monitor_start_time_str = start_time_tostr(self.monitor_start_time)
+        monitor_start_time_str = start_time_tostr(self.monitor_start_time, self.timezone)
 
         call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names) + " -S " + monitor_start_time_str
 
         client = SshClient(ssh_config)
 
-        output, exit_code = client.execute_shell_command(
-            call,
-            workdir=self.workdir,
-            wait_result=True)
+        output, exit_code = client.execute_shell_command(call, workdir=self.workdir, wait_result=True)
         states = {}
         if exit_code == 0:
             states = _parse_states(output, self.logger)

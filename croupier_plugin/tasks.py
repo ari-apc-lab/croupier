@@ -682,7 +682,7 @@ def delete_reservation(**kwargs):
     if ok:
         ctx.logger.info('Reservation with ID {0} deleted successfully'.format(reservation_id))
     else:
-        ctx.logger.warning('Reservation with ID {0} could not be deleted, it might have been already been deleted'
+        ctx.logger.warning('Reservation with ID {0} could not be deleted, it might have already been deleted'
                            .format(reservation_id))
 
 
