@@ -151,8 +151,18 @@ class TestPlugin(unittest.TestCase):
     def test_single_scale(self, cfy_local):
         self.run_test(cfy_local)
 
+    # -------------------------------------------------------------------------------
+    # ------------------------------- Reservation -----------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'reservation', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='reservation')
+    def test_reservation(self, cfy_local):
+        self.run_test(cfy_local)
+
     # ------------------------------------------------------------------------------
-    # ------------------------------------ Four ------------------------------------
+    # ---------------------------------- Four --------------------------------------
     # ------------------------------------------------------------------------------
     @workflow_test(
         os.path.join('blueprints', 'four', 'blueprint_four.yaml'),
