@@ -82,6 +82,7 @@ class TaskGraphInstance(GraphInstance):
         self.instance = instance
         self._status = 'WAITING'
         self.completed = False
+        self.timezone = self.runtime_properties["timezone"]
 
 
 class JobGraphInstance(TaskGraphInstance):
@@ -364,7 +365,8 @@ class Monitor(object):
                                 'type': job_instance.monitor_type,
                                 'workdir': job_instance.workdir,
                                 'names': [job_instance.name],
-                                'period': job_instance.monitor_period
+                                'period': job_instance.monitor_period,
+                                'timezone': job_instance.timezone
                             }
                     else:
                         job_instance.set_status('COMPLETED')
@@ -390,7 +392,9 @@ class Monitor(object):
             for inst_name, state in states.items():
                 self.job_instances_map[inst_name].set_status(state)
 
-            self.continued_errors = 0
+            if self.continued_errors > 0:
+                self.logger.debug("Monitor error count reset to 0. States: " + str(states))
+                self.continued_errors = 0
         except Exception as exp:
             if self.continued_errors >= Monitor.MAX_ERRORS:
                 self.logger.error("Error when monitoring jobs: " + str(exp))
