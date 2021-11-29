@@ -1,4 +1,4 @@
-from croupier_plugin.data_management.data_management import DataTransfer, ssh_credentials
+from croupier_plugin.data_management.data_management import DataTransfer
 from croupier_plugin.ssh import SshClient, SFtpClient
 from cloudify import ctx
 from cloudify.exceptions import CommandExecutionError
@@ -187,18 +187,18 @@ class RSyncDataTransfer(DataTransfer):
             to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
 
             if rsync_source_to_target:
-                credentials = ssh_credentials(from_source_infra_endpoint, from_source_infra_credentials)
+                credentials = from_source_infra_credentials
             else:
-                credentials = ssh_credentials(to_target_infra_endpoint, to_target_infra_credentials)
+                credentials = to_target_infra_credentials
 
             ssh_client = SshClient(credentials)
             ftp_client = SFtpClient(credentials)
 
             if rsync_source_to_target:
-                if "username" in to_target_infra_credentials and "password" in to_target_infra_credentials:
+                if "user" in to_target_infra_credentials and "password" in to_target_infra_credentials:
                     # NOTE rsync authentication with username/password requires sshpass which it is not installed
                     # some HPC frontends
-                    target_username = to_target_infra_credentials['username']
+                    target_username = to_target_infra_credentials['user']
                     target_password = to_target_infra_credentials['password']
                     dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no ' \
                                  '-o IdentitiesOnly=yes -l {username}" {ds_source}  {target_endpoint}:{ds_target}'\
@@ -207,9 +207,9 @@ class RSyncDataTransfer(DataTransfer):
                             target_endpoint=to_target_infra_endpoint, ds_source=from_source_data_url,
                             ds_target=to_target_data_url
                         )
-                elif "username" in to_target_infra_credentials and "key" in to_target_infra_credentials:
-                    target_username = to_target_infra_credentials['username']
-                    target_key = to_target_infra_credentials['key']
+                elif "user" in to_target_infra_credentials and "private_key" in to_target_infra_credentials:
+                    target_username = to_target_infra_credentials['user']
+                    target_key = to_target_infra_credentials['private_key']
                     # Save key in temporary file
                     with tempfile.NamedTemporaryFile() as key_file:
                         key_file.write(bytes(target_key, 'utf-8'))
@@ -225,11 +225,11 @@ class RSyncDataTransfer(DataTransfer):
                                         ds_source=from_source_data_url, ds_target=to_target_data_url
                                         )
             else:
-                if "username" in from_source_infra_credentials and "password" in from_source_infra_credentials:
+                if "user" in from_source_infra_credentials and "password" in from_source_infra_credentials:
                     # NOTE rsync authentication with username/password requires sshpass which it is not installed
                     # some HPC frontends
 
-                    source_username = from_source_infra_credentials['username']
+                    source_username = from_source_infra_credentials['user']
                     source_password = from_source_infra_credentials['password']
                     dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no ' \
                                  '-o IdentitiesOnly=yes -l {username}" {source_endpoint}:{ds_source} {ds_target}'\
@@ -238,8 +238,8 @@ class RSyncDataTransfer(DataTransfer):
                             source_endpoint=from_source_infra_endpoint, ds_source=from_source_data_url,
                             ds_target=to_target_data_url
                         )
-                elif "username" in from_source_infra_credentials and "key" in from_source_infra_credentials:
-                    source_username = from_source_infra_credentials['username']
+                elif "username" in from_source_infra_credentials and "private_key" in from_source_infra_credentials:
+                    source_username = from_source_infra_credentials['user']
                     source_key = from_source_infra_credentials['key']
                     # Save key in temporary file
                     with tempfile.NamedTemporaryFile() as key_file:

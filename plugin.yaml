@@ -211,48 +211,22 @@ data_types:
                 required: false
                 default: ''
 
-    croupier.data.infrastructure.Config:
-        properties:
-            country_tz:
-                description: 'Timezone of HPC interface'
-                type: string
-                required: false
-            infrastructure_interface:
-                description: 'Scheduler of HPC interface. Supported Values: SLURM, TORQUE, PBSPRO'
-                type: string
-
-    croupier.data.infrastructure.Credentials:
-        properties:
-            host:
-                description: 'Endpoint of HPC interface'
-                type: string
-            user:
-                description: 'Username of HPC account'
-                type: string
-            password:
-                description: 'Password of HPC account'
-                type: string
-            private_key:
-                description: 'SSH private key to connect to HPC infrastructure'
-                type: string
-            private_key_password:
-                description: 'Password for SSH private key to connect to HPC infrastructure'
-                type: string
-                required: false
-                default: ''
-
-    croupier.data.job.Options:
+    croupier.datatype.job_options:
         properties:
             commands:
                 description: 'List of commands to be included in job submission script. It is incompatible with script property'
                 type: list
                 required: false #Either commands or script must be present
-            script:
-                description: 'Script to be launched with job submission. It is incompatible with commands property'
+            remote_script:
+                description: 'Script, present in the HPC workdir, to be launched with job submission. It is incompatible with commands/local_script property'
+                type: string
+                required: false #Either commands or script must be present
+            local_script:
+                description: 'Script to be uploaded from the blueprint folder and launched with job submission. It is incompatible with commands/remote_script property'
                 type: string
                 required: false #Either commands or script must be present
             arguments:
-                description: 'List of arguments to be sent to the script'
+                description: 'List of arguments to be sent to the remote_script or local_script'
                 type: list
                 required: false
             nodes:
@@ -325,9 +299,15 @@ data_types:
                 required: false
 
 # DATA MANAGEMENT
-    croupier.data.dm.Credentials:
+
+    croupier.datatype.dm.Credentials:
         properties:
-            username:
+            host:
+                description: 'Host for which the credentials are for'
+                type: string
+                required: false
+                default: ''
+            user:
                 description: 'Account username'
                 type: string
                 required: false

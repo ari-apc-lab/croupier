@@ -88,7 +88,7 @@ class HttpDataTransfer(DataTransfer):
                 else from_source_data_url, ds_target=to_target_data_url
             )
 
-            credentials = ssh_credentials(to_target_infra_endpoint, to_target_infra_credentials)
+            credentials = to_target_infra_credentials
             ssh_client = SshClient(credentials)
 
             # TODO support credentials in wget if given
@@ -152,7 +152,7 @@ class HttpDataTransfer(DataTransfer):
                 to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
                 to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
 
-                target_username = to_target_infra_credentials['username']
+                target_username = to_target_infra_credentials['user']
                 target_password = None
                 target_private_key = None
 
@@ -176,8 +176,8 @@ class HttpDataTransfer(DataTransfer):
 
                 if "password" in to_target_infra_credentials:
                     target_password = to_target_infra_credentials['password']
-                elif "key" in to_target_infra_credentials:
-                    target_key = to_target_infra_credentials['key']
+                elif "private_key" in to_target_infra_credentials:
+                    target_key = to_target_infra_credentials['private_key']
                     # Save key in temporary file
                     with tempfile.NamedTemporaryFile(delete=False) as key_file:
                         key_file.write(bytes(target_key, 'utf-8'))

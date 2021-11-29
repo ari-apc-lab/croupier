@@ -129,7 +129,7 @@ node_templates:
         properties:
             filepath: ./output_concatenated_files.geojson
             workspace:
-              name: ws_agroclimatic
+                name: ws_agroclimatic
             located_at: { get_input: hpc_data_access_infra }
 
     remote_out:
@@ -150,14 +150,14 @@ node_templates:
               target: job_in
 
     dt_gridftp_upload:
-      type: croupier.nodes.DataTransfer
-      properties:
-        transfer_protocol: GridFTP
-      relationships:
-        - type: from_source
-          target: job_out
-        - type: to_target
-          target: remote_out
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: GridFTP
+        relationships:
+            - type: from_source
+              target: job_out
+            - type: to_target
+              target: remote_out
 
 # END DATA MANAGEMENT
 

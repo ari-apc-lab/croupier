@@ -171,25 +171,17 @@ def createDataSourceNode(ds, dt_instances=None):
 
 
 def createDataTransferNode(dt_instance):
-    dtNode = {'id': dt_instance.id, 'transfer_protocol': dt_instance.properties['transfer_protocol']}
+    dtNode = {
+        'id': dt_instance.id,
+        'transfer_protocol': dt_instance.properties['transfer_protocol'],
+        'properties': dt_instance.properties
+    }
     for relationship in dt_instance.relationships:
         if isFromSourceRelationship(relationship):
             dtNode['fromSource'] = createDataSourceNode(relationship.target_node)
         if isToTargetRelationship(relationship):
             dtNode['toTarget'] = createDataSourceNode(relationship.target_node)
     return dtNode
-
-
-def ssh_credentials(host, dm_credentials):
-    credentials = {'host': host, 'user': dm_credentials['username']}
-    if 'password' in dm_credentials:
-        credentials['password'] = dm_credentials['password']
-    if 'key' in dm_credentials:
-        credentials['private_key'] = dm_credentials['key']
-    if 'key_password' in dm_credentials:
-        credentials['private_key_password'] = dm_credentials['key_password']
-
-    return credentials
 
 
 def processDataTransfer(inouts, logger):
