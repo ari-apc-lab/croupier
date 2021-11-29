@@ -91,16 +91,22 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
             raise NonRecoverableError("If cubbyhole is false, a user must be provided to download Vault credentials")
 
         if 'ssh_config' in ctx.source.node.properties:
-            ssh_config = ctx.source.node.properties['ssh_config']
-            ssh_config = vault.download_ssh_credentials(ssh_config, token, user, address, cubbyhole)
-            ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
-            ctx.logger.info("SSH credentials downloaded from Vault for host {0}".format(ssh_config['host']))
+            host = ctx.source.node.properties['ssh_config']['host']
+            ssh_credentials = vault.download_credentials(host, token, user, address, cubbyhole)
+            if ssh_credentials:
+                ssh_config = ctx.source.node.properties['ssh_config'].update(ssh_credentials)
+                ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
+                ctx.logger.info("SSH credentials downloaded from Vault for host {0}".format(host))
+            else:
+                ctx.logger.info("Using provided ssh credentials: " + ctx.source.node.properties['ssh_config'])
 
         if 'keycloak_credentials' in ctx.source.node.properties:
-            keycloak_credentials = ctx.source.node.properties['keycloak_credentials']
-            keycloak_credentials = vault.download_keycloak_credentials(keycloak_credentials, token, user, address, cubbyhole)
-            ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
-            ctx.logger.info("Keycloak credentials downloaded from Vault for user {0}".format(user))
+            keycloak_credentials = vault.download_credentials('keycloak', token, user, address, cubbyhole)
+            if keycloak_credentials:
+                ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
+                ctx.logger.info("Keycloak credentials downloaded from Vault for user {0}".format(user))
+            else:
+                ctx.logger.info("Using provided credentials: " + ctx.source.node.properties['keycloak_credentials'])
 
     except Exception as exp:
         ctx.logger.error("Failed trying to get credentials from Vault for user: {0}".format(user))
@@ -895,9 +901,9 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudi
                         "stdout"])
                 return 200
             elif "file" in data and "stdout" in data:
-                ctx.instance.runtime_properties['data_urls'] = [data["file"]]
+                ctx.instance.runtime_properties['resource'] = [data["file"]]
                 ctx.logger.info("Process completed, stdout:\n" + data["stdout"])
-                ctx.logger.info("CKAN URL: " + ctx.instance.runtime_properties['ckan_url'])
+                ctx.logger.info("CKAN URL: " + ctx.instance.runtime_properties['resource'])
                 return 200
             else:
                 ctx.logger.error(data)
@@ -951,40 +957,6 @@ def download_data(unzip_data, dest_data, data_urls, **kwargs):
     else:
         ctx.logger.warning('...nothing to download')
         raise NonRecoverableError("There was no data to download")
-
-
-@operation
-def delete_data(**kwargs):
-    simulate = ctx.instance.runtime_properties['simulate']
-    if "files_downloaded" in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded'] \
-            and not simulate:
-        inputs = ctx.instance.runtime_properties["files_downloaded"]
-        ssh_config = ctx.instance.runtime_properties['ssh_config']
-        workdir = ctx.node.properties["dest_data"] if ctx.node.properties["dest_data"] \
-            else ctx.instance.runtime_properties['workdir']
-        name = "data_download_" + ctx.instance.id + ".sh"
-        interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = data_delete_script()
-        skip_cleanup = False
-        if deploy_job(script, inputs, ssh_config, interface_type, workdir, name, ctx.logger, skip_cleanup):
-            ctx.logger.info('...data deleted')
-            ctx.instance.runtime_properties["files_downloaded"] = []
-        else:
-            ctx.logger.error('Data could not be deleted')
-    elif 'files_downloaded' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['files_downloaded']:
-        ctx.logger.info("...data deletion simulated")
-    else:
-        ctx.logger.warning('...nothing to delete')
-
-
-@operation
-def pass_data_info(**kwargs):
-    files_downloaded = ctx.source.instance.runtime_properties['files_downloaded'] if \
-        'files_downloaded' in ctx.source.instance.runtime_properties else []
-    if 'files_downloaded' in ctx.target.instance.runtime_properties:
-        for file in ctx.target.instance.runtime_properties['files_downloaded']:
-            files_downloaded.append(file)
-    ctx.source.instance.runtime_properties['files_downloaded'] = files_downloaded
 
 
 def get_hours(cput):

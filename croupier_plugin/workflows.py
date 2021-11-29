@@ -118,22 +118,16 @@ class GraphInstance(object):
         self.runtime_properties = self.instance._node_instance.runtime_properties
 
 
-class TaskGraphInstance(GraphInstance):
+class JobGraphInstance(GraphInstance):
+    """ Wrap to add job functionalities to node instances """
+
     def __init__(self, parent, instance, root_nodes):
+
         super().__init__(parent, instance, root_nodes)
         self.instance = instance
         self._status = 'WAITING'
         self.completed = False
         self.timezone = self.runtime_properties["timezone"]
-
-
-class JobGraphInstance(TaskGraphInstance):
-    """ Wrap to add job functionalities to node instances """
-
-    def __init__(self, parent, instance, root_nodes):
-        super().__init__(parent, instance, root_nodes)
-
-        # Get runtime properties
         self.host = self.runtime_properties["ssh_config"]["host"]
         self.simulate = self.runtime_properties["simulate"]
         self.workdir = self.runtime_properties["workdir"]
@@ -266,36 +260,6 @@ class JobGraphInstance(TaskGraphInstance):
 #             if isToTargetRelationship(relationship):
 #                 self.toTarget = DataSourceNode(relationship.target_node)
 
-class DataGraphInstance(TaskGraphInstance):
-
-    def __init__(self, parent, instance, root_nodes):
-
-        super().__init__(parent, instance, root_nodes)
-        self.name = instance.id
-        self.completed = False
-        self.source_urls = self.runtime_properties['data_urls'] \
-            if 'data_urls' in self.runtime_properties else self.node.cfy_node.properties['data_urls']
-
-    def launch(self):
-        self.instance.execute_operation('cloudify.interfaces.delete')
-        """ Launches the data gathering algorithm """
-        self.instance.send_event('Launched gathering data process...')
-        result = self.instance.execute_operation('cloudify.interfaces.lifecycle.configure')
-        result.get()
-        if result.task.get_state() == tasks.TASK_FAILED:
-            init_state = 'FAILED'
-        else:
-            self.instance.send_event('.. Gathering data')
-            init_state = 'PENDING'
-        self.set_status(init_state)
-        return result
-
-    def update_properties(self):
-        super().update_properties()
-        self.source_urls = self.runtime_properties['data_urls'] \
-            if 'data_urls' in self.runtime_properties else self.node.cfy_node.properties['data_urls']
-
-
 class GraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
@@ -304,14 +268,12 @@ class GraphNode(object):
         self.type = node.type
         self.cfy_node = node
         self.is_job = 'croupier.nodes.Job' in node.type_hierarchy
-        self.is_data = 'croupier.nodes.Data' in node.type_hierarchy
-        self.is_task = self.is_job or self.is_data
         self.completed = False
         self.failed = False
         self.parents = []
         self.children = []
         self.parent_dependencies_left = 0
-        if self.is_task:
+        if self.is_job:
             self.status = 'WAITING'
             self.outputs = []
             self.inputs = []
@@ -345,8 +307,6 @@ class GraphNode(object):
             if self.is_job:
                 graph_instance = JobGraphInstance(self, instance, root_nodes)
                 job_instances_map[graph_instance.name] = graph_instance
-            elif self.is_data:
-                graph_instance = DataGraphInstance(self, instance, root_nodes)
             else:
                 graph_instance = GraphInstance(self, instance, root_nodes)
 
@@ -362,14 +322,14 @@ class GraphNode(object):
         self.children.append(node)
 
     def launch_all_instances(self):
-        """ Launches all task instances """
-        tasks_result_list = []
-        if self.is_task:
-            for task_instance in self.instances:
-                tasks_result_list.append(task_instance.launch())
+        """ Launches all job instances """
+        jobs_result_list = []
+        if self.is_job:
+            for job_instance in self.instances:
+                jobs_result_list.append(job_instance.launch())
             self.status = 'QUEUED'
 
-        return tasks_result_list
+        return jobs_result_list
 
     def is_ready(self):
         """ True if it has no more dependencies to satisfy """
@@ -388,7 +348,7 @@ class GraphNode(object):
         Returns True if there is no errors (no job has failed)
         """
         if not self.completed and not self.failed:
-            if not self.is_task:
+            if not self.is_job:
                 self._remove_children_dependency()
                 self.status = 'COMPLETED'
                 self.completed = True
@@ -471,29 +431,23 @@ class Monitor(object):
 
         # first get the instances we need to check
         monitor_jobs = {}
-        for _, task_node in self.get_executions_iterator():
-            if task_node.is_job:
-                for job_instance in task_node.instances:
-                    if not job_instance.simulate:
-                        if job_instance.host in monitor_jobs:
-                            monitor_jobs[job_instance.host]['names'].append(
-                                job_instance.name)
-                        else:
-                            monitor_jobs[job_instance.host] = {
-                                'config': job_instance.monitor_config,
-                                'type': job_instance.monitor_type,
-                                'workdir': job_instance.workdir,
-                                'names': [job_instance.name],
-                                'period': job_instance.monitor_period,
-                                'timezone': job_instance.timezone
-                            }
+        for _, job_node in self.get_executions_iterator():
+            for job_instance in job_node.instances:
+                if not job_instance.simulate:
+                    if job_instance.host in monitor_jobs:
+                        monitor_jobs[job_instance.host]['names'].append(
+                            job_instance.name)
                     else:
-                        job_instance.set_status('COMPLETED')
-            elif task_node.is_data:
-                for data_instance in task_node.instances:
-                    data_instance.update_properties()
-                    if data_instance.source_urls:
-                        data_instance.set_status('COMPLETED')
+                        monitor_jobs[job_instance.host] = {
+                            'config': job_instance.monitor_config,
+                            'type': job_instance.monitor_type,
+                            'workdir': job_instance.workdir,
+                            'names': [job_instance.name],
+                            'period': job_instance.monitor_period,
+                            'timezone': job_instance.timezone
+                        }
+                else:
+                    job_instance.set_status('COMPLETED')
 
         # nothing to do if we don't have nothing to monitor
         if not monitor_jobs:
@@ -599,26 +553,26 @@ class ConfigureTask(object):
             operation = 'cloudify.interfaces.relationship_lifecycle.preconfigure'
             for rel_instance in instance.relationships:
                 result_preconfigure = rel_instance.execute_source_operation(operation, kwargs={"recurring": True})
-                if isinstance(result_preconfigure, tasks.WorkflowTaskResult):
+                if isinstance(result_preconfigure, jobs.WorkflowTaskResult):
                     result_preconfigure.get()
 
             ctx.logger.info("Configuring instance " + instance.id)
             operation = 'cloudify.interfaces.lifecycle.configure'
             result_configure = instance.execute_operation(operation, kwargs={"recurring": True})
-            if isinstance(result_configure, tasks.WorkflowTaskResult):
+            if isinstance(result_configure, jobs.WorkflowTaskResult):
                 result_configure.get()
 
             ctx.logger.info("Postconfiguring relationships")
             operation = 'cloudify.interfaces.relationship_lifecycle.postconfigure'
             for rel_instance in instance.relationships:
                 result_postconfigure = rel_instance.execute_source_operation(operation, kwargs={"recurring": True})
-                if isinstance(result_postconfigure, tasks.WorkflowTaskResult):
+                if isinstance(result_postconfigure, jobs.WorkflowTaskResult):
                     result_postconfigure.get()
 
             operation = 'cloudify.interfaces.lifecycle.start'
             if 'croupier.nodes.Data' in instance.node.type_hierarchy:
                 result_start = instance.execute_operation(operation, kwargs={"recurring": True})
-                if isinstance(result_start, tasks.WorkflowTaskResult):
+                if isinstance(result_start, jobs.WorkflowTaskResult):
                     result_start.get()
 
 
@@ -645,13 +599,13 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
     # Monitoring and next executions loop
     while new_exec_nodes or monitor.is_something_executing() and not api.has_cancel_request():
         # perform new executions
-        tasks_result_list = []
+        jobs_result_list = []
         for new_node in new_exec_nodes:
             monitor.add_node(new_node)
             if (force_data or not new_node.is_data) and (not new_node.is_job or not skip_jobs):
-                tasks_result_list += new_node.launch_all_instances()
+                jobs_result_list += new_node.launch_all_instances()
 
-        wait_tasks_to_finish(tasks_result_list)
+        wait_jobs_to_finish(jobs_result_list)
         # Monitor the infrastructure
         monitor.update_status()
         exec_nodes_finished = []
@@ -673,7 +627,7 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         for node_name in exec_nodes_finished:
             monitor.finish_node(node_name)
 
-        wait_tasks_to_finish(tasks_result_list)
+        wait_jobs_to_finish(jobs_result_list)
 
     if monitor.is_something_executing():
         ctx.logger.info("Cancelling jobs...")
@@ -739,13 +693,13 @@ def croupier_install(**kwargs):
 
 @workflow
 def croupier_configure(**kwargs):
-    task_instances, interface_instances = build_configure_graph(ctx.nodes)
+    job_instances, interface_instances = build_configure_graph(ctx.nodes)
 
     for interface in interface_instances:
         interface.configure()
 
-    for task in task_instances:
-        task.configure()
+    for job in job_instances:
+        job.configure()
 
 
 def cancel_all(executions):
@@ -754,9 +708,9 @@ def cancel_all(executions):
         exec_node.cancel_all_instances()
 
 
-def wait_tasks_to_finish(tasks_result_list):
-    """Blocks until all tasks have finished"""
-    for result in tasks_result_list:
+def wait_jobs_to_finish(jobs_result_list):
+    """Blocks until all jobs have finished"""
+    for result in jobs_result_list:
         result.get()
 
 

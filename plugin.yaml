@@ -311,15 +311,28 @@ data_types:
                 description: 'Account username'
                 type: string
                 required: false
+                default: ''
             password:
                 description: 'Account password'
                 type: string
                 required: false
-            key:
+                default: ''
+            auth-header:
+                type: string
+                required: false
+                default: ''
+                description: 'Auth header for http calls, for example API tokens'
+            auth-header-label:
+                type: string
+                required: false
+                default: 'Authorization'
+                description: 'Label to use for authenticating calls to the API'
+            private_key:
                 description: 'User private key'
                 type: string
                 required: false
-            key_password:
+                default: ''
+            private_key_password:
                 description: 'Password for User private key'
                 type: string
                 required: false
@@ -329,20 +342,23 @@ data_types:
                 required: false
                 default: false
 
-    croupier.data.dm.GridFTPCredentials:
-        derived_from: croupier.data.dm.Credentials
+
+    croupier.datatype.dm.GridFTPCredentials:
+        derived_from: croupier.datatype.dm.Credentials
         properties:
             cert:
-                description: "GripFTP user's certificate"
+                description: "GridFTP user's certificate"
                 type: string
                 required: false
+                default: ''
             cert_password:
                 description: "Password for GripFTP user's certificate"
                 type: string
                 required: false
+                default: ''
 
 
-    croupier.data.dm.DataAccessInfrastructure:
+    croupier.datatype.dm.DataAccessInfrastructure:
         properties:
             endpoint:
                 description: 'accessible (via protocol) endpoint of infrastructure'
@@ -352,7 +368,7 @@ data_types:
                 type: list
             credentials:
                 description: 'Credentials to access the data access infrastructure'
-                type: croupier.data.dm.Credentials
+                type: croupier.datatype.dm.Credentials
                 required: false
             internet_access:
                 description: 'Whether of not this DM infrastructure has external access to Internet'
@@ -360,8 +376,8 @@ data_types:
                 required: false
                 default: false
 
-    croupier.data.dm.GridFTPDataAccessInfrastructure:
-        derived_from: croupier.data.dm.DataAccessInfrastructure
+    croupier.datatype.dm.GridFTPDataAccessInfrastructure:
+        derived_from: croupier.datatype.dm.DataAccessInfrastructure
         properties:
             workspace_basepath:
                 description: 'basepath location for workspace creating'
@@ -376,7 +392,7 @@ data_types:
                 type: croupier.data.dm.GridFTPCredentials
                 required: false
 
-    croupier.data.dm.HPCWorkspace:
+    croupier.datatype.dm.HPCWorkspace:
         properties:
             name:
                 description: 'workspace name'
@@ -581,7 +597,7 @@ node_types:
         properties:
             located_at:
                 description: 'infrastructure where data source is located'
-                type: croupier.data.dm.DataAccessInfrastructure
+                type: croupier.datatype.dm.DataAccessInfrastructure
                 required: true
         interfaces:
             cloudify.interfaces.lifecycle:
@@ -605,6 +621,83 @@ node_types:
             resource:
                 description: 'URI of data source in Web'
                 type: string
+            unzip:
+                description: 'Whether to unzip the file after being downloaded'
+                type: boolean
+                default: False
+                required: False
+
+    croupier.nodes.ECMWFVerticalInterpolation:
+        derived_from: croupier.nodes.WebDataSource
+        properties:
+            ssh_config:
+                description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
+                type: croupier.datatypes.ssh_config
+            keycloak_credentials:
+                description: login credentials for hidalgo keycloak. Fields- user, pw
+                type: croupier.datatypes.dm.APICredentials
+            query:
+                description: ECMWF Query fields.
+                type: croupier.datatypes.ecmwf_query
+            server_port:
+                type: string
+                default: 9984
+            unzip:
+                type: boolean
+                default: True
+            cloudify_address:
+                type: string
+                default: ''
+                required: False
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
+                    max_retries: 0
+                    inputs:
+                        query:
+                            default: { get_property: [ SELF, query ] }
+                        ssh_config:
+                            default: { get_property: [ SELF, ssh_config_ECMWF ] }
+                        keycloak_credentials:
+                            default: { get_property: [ SELF, keycloak_credentials ] }
+                        cloudify_address:
+                            default: { get_property: [ SELF, cloudify_address ] }
+                        server_port:
+                            default: { get_property: [ SELF, port ] }
+
+    croupier.nodes.CKAN:
+        derived_from: croupier.nodes.WebDataSource
+        properties:
+            query:
+                description: ECMWF Query fields.
+                type: croupier.datatypes.ecmwf_query
+            server_port:
+                type: string
+                default: 9984
+            unzip:
+                type: boolean
+                default: True
+            cloudify_address:
+                type: string
+                default: ''
+                required: False
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
+                    max_retries: 0
+                    inputs:
+                        query:
+                            default: { get_property: [ SELF, query ] }
+                        ssh_config:
+                            default: { get_property: [ SELF, ssh_config_ECMWF ] }
+                        keycloak_credentials:
+                            default: { get_property: [ SELF, keycloak_credentials ] }
+                        cloudify_address:
+                            default: { get_property: [ SELF, cloudify_address ] }
+                        server_port:
+                            default: { get_property: [ SELF, port ] }
 
     croupier.nodes.HPCDataSource:
         derived_from: croupier.nodes.FileDataSource
@@ -656,75 +749,6 @@ node_types:
                         address:
                             default: { get_property: [SELF,address] }
 
-    croupier.nodes.Data:
-        derived_from: cloudify.nodes.WebServer
-        properties:
-            data_urls:
-                description: list of URLs of the files to download to the HPC (ckan for example)
-                default: []
-            unzip_data:
-                description: True if the files need to be unzipped after downloading
-                type: boolean
-                default: False
-            dest_data:
-                description: Path where the data needs to be downloaded to. If left blank it will be the job workdir
-                type: string
-                default: ""
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                start:
-                    implementation: croupier.croupier_plugin.tasks.download_data
-                    max_retries: 0
-                    inputs:
-                        data_urls:
-                            default: { get_property: [SELF, data_urls] }
-                        unzip_data:
-                            default: { get_property: [ SELF, unzip_data ] }
-                        dest_data:
-                            default: { get_property: [ SELF, dest_data ] }
-            croupier.interfaces.lifecycle:
-                delete:
-                    implementation: croupier.croupier_plugin.tasks.delete_data
-                    max_retries: 0
-
-    croupier.nodes.ECMWFVerticalInterpolation:
-        derived_from: croupier.nodes.Data
-        properties:
-            ssh_config_ECMWF:
-                description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
-                type: croupier.datatypes.ssh_config
-            keycloak_credentials:
-                description: login credentials for hidalgo keycloak. Fields- user, pw
-                type: croupier.datatypes.keycloak_credentials
-            query:
-                description: ECMWF Query fields. Fields- params, date, time, area, max_steps, [ensemble], [memebers], [input], [keep_input], [algorithm]
-                type: croupier.datatypes.ecmwf_query
-            server_port:
-                type: string
-                default: 9984
-            unzip_data:
-                type: boolean
-                default: True
-            cloudify_address:
-                type: string
-                default: ''
-                required: False
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                configure:
-                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
-                    max_retries: 0
-                    inputs:
-                        query:
-                            default: { get_property: [SELF, query] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config_ECMWF] }
-                        keycloak_credentials:
-                            default: { get_property: [SELF, keycloak_credentials] }
-                        cloudify_address:
-                            default: { get_property: [SELF, cloudify_address] }
-                        server_port:
-                            default: { get_property: [SELF, port] }
 relationships:
     interface_contained_in:
         derived_from: cloudify.relationships.contained_in
@@ -777,14 +801,6 @@ relationships:
 
     output:
         derived_from: cloudify.relationships.connected_to
-
-    job_needs_data:
-        derived_from: cloudify.relationships.depends_on
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.pass_data_info
-                    max_retries: 0
 
     retrieve_credentials_from_vault:
         derived_from: cloudify.relationships.depends_on

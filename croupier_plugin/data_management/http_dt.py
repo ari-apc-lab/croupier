@@ -1,10 +1,11 @@
-from croupier_plugin.data_management.data_management import DataTransfer, ssh_credentials
+from croupier_plugin.data_management.data_management import DataTransfer
 from croupier_plugin.ssh import SshClient
 from cloudify import ctx
 from cloudify.exceptions import CommandExecutionError
 import tempfile
 import os
 import shutil
+from urllib.parse import urlparse
 
 
 def thereIsOnlyOneFileInDirectory(path):
@@ -81,6 +82,22 @@ class HttpDataTransfer(DataTransfer):
             else:
                 dt_command_template = 'wget {source_endpoint}/{resource} -P {ds_target}'
 
+            source_credentials = self.dt_config['fromSource']['properties']['located_at']['credentials']
+
+            if 'user' in source_credentials and 'password' in source_credentials and \
+                    source_credentials['user'] and source_credentials['password']:
+                dt_command_template += ' --user {0} --password {1}'.format(
+                    source_credentials['user'], source_credentials['password'])
+            elif 'auth-header' in source_credentials and source_credentials['auth-header']:
+                auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
+                dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
+
+            if 'unzip' in self.dt_config.properties and self.dt_config.properties['unzip']:
+                if target_is_file:
+                    dt_command_template += '; unzip {ds_target}'
+                else:
+                    dt_command_template += '; cd {ds_target}; unzip {resource}'
+
             dt_command = dt_command_template.format(
                 source_endpoint=from_source_infra_endpoint[:-1] if from_source_infra_endpoint.endswith('/')
                 else from_source_infra_endpoint,
@@ -90,8 +107,6 @@ class HttpDataTransfer(DataTransfer):
 
             credentials = to_target_infra_credentials
             ssh_client = SshClient(credentials)
-
-            # TODO support credentials in wget if given
 
             # Execute data transfer command
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
@@ -120,9 +135,20 @@ class HttpDataTransfer(DataTransfer):
                 from_source_data_url = self.dt_config['fromSource']['properties']['resource']
             from_source_infra_endpoint = self.dt_config['fromSource']['properties']['located_at']['endpoint']
 
-            # TODO support credentials in wget if given
+            dt_command_template = 'cd {temp_dir}; wget {source_endpoint}/{resource}'
+
+            source_credentials = self.dt_config['fromSource']['properties']['located_at']['credentials']
+
+            if 'user' in source_credentials and 'password' in source_credentials and \
+                    source_credentials['user'] and source_credentials['password']:
+                dt_command_template += ' --user {0} --password {1}'.format(
+                    source_credentials['user'], source_credentials['password'])
+            elif 'auth-header' in source_credentials and source_credentials['auth-header']:
+                auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
+                dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
+
             temporary_dir = tempfile.mkdtemp()
-            dt_command = 'cd {temp_dir}; wget {source_endpoint}/{resource}'.format(
+            dt_command = dt_command_template.format(
                 source_endpoint=from_source_infra_endpoint[:-1] if from_source_infra_endpoint.endswith('/')
                 else from_source_infra_endpoint,
                 resource=from_source_data_url[1:] if from_source_data_url.startswith('/')
@@ -209,6 +235,23 @@ class HttpDataTransfer(DataTransfer):
                 if exit_code is not None:  # exit code is None is successful
                     raise CommandExecutionError(
                         "Failed executing rsync data transfer: exit code " + str(exit_code) + " and msg: " + cmd_msg)
+
+                if 'unzip' in self.dt_config.properties and self.dt_config.properties['unzip']:
+                    filename = os.path.basename(urlparse(from_source_data_url).path)
+                    if target_is_file:
+                        unzip_command = 'unzip {0}'.format(filename)
+                    else:
+                        unzip_command = 'unzip {0}/{1}'.format(ds_target, filename)
+
+                    credentials = to_target_infra_credentials
+                    ssh_client = SshClient(credentials)
+
+                    # Execute data transfer command
+                    exit_msg, exit_code = ssh_client.execute_shell_command(unzip_command, wait_result=True)
+
+                    if exit_code != 0:
+                        raise CommandExecutionError("Failed unzipping file: exit code " + str(exit_code))
+
             else:
                 ctx.logger.warn('HTTP DT: Not transferring data from empty temporary folder')
 
