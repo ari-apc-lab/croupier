@@ -336,11 +336,7 @@ data_types:
                 description: 'Password for User private key'
                 type: string
                 required: false
-            retrieve_credentials_from_vault:
-                description: 'Whether to retrieve credentials from configured Vault'
-                type: boolean
-                required: false
-                default: false
+                default: ''
 
 
     croupier.datatype.dm.GridFTPCredentials:
@@ -599,14 +595,6 @@ node_types:
                 description: 'infrastructure where data source is located'
                 type: croupier.datatype.dm.DataAccessInfrastructure
                 required: true
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                create:
-                    implementation: croupier.croupier_plugin.tasks.configure_data_source
-                    inputs:
-                        located_at:
-                            description: "DataSourceInfrastructure where data source is located"
-                            default: { get_property: [ SELF, located_at ] }
 
     croupier.nodes.FileDataSource:
         derived_from: croupier.nodes.DataSource

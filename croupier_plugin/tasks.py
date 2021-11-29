@@ -108,59 +108,18 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
             else:
                 ctx.logger.info("Using provided credentials: " + ctx.source.node.properties['keycloak_credentials'])
 
+        if 'located_at' in ctx.source.node.properties and 'credentials' in ctx.source.node.properties['located_at']:
+            host = ctx.source.node.properties['located_at']['endpoint']
+            credentials = vault.download_credentials(host, token, user, address, cubbyhole)
+            if credentials:
+                ctx.source.instance.runtime_properties['located_at']['credentials'] = credentials
+                ctx.logger.info("Credentials downloaded from Vault for host {0}".format(host))
+            else:
+                ctx.logger.info("Using provided credentials: " + ctx.source.node.properties['located_at']['credentials'])
     except Exception as exp:
         ctx.logger.error("Failed trying to get credentials from Vault for user: {0}".format(user))
         raise NonRecoverableError("Failed trying to get credentials from Vault")
 
-
-def findVaultNode(node_templates):
-    for node in node_templates:
-        if node['type'] == 'croupier.nodes.Vault':
-            return node
-    return None
-
-
-@operation
-def configure_data_source(located_at,  **kwargs):
-    # Configure DataAccessInfrastructure credentials if retrieved from Vault
-    ctx.logger.info('Configuring data source infrastructure: ' + located_at['endpoint'])
-    try:
-        if 'credentials' in located_at:
-            if 'retrieve_credentials_from_vault' in located_at['credentials']:
-                if located_at['credentials']['retrieve_credentials_from_vault']:
-                    ssh_config = {'host': located_at['endpoint']}
-                    # Find Vault node to get token, user, address
-                    node_templates = ctx.blueprint._context['storage'].plan.node_templates
-                    vault_node = findVaultNode(node_templates)
-                    # Raise exception if Vault node not present
-                    if not vault_node:
-                        raise NonRecoverableError('Retrieve credentials from Vault was enabled for '
-                                                  'DataSourceInfrastructure but no Vault node could be found in '
-                                                  'blueprint')
-                    token = vault_node['properties']['token']
-                    user = vault_node['properties']['user']
-                    vault_address = vault_node['properties']['address']
-                    # Get address from configuration if empty
-                    if not vault_address:
-                        ctx.logger.info("No vault address provided, getting vault address from croupier's config file")
-                        vault_address = getVaultAddressFromConfiguration()
-                        vault_address = vault_address \
-                            if vault_address.startswith('http') \
-                            else 'http://' + vault_address
-                    ssh_config = vault.download_ssh_credentials(ssh_config, token, user, vault_address, cubbyhole=None)
-                    # Set credentials in data source infrastructure
-                    located_at['credentials']['username'] = ssh_config['user']
-                    if 'password' in ssh_config and ssh_config['password']:
-                        located_at['credentials']['password'] = ssh_config['password']
-                    if 'private_key' in ssh_config and ssh_config['private_key']:
-                        located_at['credentials']['key'] = ssh_config['private_key']
-                    if 'private_key_password' in ssh_config and ssh_config['private_key_password']:
-                        located_at['credentials']['key_password'] = ssh_config['private_key_password'] \
-
-                    ctx.instance.runtime_properties['located_at'] = located_at
-    except Exception as exp:
-        ctx.logger.error("Configuration of data source {0} from Vault failed".format(ctx.instance.id))
-        raise NonRecoverableError("Configuration of data source: " + ctx.instance.id + ' from Vault failed')
 
 @operation
 def preconfigure_interface(
