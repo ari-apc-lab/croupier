@@ -103,7 +103,8 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
             ctx.logger.info("Keycloak credentials downloaded from Vault for user {0}".format(user))
 
     except Exception as exp:
-        ctx.logger.error("Failed trying to get credentials from Vault for user: {0}".format(user))
+        ctx.logger.error("Failed trying to get credentials from Vault for user: {0} because of error {1}".
+                         format(user, str(exp)))
         raise NonRecoverableError("Failed trying to get credentials from Vault")
 
 
@@ -153,7 +154,8 @@ def configure_data_source(located_at,  **kwargs):
 
                     ctx.instance.runtime_properties['located_at'] = located_at
     except Exception as exp:
-        ctx.logger.error("Configuration of data source {0} from Vault failed".format(ctx.instance.id))
+        ctx.logger.error("Configuration of data source {0} from Vault failed with error {1}".
+                         format(ctx.instance.id), str(exp))
         raise NonRecoverableError("Configuration of data source: " + ctx.instance.id + ' from Vault failed')
 
 @operation
@@ -241,7 +243,8 @@ def configure_execution(
         try:
             client = SshClient(ssh_config)
         except Exception as exp:
-            ctx.logger.error('Error Connecting to infrastructure interface {0}: {1}'.format(ctx.instance.id, exp))
+            ctx.logger.error('Error Connecting to infrastructure interface {0} with error {1}'
+                             .format(ctx.instance.id, str(exp)))
             raise NonRecoverableError(
                 "Failed trying to connect to infrastructure interface: " + str(exp))
 
@@ -674,7 +677,7 @@ def delete_reservation(**kwargs):
             reservation_id,
             deletion_path)
     except Exception as ex:
-        ctx.logger.error('Reservation could not be deleted because: ' + str(ex))
+        ctx.logger.error('Reservation could not be deleted because error: ' + str(ex))
         client.close_connection()
         return
     client.close_connection()
@@ -725,7 +728,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not cleaned.')
     except Exception as exp:
         ctx.logger.error(
-            'Something happened when trying to clean up:' + '\n' + traceback.format_exc() + '\n' + str(exp))
+            'Error happened when trying to clean up:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -764,7 +767,8 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
             raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
     except Exception as exp:
-        ctx.logger.error('Something happened when trying to stop job:' + '\n' + traceback.format_exc() + '\n' + str(exp))
+        ctx.logger.error('Something happened when trying to stop job:'
+                         + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -1031,7 +1035,7 @@ def register_orchestrator_instance_accounting():
             ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
         except Exception as err:
             ctx.logger.warning(
-                'Croupier instance could not be registered into Accounting, raising an error: {}'.format(err))
+                'Croupier instance could not be registered into Accounting, raising an error: {}'.format(str(err)))
 
 
 def convert_cput(cput, job_id, workdir, ssh_client, logger):
@@ -1059,9 +1063,11 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
                 user = User(username)
                 user = accounting_client.add_user(user)
             except Exception as err:
-                ctx.logger.error('User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
+                ctx.logger.error('User {0} could not be registered into Accounting, raising an error: {1}'
+                                 .format(username, str(err)))
                 raise Exception(
-                    'User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
+                    'User {0} could not be registered into Accounting, raising an error: {1}'
+                        .format(username, str(err)))
 
         # Register HPC CPU total
         server = ctx.instance.runtime_properties['ssh_config']['host']
@@ -1087,7 +1093,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
     except Exception as err:
         logger.error(
             'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
-                format(workflow_id=workflow_id, err=err))
+                format(workflow_id=workflow_id, err=str(err)))
 
 
 def read_processors_per_node(job_id, workdir, ssh_client, logger):
