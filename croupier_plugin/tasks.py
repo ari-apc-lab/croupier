@@ -155,7 +155,7 @@ def configure_data_source(located_at,  **kwargs):
                     ctx.instance.runtime_properties['located_at'] = located_at
     except Exception as exp:
         ctx.logger.error("Configuration of data source {0} from Vault failed with error {1}".
-                         format(ctx.instance.id), str(exp))
+                         format(ctx.instance.id, str(exp)))
         raise NonRecoverableError("Configuration of data source: " + ctx.instance.id + ' from Vault failed')
 
 @operation
