@@ -38,19 +38,6 @@ inputs:
     vault_user:
         type: string
 
-################ Data Management ################
-    hpc1_data_access_infra:
-        description: 'Data access infrastructure for HPC1'
-        type: croupier.data.dm.DataAccessInfrastructure
-
-    cloud_data_access_infra:
-        description: 'Data access infrastructure for Cloud'
-        type: croupier.data.dm.DataAccessInfrastructure
-
-    hpc2_data_access_infra:
-        description: 'Data access infrastructure for HPC2'
-        type: croupier.data.dm.DataAccessInfrastructure
-
 ############## HPC Infrastructures ##############
     hpc1_host:
         type: string
@@ -71,7 +58,7 @@ inputs:
         type: string
 
 
-#################### WORKFLOW ###################
+#################### START WORKFLOW ###################
 node_templates:
     vault:
         type: croupier.nodes.Vault
@@ -158,34 +145,76 @@ node_templates:
               target: job1
             - type: input
               target: alice_in
+#################### END WORKFLOW ###################
 
-    # BEGIN DATA MANAGEMENT
+#################### START DATAFLOW #################
+
+    #DATA ACCESS INFRASTRUCTURES
+    #HPC1 DataManagement Infrastructure
+    hpc1_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: dt01.bsc.es
+            internet_access: false
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #HPC2 DataManagement Infrastructure
+    hpc2_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: ft2.cesga.es
+            internet_access: true
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #CLOUD DataManagement Infrastructure
+    cloud_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: http://corpus.canterbury.ac.nz/
+            supported_protocols:
+                - HTTP
 
     #INPUTS
     canterbury_corpus_in:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ~/cantrbry.zip
-            located_at: { get_input: hpc1_data_access_infra }
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
 
     canterbury_corpus_web:
         type: croupier.nodes.WebDataSource
         properties:
             resource: /resources/cantrbry.zip
-            located_at: { get_input: cloud_data_access_infra }
+        relationships:
+            - type: ds_located_at
+              target: cloud_data_access_infra
 
     alice_in:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ~/croupier/dm_test/alice.txt
-            located_at: { get_input: hpc2_data_access_infra }
+        relationships:
+            - type: ds_located_at
+              target: hpc2_data_access_infra
 
     #OUTPUTS
     alice_out:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ~/croupier/dm_test/cantbry/alice29.txt
-            located_at: { get_input: hpc1_data_access_infra }
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
 
     # DATA TRANSFER
     dt_http:
@@ -208,7 +237,7 @@ node_templates:
             - type: to_target
               target: alice_in
 
-# END DATA MANAGEMENT
+#################### START DATAFLOW ###################
 
 outputs:
     job1_name:

@@ -150,7 +150,7 @@ class JobGraphInstance(TaskGraphInstance):
         """ Sends the job's instance to the infrastructure queue """
         self.instance.send_event('Queuing job..')
         result = self.instance.execute_operation(
-            'croupier.interfaces.lifecycle.queue', kwargs={"name": self.name, "inputs": self.node.inputs})
+            'croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
@@ -173,16 +173,15 @@ class JobGraphInstance(TaskGraphInstance):
 
         self.instance.send_event('Publishing job outputs..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.publish',
-                                                 kwargs={"name": self.name, "audit": self.audit,
-                                                         "outputs": self.parent_node.outputs})
+                                                 kwargs={"name": self.name, "audit": self.audit})
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.instance.send_event('..outputs sent for publication')
 
-        # Remove completed data transfer objects for associated jobs
-        dm.removeDataTransferInstancesConnectedToJob(self.node, ctx.nodes, self.root_nodes)
-        for output in self.node.outputs:
-            output['dt_instances'] = []
+        # # Remove completed data transfer objects for associated jobs
+        # dm.removeDataTransferInstancesConnectedToJob(self.node, ctx.nodes, self.root_nodes)
+        # for output in self.node.outputs:
+        #     output['dt_instances'] = []
 
         return result.task
 
@@ -312,30 +311,30 @@ class GraphNode(object):
         self.parent_dependencies_left = 0
         if self.is_task:
             self.status = 'WAITING'
-            self.outputs = []
-            self.inputs = []
-            # Collect outputs associated to data transfer objects
-            for relationship in node.relationships:
-                #  For each DS node connected by output relationship:
-                if dm.isOutputRelationship(relationship):
-                    _output = relationship.target_node
-                    #  find data transfer object in nodes, such as DT|from-source == DS node
-                    nodes = ctx.nodes
-                    dt_instances = dm.findDataTransferInstancesForSource(_output, nodes)
-                    #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
-                    #  For data management graph nodes use DMGraphNode class
-                    if dt_instances:
-                        self.outputs.append(dm.createDataSourceNode(_output, dt_instances))
-                #  For each DS node connected by input relationship:
-                if dm.isInputRelationship(relationship):
-                    _input = relationship.target_node
-                    #  find data transfer object in nodes, such as DT|to_target == DS node
-                    nodes = ctx.nodes
-                    dt_instances = dm.findDataTransferInstancesForTarget(_input, nodes)
-                    #  if such DT node exist, add the DS node to inputs collection to this JobGraphNode
-                    #  For data management graph nodes use DMGraphNode class
-                    if dt_instances:
-                        self.inputs.append(dm.createDataSourceNode(_input, dt_instances))
+            # self.outputs = []
+            # self.inputs = []
+            # # Collect outputs associated to data transfer objects
+            # for relationship in node.relationships:
+            #     #  For each DS node connected by output relationship:
+            #     if dm.isOutputRelationship(relationship):
+            #         _output = relationship.target_node
+            #         #  find data transfer object in nodes, such as DT|from-source == DS node
+            #         nodes = ctx.nodes
+            #         dt_instances = dm.findDataTransferInstancesForSource(_output, nodes)
+            #         #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
+            #         #  For data management graph nodes use DMGraphNode class
+            #         if dt_instances:
+            #             self.outputs.append(dm.createDataSourceNode(_output, dt_instances))
+            #     #  For each DS node connected by input relationship:
+            #     if dm.isInputRelationship(relationship):
+            #         _input = relationship.target_node
+            #         #  find data transfer object in nodes, such as DT|to_target == DS node
+            #         nodes = ctx.nodes
+            #         dt_instances = dm.findDataTransferInstancesForTarget(_input, nodes)
+            #         #  if such DT node exist, add the DS node to inputs collection to this JobGraphNode
+            #         #  For data management graph nodes use DMGraphNode class
+            #         if dt_instances:
+            #             self.inputs.append(dm.createDataSourceNode(_input, dt_instances))
         else:
             self.status = 'NONE'
 

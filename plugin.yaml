@@ -343,11 +343,6 @@ data_types:
                 description: 'Password for User private key'
                 type: string
                 required: false
-            retrieve_credentials_from_vault:
-                description: 'Whether to retrieve credentials from configured Vault'
-                type: boolean
-                required: false
-                default: false
 
     croupier.data.dm.GridFTPCredentials:
         derived_from: croupier.data.dm.Credentials
@@ -359,41 +354,6 @@ data_types:
             cert_password:
                 description: "Password for GripFTP user's certificate"
                 type: string
-                required: false
-
-
-    croupier.data.dm.DataAccessInfrastructure:
-        properties:
-            endpoint:
-                description: 'accessible (via protocol) endpoint of infrastructure'
-                type: string
-            supported_protocols:
-                description: 'list of supported interfaces to access the data'
-                type: list
-            credentials:
-                description: 'Credentials to access the data access infrastructure'
-                type: croupier.data.dm.Credentials
-                required: false
-            internet_access:
-                description: 'Whether of not this DM infrastructure has external access to Internet'
-                type: boolean
-                required: false
-                default: false
-
-    croupier.data.dm.GridFTPDataAccessInfrastructure:
-        derived_from: croupier.data.dm.DataAccessInfrastructure
-        properties:
-            workspace_basepath:
-                description: 'basepath location for workspace creating'
-                type: string
-                required: false
-            ssh_endpoint:
-                description: 'ssh endpoint for workspace management'
-                type: string
-                required: false
-            credentials:
-                description: 'Credentials to access the data access infrastructure'
-                type: croupier.data.dm.GridFTPCredentials
                 required: false
 
     croupier.data.dm.HPCWorkspace:
@@ -589,28 +549,54 @@ node_types:
         derived_from: croupier.nodes.Job
 
 # DATA MANAGEMENT
+    croupier.nodes.DataAccessInfrastructure:
+        derived_from: cloudify.nodes.Root
+        properties:
+            endpoint:
+                description: 'accessible (via protocol) endpoint of infrastructure'
+                type: string
+            supported_protocols:
+                description: 'list of supported interfaces to access the data'
+                type: list
+            credentials:
+                description: 'Credentials to access the data access infrastructure'
+                type: croupier.data.dm.Credentials
+                required: false
+            internet_access:
+                description: 'Whether of not this DM infrastructure has external access to Internet'
+                type: boolean
+                required: false
+                default: false
+
+    croupier.nodes.GridFTPDataAccessInfrastructure:
+        derived_from: croupier.nodes.DataAccessInfrastructure
+        properties:
+            workspace_basepath:
+                description: 'basepath location for workspace creating'
+                type: string
+                required: false
+            ssh_endpoint:
+                description: 'ssh endpoint for workspace management'
+                type: string
+                required: false
+            credentials:
+                description: 'Credentials to access the data access infrastructure'
+                type: croupier.data.dm.GridFTPCredentials
+                required: false
+
     croupier.nodes.DataTransfer:
         derived_from: cloudify.nodes.Root
         properties:
             transfer_protocol:
                 description: 'protocol to transfer data from source to target'
                 type: string
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.configure_data_transfer
 
     croupier.nodes.DataSource:
         derived_from: cloudify.nodes.Root
-        properties:
-            located_at:
-                description: 'infrastructure where data source is located'
-                type: croupier.data.dm.DataAccessInfrastructure
-                required: true
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                create:
-                    implementation: croupier.croupier_plugin.tasks.configure_data_source
-                    inputs:
-                        located_at:
-                            description: "DataSourceInfrastructure where data source is located"
-                            default: { get_property: [ SELF, located_at ] }
 
     croupier.nodes.FileDataSource:
         derived_from: croupier.nodes.DataSource
@@ -783,14 +769,31 @@ relationships:
                         simulate:
                             default: { get_property: [TARGET, simulate] }
 
+    ds_located_at:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_data_source
+
+
     job_depends_on:
         derived_from: cloudify.relationships.depends_on
 
     from_source:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
 
     to_target:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
+
 
     input:
         derived_from: cloudify.relationships.connected_to

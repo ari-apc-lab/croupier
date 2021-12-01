@@ -37,8 +37,8 @@ class HttpDataTransfer(DataTransfer):
 
     def process(self):
         use_proxy = False
-        if 'internet_access' in self.dt_config['toTarget']['properties']['located_at']:
-            use_proxy = not self.dt_config['toTarget']['properties']['located_at']['internet_access']
+        if 'internet_access' in self.dt_config['to_target']['located_at']:
+            use_proxy = not self.dt_config['to_target']['located_at']['internet_access']
         if use_proxy:
             self.process_http_transfer_with_proxy()
         else:
@@ -49,28 +49,28 @@ class HttpDataTransfer(DataTransfer):
 
         try:
             ctx.logger.info('Processing http data transfer from source {} to target {}'.format(
-                self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
+                self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
             ))
             #  Copy source data into target data by invoking wget command at target data infrastructure
             #  Create wget command
             #  Invoke command in target infrastructure
 
             # Source DS
-            from_source_type = self.dt_config['fromSource']['type']
+            from_source_type = self.dt_config['from_source']['type']
             from_source_data_url = None
             if 'WebDataSource' in from_source_type:
-                from_source_data_url = self.dt_config['fromSource']['properties']['resource']
-            from_source_infra_endpoint = self.dt_config['fromSource']['properties']['located_at']['endpoint']
+                from_source_data_url = self.dt_config['from_source']['resource']
+            from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
 
             # Target DS
-            to_target_type = self.dt_config['toTarget']['type']
+            to_target_type = self.dt_config['to_target']['type']
             to_target_data_url = None
             if 'FileDataSource' in to_target_type:
-                to_target_data_url = self.dt_config['toTarget']['properties']['filepath']
+                to_target_data_url = self.dt_config['to_target']['filepath']
                 if to_target_data_url.startswith('~/'):
                     to_target_data_url = to_target_data_url[2:]
-            to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
-            to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
+            to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
+            to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
             target_is_file = isFile(to_target_data_url)
 
@@ -109,16 +109,16 @@ class HttpDataTransfer(DataTransfer):
         temporary_dir = None
         try:
             ctx.logger.info('Processing http data transfer proxied by Croupier from source {} to target {}'.format(
-                self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
+                self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
             ))
 
             # Copy source data into croupier temporary folder using wget
             # Source DS
-            from_source_type = self.dt_config['fromSource']['type']
+            from_source_type = self.dt_config['from_source']['type']
             from_source_data_url = None
             if 'WebDataSource' in from_source_type:
-                from_source_data_url = self.dt_config['fromSource']['properties']['resource']
-            from_source_infra_endpoint = self.dt_config['fromSource']['properties']['located_at']['endpoint']
+                from_source_data_url = self.dt_config['from_source']['resource']
+            from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
 
             # TODO support credentials in wget if given
             temporary_dir = tempfile.mkdtemp()
@@ -143,14 +143,14 @@ class HttpDataTransfer(DataTransfer):
             # Target DS
 
             if directoryIsNotEmpty(temporary_dir):
-                to_target_type = self.dt_config['toTarget']['type']
+                to_target_type = self.dt_config['to_target']['type']
                 to_target_data_url = None
                 if 'FileDataSource' in to_target_type:
-                    to_target_data_url = self.dt_config['toTarget']['properties']['filepath']
+                    to_target_data_url = self.dt_config['to_target']['filepath']
                     if to_target_data_url.startswith('~/'):
                         to_target_data_url = to_target_data_url[2:]
-                to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
-                to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
+                to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
+                to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
                 target_username = to_target_infra_credentials['username']
                 target_password = None
