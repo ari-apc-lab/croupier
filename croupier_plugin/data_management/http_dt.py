@@ -96,6 +96,7 @@ class HttpDataTransfer(DataTransfer):
             # TODO support credentials in wget if given
 
             # Execute data transfer command
+            ctx.logger.info('http(wget) data transfer: executing command: {}'.format(dt_command))
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
 
             if exit_code != 0:
@@ -133,6 +134,7 @@ class HttpDataTransfer(DataTransfer):
             )
 
             # Execute data transfer command
+            ctx.logger.info('http(wget) data transfer: executing command: {}'.format(dt_command))
             cmd_output = os.popen(dt_command)
             cmd_msg = cmd_output.read()
             exit_code = cmd_output.close()
@@ -204,6 +206,7 @@ class HttpDataTransfer(DataTransfer):
                             self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
                         ))
 
+                ctx.logger.info('http(rsync) data transfer: executing command: {}'.format(dt_command))
                 cmd_output = os.popen(dt_command)
                 cmd_msg = cmd_output.read()
                 exit_code = cmd_output.close()

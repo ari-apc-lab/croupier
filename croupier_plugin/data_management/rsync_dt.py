@@ -257,6 +257,7 @@ class RSyncDataTransfer(DataTransfer):
                                         )
 
             # Execute data transfer command
+            ctx.logger.info('rsync data transfer: executing command: {}'.format(dt_command))
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
 
             if exit_code != 0:
