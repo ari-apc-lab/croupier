@@ -6,6 +6,8 @@ import tempfile
 import os
 import shutil
 
+target_private_key = None
+
 
 def thereIsOnlyOneFileInDirectory(path):
     return len([name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]) == 1
@@ -154,7 +156,6 @@ class HttpDataTransfer(DataTransfer):
 
                 target_username = to_target_infra_credentials['username']
                 target_password = None
-                target_private_key = None
 
                 source_is_file = thereIsOnlyOneFileInDirectory(temporary_dir)
                 target_is_file = isFile(to_target_data_url)
@@ -182,6 +183,7 @@ class HttpDataTransfer(DataTransfer):
                     with tempfile.NamedTemporaryFile(delete=False) as key_file:
                         key_file.write(bytes(target_key, 'utf-8'))
                         key_file.flush()
+                        global target_private_key
                         target_private_key = key_file.name
 
                 if target_private_key:
