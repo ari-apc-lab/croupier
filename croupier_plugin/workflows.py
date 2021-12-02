@@ -46,43 +46,6 @@ from croupier_plugin.vault.vault import revoke_token
 LOOP_PERIOD = 1
 
 
-# def isOutputRelationship(relationship):
-#     return 'output' == relationship._relationship['type']
-#
-#
-# def isFromSourceRelationship(relationship):
-#     return 'from_source' == relationship._relationship['type']
-#
-#
-# def isToTargetRelationship(relationship):
-#     return 'to_target' == relationship._relationship['type']
-#
-#
-# def isDataManagementNode(node):
-#     return not ('croupier.nodes.Job' in node.type_hierarchy or
-#                 'croupier.nodes.InfrastructureInterface' in node.type_hierarchy)
-#
-#
-# def isDataTransferNode(node):
-#     return 'croupier.nodes.DataTransfer' in node.type_hierarchy
-#
-#
-# def isDataManagementRelationship(relationship):
-#     return ('input' == relationship._relationship['type'] or
-#             'output' == relationship._relationship['type'])
-#
-#
-# def findDataTransferInstancesForSource(data_source, nodes):
-#     #  find data transfer object in nodes, such as DT|from-source == DS node
-#     dt_instances = []
-#     for node in nodes:
-#         if isDataTransferNode(node):
-#             for relationship in node.relationships:
-#                 if isFromSourceRelationship(relationship):
-#                     if data_source.id == relationship.target_node.id:
-#                         dt_instances.append(node)
-#     return dt_instances
-
 class GraphInstance(object):
 
     def __init__(self, parent, instance, root_nodes):
@@ -178,11 +141,6 @@ class JobGraphInstance(TaskGraphInstance):
         if result.task.get_state() != tasks.TASK_FAILED:
             self.instance.send_event('..outputs sent for publication')
 
-        # # Remove completed data transfer objects for associated jobs
-        # dm.removeDataTransferInstancesConnectedToJob(self.node, ctx.nodes, self.root_nodes)
-        # for output in self.node.outputs:
-        #     output['dt_instances'] = []
-
         return result.task
 
     def set_status(self, status):
@@ -218,51 +176,6 @@ class JobGraphInstance(TaskGraphInstance):
 
         self._status = 'CANCELLED'
 
-
-# def createDataSourceNode(output, dt_instances=None):
-#         dsNode = {}
-#         dsNode['id'] = output.id
-#         dsNode['type'] = output.type
-#         dsNode['properties'] = output.properties
-#         data_transfer_instances = []
-#         if dt_instances:
-#             for dt_instance in dt_instances:
-#                 data_transfer_instances.append(createDataTransferNode(dt_instance))
-#         dsNode['dt_instances'] = data_transfer_instances
-#         return dsNode
-
-# class DataSourceNode:
-#     def __init__(self, output, job=None, dt_instances=None):
-#         self.id = output.id
-#         self.type = output.type
-#         self.properties = output.properties
-#         data_transfer_instances = []
-#         if dt_instances:
-#             for dt_instance in dt_instances:
-#                 data_transfer_instances.append(DataTransferNode(dt_instance))
-#         self.dt_instances = data_transfer_instances
-#         self.job = job
-
-
-# def createDataTransferNode(dt_instance):
-#     dtNode = {}
-#     dtNode['id'] =  dt_instance.id
-#     for relationship in dt_instance.relationships:
-#         if isFromSourceRelationship(relationship):
-#             dtNode['fromSource'] = createDataSourceNode(relationship.target_node)
-#         if isToTargetRelationship(relationship):
-#             dtNode['toTarget'] = createDataSourceNode(relationship.target_node)
-#     return dtNode
-
-
-# class DataTransferNode:
-#     def __init__(self, dt_instance):
-#         self.id = dt_instance.id
-#         for relationship in dt_instance.relationships:
-#             if isFromSourceRelationship(relationship):
-#                 self.fromSource = DataSourceNode(relationship.target_node)
-#             if isToTargetRelationship(relationship):
-#                 self.toTarget = DataSourceNode(relationship.target_node)
 
 class DataGraphInstance(TaskGraphInstance):
 
@@ -311,30 +224,6 @@ class GraphNode(object):
         self.parent_dependencies_left = 0
         if self.is_task:
             self.status = 'WAITING'
-            # self.outputs = []
-            # self.inputs = []
-            # # Collect outputs associated to data transfer objects
-            # for relationship in node.relationships:
-            #     #  For each DS node connected by output relationship:
-            #     if dm.isOutputRelationship(relationship):
-            #         _output = relationship.target_node
-            #         #  find data transfer object in nodes, such as DT|from-source == DS node
-            #         nodes = ctx.nodes
-            #         dt_instances = dm.findDataTransferInstancesForSource(_output, nodes)
-            #         #  if such DT node exist, add the DS node to outputs collection to this JobGraphNode
-            #         #  For data management graph nodes use DMGraphNode class
-            #         if dt_instances:
-            #             self.outputs.append(dm.createDataSourceNode(_output, dt_instances))
-            #     #  For each DS node connected by input relationship:
-            #     if dm.isInputRelationship(relationship):
-            #         _input = relationship.target_node
-            #         #  find data transfer object in nodes, such as DT|to_target == DS node
-            #         nodes = ctx.nodes
-            #         dt_instances = dm.findDataTransferInstancesForTarget(_input, nodes)
-            #         #  if such DT node exist, add the DS node to inputs collection to this JobGraphNode
-            #         #  For data management graph nodes use DMGraphNode class
-            #         if dt_instances:
-            #             self.inputs.append(dm.createDataSourceNode(_input, dt_instances))
         else:
             self.status = 'NONE'
 

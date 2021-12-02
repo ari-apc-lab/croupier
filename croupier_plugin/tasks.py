@@ -174,7 +174,7 @@ def configure_data_transfer(**kwargs):
 
     to_target = {
         "name": to_target_node.name,
-        "type": from_source_node.type,
+        "type": to_target_node.type,
         "filepath": to_target_node.properties['filepath']
         if "filepath" in to_target_node.properties else None,
         "resource": to_target_node.properties['resource']
@@ -842,7 +842,7 @@ def publish(publish_list, **kwargs):
         published = True
         if not simulate:
             # Process data flow for outputs in this job
-            dm.processDataTransfer(ctx.logger)
+            dm.processDataTransferForOutputs(ctx.instance, ctx.logger)
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['ssh_config'])
