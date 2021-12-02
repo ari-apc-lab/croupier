@@ -56,6 +56,18 @@ inputs:
 
     hpc2_queue:
         type: string
+############## DS Infrastructures ##############
+    hpc1_dai_host:
+        type: string
+
+    hpc1_dai_internet_access:
+        type: boolean
+
+    hpc2_dai_host:
+        type: string
+
+    hpc2_dai_internet_access:
+        type: boolean
 
 
 #################### START WORKFLOW ###################
@@ -154,8 +166,8 @@ node_templates:
     hpc1_data_access_infra:
         type: croupier.nodes.DataAccessInfrastructure
         properties:
-            endpoint: dt01.bsc.es
-            internet_access: false
+            endpoint: { get_input: hpc1_dai_host }
+            internet_access: { get_input: hpc1_dai_internet_access }
             supported_protocols:
                 - RSync
         relationships:
@@ -166,8 +178,8 @@ node_templates:
     hpc2_data_access_infra:
         type: croupier.nodes.DataAccessInfrastructure
         properties:
-            endpoint: ft2.cesga.es
-            internet_access: true
+            endpoint: { get_input: hpc2_dai_host }
+            internet_access: { get_input: hpc2_dai_internet_access }
             supported_protocols:
                 - RSync
         relationships:
