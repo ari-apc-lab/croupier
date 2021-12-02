@@ -189,14 +189,14 @@ class HttpDataTransfer(DataTransfer):
                         target_private_key = key_file.name
 
                 if target_private_key:
-                    dt_command = 'rsync -ratlz {rsync_options} -e "ssh -o IdentitiesOnly=yes -i {key_file}" ' \
+                    dt_command = 'rsync -ratlz {rsync_options} -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i {key_file}" ' \
                                  '{ds_source} {username}@{target_endpoint}:{ds_target}'.format(
                                     username=target_username, key_file=target_private_key,
                                     target_endpoint=to_target_infra_endpoint,
                                     ds_source=ds_source, ds_target=ds_target, rsync_options=rsync_options)
                 elif target_password:
                     dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no' \
-                                 ' -o IdentitiesOnly=yes -l {username}" {ds_source}  {target_endpoint}:{ds_target}'.\
+                                 ' -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -l {username}" {ds_source}  {target_endpoint}:{ds_target}'.\
                                     format(username=target_username, password=target_password,
                                            target_endpoint=to_target_infra_endpoint, ds_source=ds_source,
                                            ds_target=ds_target)

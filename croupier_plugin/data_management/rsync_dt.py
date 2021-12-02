@@ -218,7 +218,7 @@ class RSyncDataTransfer(DataTransfer):
                         target_key_filepath = key_file.name.split('/')[-1]
                         # Transfer key_file
                         ftp_client.sendKeyFile(ssh_client, key_filepath, target_key_filepath)
-                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}" {ds_source} ' \
+                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/{key_file}" {ds_source} ' \
                                      '{username}@{target_endpoint}:{ds_target}'.format(
                                         username=target_username, key_file=target_key_filepath,
                                         target_endpoint=to_target_infra_endpoint,
@@ -249,7 +249,7 @@ class RSyncDataTransfer(DataTransfer):
                         source_key_filepath = key_file.name.split('/')[-1]
                         # Transfer key_file
                         ftp_client.sendKeyFile(ssh_client, key_filepath, source_key_filepath)
-                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}" ' \
+                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/{key_file}" ' \
                                      '{username}@{source_endpoint}:{ds_source} {ds_target}'.format(
                                         username=source_username, key_file=source_key_filepath,
                                         source_endpoint=from_source_infra_endpoint,
