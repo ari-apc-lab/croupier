@@ -50,7 +50,7 @@ setup(
               'croupier_plugin.data_management'
               ],
     package_data={'croupier_plugin.infrastructure_interfaces': ['*.sh'],
-                  'croupier_plugin': ['*.cfg']},
+                  'croupier_plugin': ['*.cfg'], 'croupier_plugin.data_management': ['*.sh']},
     include_package_data=True,
     zip_safe=False,
     install_requires=[
