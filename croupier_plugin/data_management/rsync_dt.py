@@ -47,7 +47,7 @@ class RSyncDataTransfer(DataTransfer):
 
         try:
             current_dir = os.path.dirname(os.path.realpath(__file__))
-            script_path = current_dir + "/proxied_rsync.sh"
+            script_path = 'sh ' + current_dir + "/proxied_rsync.sh"
 
             # Generate script invocation command
             # Source DS
