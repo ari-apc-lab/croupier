@@ -134,6 +134,7 @@ class RSyncDataTransfer(DataTransfer):
                         self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
                     ))
 
+            ctx.logger.info('rsync data transfer: executing command: {}'.format(cmd))
             cmd_output = os.popen(cmd)
             cmd_msg = cmd_output.read()
             exit_code = cmd_output.close()
