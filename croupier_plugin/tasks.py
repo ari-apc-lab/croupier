@@ -46,7 +46,7 @@ from cloudify.exceptions import NonRecoverableError
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
-from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
+# from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
 import croupier_plugin.vault.vault as vault
 from croupier_plugin.accounting_client.model.user import (User)
 from croupier_plugin.accounting_client.accounting_client import (AccountingClient)
@@ -108,17 +108,105 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
             else:
                 ctx.logger.info("Using provided credentials: " + ctx.source.node.properties['keycloak_credentials'])
 
-        if 'located_at' in ctx.source.node.properties and 'credentials' in ctx.source.node.properties['located_at']:
-            host = ctx.source.node.properties['located_at']['endpoint']
+        if 'credentials' in ctx.source.node.properties:
+            host = ctx.source.node.properties['endpoint']
             credentials = vault.download_credentials(host, token, user, address, cubbyhole)
             if credentials:
-                ctx.source.instance.runtime_properties['located_at']['credentials'] = credentials
+                ctx.source.instance.runtime_properties['credentials'] = credentials
                 ctx.logger.info("Credentials downloaded from Vault for host {0}".format(host))
             else:
                 ctx.logger.info("Using provided credentials: " + ctx.source.node.properties['located_at']['credentials'])
     except Exception as exp:
-        ctx.logger.error("Failed trying to get credentials from Vault for user: {0}".format(user))
+        ctx.logger.error("Failed trying to get credentials from Vault for user: {0} because of error {1}".
+                         format(user, str(exp)))
         raise NonRecoverableError("Failed trying to get credentials from Vault")
+
+
+def findVaultNode(node_templates):
+    for node in node_templates:
+        if node['type'] == 'croupier.nodes.Vault':
+            return node
+    return None
+
+
+@operation
+def configure_data_source(**kwargs):
+    # Configure DataSource located_at
+    ctx.logger.info('Configuring data source: ' + ctx.source.node.name)
+    located_at = {
+        "endpoint": ctx.target.node.properties['endpoint'],
+        "internet_access": ctx.target.node.properties['internet_access'],
+        "supported_protocols": ctx.target.node.properties['supported_protocols']
+        if "supported_protocols" in ctx.target.node.properties else None,
+        "credentials": ctx.target.instance.runtime_properties['credentials']
+        if "credentials" in ctx.target.instance.runtime_properties else None}
+    ctx.source.instance.runtime_properties['located_at'] = located_at
+    ctx.logger.info("Data source infrastructure {0} configured as location for data source {1}"
+                    .format(ctx.target.node.name, ctx.source.node.name))
+
+
+@operation
+def configure_data_transfer(**kwargs):
+    # Configure Data Transfer from_source
+    ctx.logger.info('Configuring data transfer: ' + ctx.node.name)
+    from_source_rel = ctx.instance.relationships[0] if ctx.instance.relationships[0].type == 'from_source' \
+        else ctx.instance.relationships[1]
+    to_target_rel = ctx.instance.relationships[0] if ctx.instance.relationships[0].type == 'to_target' \
+        else ctx.instance.relationships[1]
+
+    from_source_node = from_source_rel.target.node
+    from_source_instance = from_source_rel.target.instance
+
+    to_target_node = to_target_rel.target.node
+    to_target_instance = to_target_rel.target.instance
+
+    from_source = {
+        "name": from_source_node.name,
+        "type": from_source_node.type,
+        "filepath": from_source_node.properties['filepath']
+        if "filepath" in from_source_node.properties else None,
+        "resource": from_source_node.properties['resource']
+        if "resource" in from_source_node.properties else None,
+        "located_at": from_source_instance.runtime_properties['located_at']
+        if "located_at" in from_source_instance.runtime_properties else None}
+    ctx.instance.runtime_properties['from_source'] = from_source
+
+    to_target = {
+        "name": to_target_node.name,
+        "type": to_target_node.type,
+        "filepath": to_target_node.properties['filepath']
+        if "filepath" in to_target_node.properties else None,
+        "resource": to_target_node.properties['resource']
+        if "resource" in to_target_node.properties else None,
+        "located_at": to_target_instance.runtime_properties['located_at']
+        if "located_at" in to_target_instance.runtime_properties else None}
+    ctx.instance.runtime_properties['to_target'] = to_target
+
+    ctx.logger.info("Data Source {0} configured".format(ctx.node.name))
+
+
+def containsDTInstance(dt, dt_instances):
+    for instance in dt_instances:
+        if instance['id'] == dt['id']:
+            return True
+    return False
+
+
+@operation
+def configure_dt_ds_relationship(**kwargs):
+    ctx.logger.info('Configuring data transfer source')
+    dt_instance = {
+        "id": ctx.source.instance.id,
+        "transfer_protocol": ctx.source.node.properties['transfer_protocol'],
+        "from_source": ctx.source.instance.runtime_properties['from_source'],
+        "to_target": ctx.source.instance.runtime_properties['to_target']
+    }
+
+    if 'dt_instances' not in ctx.target.instance.runtime_properties:
+        ctx.target.instance.runtime_properties['dt_instances'] = []
+
+    if not containsDTInstance(dt_instance, ctx.target.instance.runtime_properties['dt_instances']):
+        ctx.target.instance.runtime_properties['dt_instances'].append(dt_instance)
 
 
 @operation
@@ -206,16 +294,17 @@ def configure_execution(
         try:
             client = SshClient(ssh_config)
         except Exception as exp:
-            ctx.logger.error('Error Connecting to infrastructure interface {0}: {1}'.format(ctx.instance.id, exp))
+            ctx.logger.error('Error Connecting to infrastructure interface {0} with error {1}'
+                             .format(ctx.instance.id, str(exp)))
             raise NonRecoverableError(
                 "Failed trying to connect to infrastructure interface: " + str(exp))
 
         # TODO: use command according to wm
-        _, exit_code = client.execute_shell_command('uname',wait_result=True)
+        _, exit_code = client.execute_shell_command('uname', wait_result=True)
 
         if exit_code != 0:
             client.close_connection()
-            raise NonRecoverableError("Failed executing on the infrastructure: exit code " +str(exit_code))
+            raise NonRecoverableError("Failed executing on the infrastructure: exit code " + str(exit_code))
 
         ctx.instance.runtime_properties['login'] = exit_code == 0
 
@@ -370,6 +459,7 @@ def start_monitoring_hpc(
         ctx.logger.warning("No HPC Exporter selected for node {0}. Won't create a collector in any HPC Exporter for it."
                            .format(ctx.node.name))
 
+
 @operation
 def stop_monitoring_hpc(
         ssh_config,
@@ -458,7 +548,7 @@ def configure_job(
             job_options['reservation'] = reservation_id
         ctx.instance.runtime_properties['reservation'] = reservation_id
         ctx.logger.info('Using reservation ID ' + reservation_id)
-    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow'] \
             and 'recurring_bootstrap' in deployment and deployment['recurring_bootstrap'] and "recurring" not in kwargs:
         ctx.logger.info('Recurring Bootstrap selected, job bootstrap will happen during croupier_configure')
         return
@@ -517,7 +607,8 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
         ctx.logger.warning('Job {0} was not reverted as it was not configured'.format(ctx.instance.id))
 
 
-def deploy_job(script, inputs, ssh_config, interface_type, workdir, name, logger, skip_cleanup):  # pylint: disable=W0613
+def deploy_job(script, inputs, ssh_config, interface_type, workdir, name, logger,
+               skip_cleanup):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH ssh_config as input """
 
     wm = InfrastructureInterface.factory(interface_type, logger, workdir)
@@ -564,8 +655,8 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
         job_options['reservation'] = ctx.instance.runtime_properties['reservation']
 
     if not simulate:
-        if 'inputs' in kwargs and kwargs['inputs']:
-            dm.processDataTransfer(kwargs['inputs'], ctx.logger)
+        # Process data flow for inputs in this job
+        dm.processDataTransfer(ctx.instance, ctx.logger, 'input')
 
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -639,7 +730,7 @@ def delete_reservation(**kwargs):
             reservation_id,
             deletion_path)
     except Exception as ex:
-        ctx.logger.error('Reservation could not be deleted because: ' + str(ex))
+        ctx.logger.error('Reservation could not be deleted because error: ' + str(ex))
         client.close_connection()
         return
     client.close_connection()
@@ -690,7 +781,7 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not cleaned.')
     except Exception as exp:
         ctx.logger.error(
-            'Something happened when trying to clean up:' + '\n' + traceback.format_exc() + '\n' + str(exp))
+            'Error happened when trying to clean up:' + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -715,7 +806,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
-                raise NonRecoverableError( "Infrastructure Interface '" + interface_type + "' not supported.")
+                raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
             is_stopped = wm.stop_job(client, name, job_options, is_singularity)
 
             client.close_connection()
@@ -729,7 +820,8 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
             ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
             raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id + ') not stopped.')
     except Exception as exp:
-        ctx.logger.error('Something happened when trying to stop job:' + '\n' + traceback.format_exc() + '\n' + str(exp))
+        ctx.logger.error('Something happened when trying to stop job:'
+                         + '\n' + traceback.format_exc() + '\n' + str(exp))
 
 
 @operation
@@ -739,7 +831,8 @@ def publish(publish_list, **kwargs):
         simulate = ctx.instance.runtime_properties['simulate']
     except KeyError:
         # The job wasn't configured properly, no need to publish
-        ctx.logger.warning('Job {0} outputs where not published as the job was not configured properly.'.format(ctx.instance.id))
+        ctx.logger.warning(
+            'Job {0} outputs where not published as the job was not configured properly.'.format(ctx.instance.id))
         return
 
     try:
@@ -747,10 +840,8 @@ def publish(publish_list, **kwargs):
         audit = kwargs['audit']
         published = True
         if not simulate:
-            # Do data upload (from HPC to Cloud) if requested
-            # Data Movement
-            if 'outputs' in kwargs and kwargs['outputs']:
-                dm.processDataTransfer(kwargs['outputs'], ctx.logger)
+            # Process data flow for outputs in this job
+            dm.processDataTransfer(ctx.instance, ctx.logger, 'output')
 
             workdir = ctx.instance.runtime_properties['workdir']
             client = SshClient(ctx.instance.runtime_properties['ssh_config'])
@@ -801,7 +892,7 @@ def publish(publish_list, **kwargs):
 
 @operation
 def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudify_address, server_port, **kwargs):
-    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow'] \
             and "recurring" not in kwargs:
         ctx.logger.info('Recurring workflow, ecmwf data will be generated during croupier_configure')
         return
@@ -879,7 +970,7 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudi
 
 @operation
 def download_data(unzip_data, dest_data, data_urls, **kwargs):
-    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow']\
+    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow'] \
             and "recurring" not in kwargs:
         ctx.logger.info('Recurring workflow, data will be downloaded during croupier_configure')
         return
@@ -962,7 +1053,7 @@ def register_orchestrator_instance_accounting():
             ctx.instance.runtime_properties['croupier_reporter_id'] = reporter.id
         except Exception as err:
             ctx.logger.warning(
-                'Croupier instance could not be registered into Accounting, raising an error: {}'.format(err))
+                'Croupier instance could not be registered into Accounting, raising an error: {}'.format(str(err)))
 
 
 def convert_cput(cput, job_id, workdir, ssh_client, logger):
@@ -990,9 +1081,11 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
                 user = User(username)
                 user = accounting_client.add_user(user)
             except Exception as err:
-                ctx.logger.error('User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
+                ctx.logger.error('User {0} could not be registered into Accounting, raising an error: {1}'
+                                 .format(username, str(err)))
                 raise Exception(
-                    'User {0} could not be registered into Accounting, raising an error: {1}'.format(username, err))
+                    'User {0} could not be registered into Accounting, raising an error: {1}'
+                        .format(username, str(err)))
 
         # Register HPC CPU total
         server = ctx.instance.runtime_properties['ssh_config']['host']
@@ -1018,7 +1111,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
     except Exception as err:
         logger.error(
             'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
-                format(workflow_id=workflow_id, err=err))
+                format(workflow_id=workflow_id, err=str(err)))
 
 
 def read_processors_per_node(job_id, workdir, ssh_client, logger):

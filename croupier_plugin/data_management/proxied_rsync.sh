@@ -105,8 +105,8 @@ if [ -z ${source_private_key+x} ]; then
 	sshfs -o password_stdin "$source_mount_point" /tmp/sshfstmp <<< '$source_password'
 elif [ -z ${source_password+x} ]; then
 	#Using source_private_key for sshfs authentication
-	echo "Invoking: sshfs -oIdentityFile=$source_private_key "$source_mount_point" /tmp/sshfstmp"
-	sshfs -oIdentityFile=$source_private_key "$source_mount_point" /tmp/sshfstmp
+	echo "Invoking: sshfs -o StrictHostKeyChecking=no -oIdentityFile=$source_private_key "$source_mount_point" /tmp/sshfstmp"
+	sshfs -o StrictHostKeyChecking=no -oIdentityFile=$source_private_key "$source_mount_point" /tmp/sshfstmp
 else
 	echo "either source_password or source_private_key not set, exiting ..."
       	exit 127
@@ -126,11 +126,11 @@ if [ -z ${target_private_key+x} ]; then
 elif [ -z ${target_password+x} ]; then
 	#Using target_private_key for rsync authentication
 	if [ -z ${source_file+x} ]; then
-		echo 'Invoking: rsync -e "ssh -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/ "$target"'
-		rsync -e "ssh -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/ "$target"
+		echo 'Invoking: rsync -e "ssh -o StrictHostKeyChecking=no -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/ "$target"'
+		rsync -e "ssh -o StrictHostKeyChecking=no -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/ "$target"
 	else
-		echo 'Invoking: rsync -e "ssh -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/"$source_file" "$target"'
-		rsync -e "ssh -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/"$source_file" "$target"
+		echo 'Invoking: rsync -e "ssh -o StrictHostKeyChecking=no -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/"$source_file" "$target"'
+		rsync -e "ssh -o StrictHostKeyChecking=no -i $target_private_key" --safe-links -tarxlzhP /tmp/sshfstmp/"$source_file" "$target"
 	fi
 else
 	echo "either target_password or target_private_key not set, exiting ..."

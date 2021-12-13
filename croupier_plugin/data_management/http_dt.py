@@ -7,6 +7,8 @@ import os
 import shutil
 from urllib.parse import urlparse
 
+target_private_key = None
+
 
 def thereIsOnlyOneFileInDirectory(path):
     return len([name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]) == 1
@@ -38,8 +40,8 @@ class HttpDataTransfer(DataTransfer):
 
     def process(self):
         use_proxy = False
-        if 'internet_access' in self.dt_config['toTarget']['properties']['located_at']:
-            use_proxy = not self.dt_config['toTarget']['properties']['located_at']['internet_access']
+        if 'internet_access' in self.dt_config['to_target']['located_at']:
+            use_proxy = not self.dt_config['to_target']['located_at']['internet_access']
         if use_proxy:
             self.process_http_transfer_with_proxy()
         else:
@@ -50,28 +52,28 @@ class HttpDataTransfer(DataTransfer):
 
         try:
             ctx.logger.info('Processing http data transfer from source {} to target {}'.format(
-                self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
+                self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
             ))
             #  Copy source data into target data by invoking wget command at target data infrastructure
             #  Create wget command
             #  Invoke command in target infrastructure
 
             # Source DS
-            from_source_type = self.dt_config['fromSource']['type']
+            from_source_type = self.dt_config['from_source']['type']
             from_source_data_url = None
             if 'WebDataSource' in from_source_type:
-                from_source_data_url = self.dt_config['fromSource']['properties']['resource']
-            from_source_infra_endpoint = self.dt_config['fromSource']['properties']['located_at']['endpoint']
+                from_source_data_url = self.dt_config['from_source']['resource']
+            from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
 
             # Target DS
-            to_target_type = self.dt_config['toTarget']['type']
+            to_target_type = self.dt_config['to_target']['type']
             to_target_data_url = None
             if 'FileDataSource' in to_target_type:
-                to_target_data_url = self.dt_config['toTarget']['properties']['filepath']
+                to_target_data_url = self.dt_config['to_target']['filepath']
                 if to_target_data_url.startswith('~/'):
                     to_target_data_url = to_target_data_url[2:]
-            to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
-            to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
+            to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
+            to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
             target_is_file = isFile(to_target_data_url)
 
@@ -109,6 +111,7 @@ class HttpDataTransfer(DataTransfer):
             ssh_client = SshClient(credentials)
 
             # Execute data transfer command
+            ctx.logger.info('http(wget) data transfer: executing command: {}'.format(dt_command))
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
 
             if exit_code != 0:
@@ -124,16 +127,16 @@ class HttpDataTransfer(DataTransfer):
         temporary_dir = None
         try:
             ctx.logger.info('Processing http data transfer proxied by Croupier from source {} to target {}'.format(
-                self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
+                self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
             ))
 
             # Copy source data into croupier temporary folder using wget
             # Source DS
-            from_source_type = self.dt_config['fromSource']['type']
+            from_source_type = self.dt_config['from_source']['type']
             from_source_data_url = None
             if 'WebDataSource' in from_source_type:
-                from_source_data_url = self.dt_config['fromSource']['properties']['resource']
-            from_source_infra_endpoint = self.dt_config['fromSource']['properties']['located_at']['endpoint']
+                from_source_data_url = self.dt_config['from_source']['resource']
+            from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
 
             dt_command_template = 'cd {temp_dir}; wget {source_endpoint}/{resource}'
 
@@ -157,6 +160,7 @@ class HttpDataTransfer(DataTransfer):
             )
 
             # Execute data transfer command
+            ctx.logger.info('http(wget) data transfer: executing command: {}'.format(dt_command))
             cmd_output = os.popen(dt_command)
             cmd_msg = cmd_output.read()
             exit_code = cmd_output.close()
@@ -169,18 +173,17 @@ class HttpDataTransfer(DataTransfer):
             # Target DS
 
             if directoryIsNotEmpty(temporary_dir):
-                to_target_type = self.dt_config['toTarget']['type']
+                to_target_type = self.dt_config['to_target']['type']
                 to_target_data_url = None
                 if 'FileDataSource' in to_target_type:
-                    to_target_data_url = self.dt_config['toTarget']['properties']['filepath']
+                    to_target_data_url = self.dt_config['to_target']['filepath']
                     if to_target_data_url.startswith('~/'):
                         to_target_data_url = to_target_data_url[2:]
-                to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
-                to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
+                to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
+                to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
                 target_username = to_target_infra_credentials['user']
                 target_password = None
-                target_private_key = None
 
                 source_is_file = thereIsOnlyOneFileInDirectory(temporary_dir)
                 target_is_file = isFile(to_target_data_url)
@@ -208,17 +211,18 @@ class HttpDataTransfer(DataTransfer):
                     with tempfile.NamedTemporaryFile(delete=False) as key_file:
                         key_file.write(bytes(target_key, 'utf-8'))
                         key_file.flush()
+                        global target_private_key
                         target_private_key = key_file.name
 
                 if target_private_key:
-                    dt_command = 'rsync -ratlz {rsync_options} -e "ssh -o IdentitiesOnly=yes -i {key_file}" ' \
+                    dt_command = 'rsync -ratlz {rsync_options} -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i {key_file}" ' \
                                  '{ds_source} {username}@{target_endpoint}:{ds_target}'.format(
                                     username=target_username, key_file=target_private_key,
                                     target_endpoint=to_target_infra_endpoint,
                                     ds_source=ds_source, ds_target=ds_target, rsync_options=rsync_options)
                 elif target_password:
                     dt_command = 'rsync -ratlz --rsh="/usr/bin/sshpass -p {password} ssh -o StrictHostKeyChecking=no' \
-                                 ' -o IdentitiesOnly=yes -l {username}" {ds_source}  {target_endpoint}:{ds_target}'.\
+                                 ' -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -l {username}" {ds_source}  {target_endpoint}:{ds_target}'.\
                                     format(username=target_username, password=target_password,
                                            target_endpoint=to_target_infra_endpoint, ds_source=ds_source,
                                            ds_target=ds_target)
@@ -228,6 +232,7 @@ class HttpDataTransfer(DataTransfer):
                             self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
                         ))
 
+                ctx.logger.info('http(rsync) data transfer: executing command: {}'.format(dt_command))
                 cmd_output = os.popen(dt_command)
                 cmd_msg = cmd_output.read()
                 exit_code = cmd_output.close()

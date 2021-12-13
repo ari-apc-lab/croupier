@@ -28,7 +28,7 @@ def download_credentials(host, vault_token, vault_user, vault_address, cubbyhole
     if cubbyhole:
         secret_endpoint = vault_address + "/v1/cubbyhole/" + host
     else:
-        secret_endpoint = vault_address + "/v1/" + vault_user + "/" + host
+        secret_endpoint = vault_address + "/v1/croupier/" + vault_user + "/" + host
     secret = get_secret(vault_token, secret_endpoint)
     if "error" not in secret:
         return secret

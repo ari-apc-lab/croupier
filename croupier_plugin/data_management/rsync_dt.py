@@ -16,10 +16,10 @@ class RSyncDataTransfer(DataTransfer):
         source_internet_access = False
         target_internet_access = False
 
-        if 'internet_access' in self.dt_config['fromSource']['properties']['located_at']:
-            source_internet_access = self.dt_config['fromSource']['properties']['located_at']['internet_access']
-        if 'internet_access' in self.dt_config['toTarget']['properties']['located_at']:
-            target_internet_access = self.dt_config['toTarget']['properties']['located_at']['internet_access']
+        if 'internet_access' in self.dt_config['from_source']['located_at']:
+            source_internet_access = self.dt_config['from_source']['located_at']['internet_access']
+        if 'internet_access' in self.dt_config['to_target']['located_at']:
+            target_internet_access = self.dt_config['to_target']['located_at']['internet_access']
 
         if source_internet_access:
             rsync_source_to_target = True
@@ -42,34 +42,34 @@ class RSyncDataTransfer(DataTransfer):
     def process_rsync_transfer_with_proxy(self):
         # Execute command proxied_rsync.sh located in the same folder as this python script
         ctx.logger.info('Processing rsync data transfer from source {} to target {}'.format(
-            self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
+            self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
         ))
 
         try:
             current_dir = os.path.dirname(os.path.realpath(__file__))
-            script_path = current_dir + "/proxied_rsync.sh"
+            script_path = 'sh ' + current_dir + "/proxied_rsync.sh"
 
             # Generate script invocation command
             # Source DS
-            from_source_type = self.dt_config['fromSource']['type']
+            from_source_type = self.dt_config['from_source']['type']
             from_source_data_url = None
             if 'FileDataSource' in from_source_type:
-                from_source_data_url = self.dt_config['fromSource']['properties']['filepath']
+                from_source_data_url = self.dt_config['from_source']['filepath']
                 if from_source_data_url.startswith('~/'):
                     from_source_data_url = from_source_data_url[2:]
 
-            from_source_infra_endpoint = self.dt_config['fromSource']['properties']['located_at']['endpoint']
-            from_source_infra_credentials = self.dt_config['fromSource']['properties']['located_at']['credentials']
+            from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
+            from_source_infra_credentials = self.dt_config['from_source']['located_at']['credentials']
 
             # Target DS
-            to_target_type = self.dt_config['toTarget']['type']
+            to_target_type = self.dt_config['to_target']['type']
             to_target_data_url = None
             if 'FileDataSource' in to_target_type:
-                to_target_data_url = self.dt_config['toTarget']['properties']['filepath']
+                to_target_data_url = self.dt_config['to_target']['filepath']
                 if to_target_data_url.startswith('~/'):
                     to_target_data_url = to_target_data_url[2:]
-            to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
-            to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
+            to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
+            to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
             source_username = from_source_infra_credentials['username']
             source = source_username + '@' + from_source_infra_endpoint + ':' + from_source_data_url
@@ -131,9 +131,10 @@ class RSyncDataTransfer(DataTransfer):
             else:
                 raise CommandExecutionError(
                     "Error in the configuration of rsync data transfer from source {} to target {}".format(
-                        self.dt_config['fromSource']['id'], self.dt_config['toTarget']['id']
+                        self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
                     ))
 
+            ctx.logger.info('rsync data transfer: executing command: {}'.format(cmd))
             cmd_output = os.popen(cmd)
             cmd_msg = cmd_output.read()
             exit_code = cmd_output.close()
@@ -171,20 +172,20 @@ class RSyncDataTransfer(DataTransfer):
             dt_command = None
 
             # Source DS
-            from_source_type = self.dt_config['fromSource']['type']
+            from_source_type = self.dt_config['from_source']['type']
             from_source_data_url = None
             if 'FileDataSource' in from_source_type:
-                from_source_data_url = self.dt_config['fromSource']['properties']['filepath']
-            from_source_infra_endpoint = self.dt_config['fromSource']['properties']['located_at']['endpoint']
-            from_source_infra_credentials = self.dt_config['fromSource']['properties']['located_at']['credentials']
+                from_source_data_url = self.dt_config['from_source']['filepath']
+            from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
+            from_source_infra_credentials = self.dt_config['from_source']['located_at']['credentials']
 
             # Target DS
-            to_target_type = self.dt_config['toTarget']['type']
+            to_target_type = self.dt_config['to_target']['type']
             to_target_data_url = None
             if 'FileDataSource' in to_target_type:
-                to_target_data_url = self.dt_config['toTarget']['properties']['filepath']
-            to_target_infra_endpoint = self.dt_config['toTarget']['properties']['located_at']['endpoint']
-            to_target_infra_credentials = self.dt_config['toTarget']['properties']['located_at']['credentials']
+                to_target_data_url = self.dt_config['to_target']['filepath']
+            to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
+            to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
             if rsync_source_to_target:
                 credentials = from_source_infra_credentials
@@ -218,7 +219,7 @@ class RSyncDataTransfer(DataTransfer):
                         target_key_filepath = key_file.name.split('/')[-1]
                         # Transfer key_file
                         ftp_client.sendKeyFile(ssh_client, key_filepath, target_key_filepath)
-                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}" {ds_source} ' \
+                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/{key_file}" {ds_source} ' \
                                      '{username}@{target_endpoint}:{ds_target}'.format(
                                         username=target_username, key_file=target_key_filepath,
                                         target_endpoint=to_target_infra_endpoint,
@@ -249,7 +250,7 @@ class RSyncDataTransfer(DataTransfer):
                         source_key_filepath = key_file.name.split('/')[-1]
                         # Transfer key_file
                         ftp_client.sendKeyFile(ssh_client, key_filepath, source_key_filepath)
-                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -i ~/{key_file}" ' \
+                        dt_command = 'rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i ~/{key_file}" ' \
                                      '{username}@{source_endpoint}:{ds_source} {ds_target}'.format(
                                         username=source_username, key_file=source_key_filepath,
                                         source_endpoint=from_source_infra_endpoint,
@@ -257,6 +258,7 @@ class RSyncDataTransfer(DataTransfer):
                                         )
 
             # Execute data transfer command
+            ctx.logger.info('rsync data transfer: executing command: {}'.format(dt_command))
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
 
             if exit_code != 0:

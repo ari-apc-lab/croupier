@@ -35,7 +35,7 @@ plugins:
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the blueprint directory under the
         # "plugins" directory.
-        source: https://github.com/ari-apc-lab/croupier/archive/grapevine-python.zip
+        source: https://github.com/ari-apc-lab/croupier/archive/master.zip
         install_arguments: -r plugin-requirements.txt
         package_name: croupier
         package_version: "3.2.0"
@@ -211,7 +211,7 @@ data_types:
                 required: false
                 default: ''
 
-    croupier.datatype.job_options:
+    croupier.datatypes.job.Options:
         properties:
             commands:
                 description: 'List of commands to be included in job submission script. It is incompatible with script property'
@@ -353,41 +353,6 @@ data_types:
                 required: false
                 default: ''
 
-
-    croupier.datatype.dm.DataAccessInfrastructure:
-        properties:
-            endpoint:
-                description: 'accessible (via protocol) endpoint of infrastructure'
-                type: string
-            supported_protocols:
-                description: 'list of supported interfaces to access the data'
-                type: list
-            credentials:
-                description: 'Credentials to access the data access infrastructure'
-                type: croupier.datatype.dm.Credentials
-                required: false
-            internet_access:
-                description: 'Whether of not this DM infrastructure has external access to Internet'
-                type: boolean
-                required: false
-                default: false
-
-    croupier.datatype.dm.GridFTPDataAccessInfrastructure:
-        derived_from: croupier.datatype.dm.DataAccessInfrastructure
-        properties:
-            workspace_basepath:
-                description: 'basepath location for workspace creating'
-                type: string
-                required: false
-            ssh_endpoint:
-                description: 'ssh endpoint for workspace management'
-                type: string
-                required: false
-            credentials:
-                description: 'Credentials to access the data access infrastructure'
-                type: croupier.data.dm.GridFTPCredentials
-                required: false
-
     croupier.datatype.dm.HPCWorkspace:
         properties:
             name:
@@ -521,7 +486,7 @@ node_types:
                 type: croupier.datatypes.job_deployment_config
             job_options:
                 description: Job main command and options
-                type: croupier.data.job.Options
+                type: croupier.datatypes.job.Options
             publish:
                 description: Config to publish its outputs
                 default: []
@@ -581,20 +546,54 @@ node_types:
         derived_from: croupier.nodes.Job
 
 # DATA MANAGEMENT
+    croupier.nodes.DataAccessInfrastructure:
+        derived_from: cloudify.nodes.Root
+        properties:
+            endpoint:
+                description: 'accessible (via protocol) endpoint of infrastructure'
+                type: string
+            supported_protocols:
+                description: 'list of supported interfaces to access the data'
+                type: list
+            credentials:
+                description: 'Credentials to access the data access infrastructure'
+                type: croupier.datatypes.dm.Credentials
+                required: false
+            internet_access:
+                description: 'Whether of not this DM infrastructure has external access to Internet'
+                type: boolean
+                required: false
+                default: false
+
+    croupier.nodes.GridFTPDataAccessInfrastructure:
+        derived_from: croupier.nodes.DataAccessInfrastructure
+        properties:
+            workspace_basepath:
+                description: 'basepath location for workspace creating'
+                type: string
+                required: false
+            ssh_endpoint:
+                description: 'ssh endpoint for workspace management'
+                type: string
+                required: false
+            credentials:
+                description: 'Credentials to access the data access infrastructure'
+                type: croupier.datatypes.dm.GridFTPCredentials
+                required: false
+
     croupier.nodes.DataTransfer:
         derived_from: cloudify.nodes.Root
         properties:
             transfer_protocol:
                 description: 'protocol to transfer data from source to target'
                 type: string
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.configure_data_transfer
 
     croupier.nodes.DataSource:
         derived_from: cloudify.nodes.Root
-        properties:
-            located_at:
-                description: 'infrastructure where data source is located'
-                type: croupier.datatype.dm.DataAccessInfrastructure
-                required: true
 
     croupier.nodes.FileDataSource:
         derived_from: croupier.nodes.DataSource
@@ -692,7 +691,7 @@ node_types:
         properties:
             workspace:
                 description: 'Workspace where FileDataSource is located'
-                type: croupier.data.dm.HPCWorkspace
+                type: croupier.datatypes.dm.HPCWorkspace
                 required: false
 
 #VAULT
@@ -775,14 +774,31 @@ relationships:
                         simulate:
                             default: { get_property: [TARGET, simulate] }
 
+    ds_located_at:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_data_source
+
+
     job_depends_on:
         derived_from: cloudify.relationships.depends_on
 
     from_source:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
 
     to_target:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
+
 
     input:
         derived_from: cloudify.relationships.connected_to
