@@ -36,11 +36,19 @@ inputs:
         type: string
     vault_user:
         type: string
+    infrastructure_interface:
+        type: string
+    hpc_host:
+        type: string
 
 inputs:
     vault_token:
         type: string
     vault_user:
+        type: string
+    infrastructure_interface:
+        type: string
+    hpc_host:
         type: string
 
 node_templates:
@@ -56,9 +64,9 @@ node_templates:
               target: vault
         properties:
             config:
-                infrastructure_interface: SLURM
+                infrastructure_interface: { get_input: infrastructure_interface }
             ssh_config:
-                host: ft2.cesga.es
+                host: { get_input: hpc_host }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:

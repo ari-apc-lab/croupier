@@ -36,6 +36,10 @@ inputs:
         type: string
     vault_user:
         type: string
+    infrastructure_interface:
+        type: string
+    hpc_host:
+        type: string
 
 node_templates:
 
@@ -52,7 +56,7 @@ node_templates:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: TORQUE
+                infrastructure_interface: { get_input: infrastructure_interface }
             ssh_config:
                 host: sodalite-fe.hlrs.de
             job_prefix: atos

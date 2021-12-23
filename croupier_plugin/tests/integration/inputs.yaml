@@ -27,5 +27,6 @@
 # inputs.yaml
 
 
-vault_token:
-vault_user:
+vault_token: s.tHcccDpAj5QmFMWbrufqSDV5
+vault_user: jesus
+hpc_host: sodalite-fe.hlrs.de

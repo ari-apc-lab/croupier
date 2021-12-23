@@ -115,7 +115,7 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
                 ctx.source.instance.runtime_properties['credentials'] = credentials
                 ctx.logger.info("Credentials downloaded from Vault for host {0}".format(host))
             else:
-                ctx.logger.info("Using provided credentials: " + ctx.source.node.properties['located_at']['credentials'])
+                ctx.logger.info("Using provided credentials")
     except Exception as exp:
         ctx.logger.error("Failed trying to get credentials from Vault for user: {0} because of error {1}".
                          format(user, str(exp)))

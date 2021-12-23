@@ -13,7 +13,7 @@ node_templates:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: TORQUE
+                infrastructure_interface: { get_input: infrastructure_interface }
             ssh_config: { get_input: ssh_config }
             job_prefix: test
             base_dir: "$HOME"

@@ -47,6 +47,8 @@ inputs:
         type: croupier.data.dm.GridFTPDataAccessInfrastructure
 
 ############## HPC Infrastructures ##############
+    infrastructure_interface:
+        type: string
     hpc_host:
         type: string
 

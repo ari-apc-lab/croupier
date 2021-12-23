@@ -39,13 +39,17 @@ inputs:
         type: string
     hpc:
         type: string
+    infrastructure_intercafe:
+        type: string
+    ecmwf_query:
+        type: croupier.datatypes.ecmwf_query
 
 node_templates:
     hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: TORQUE
+                infrastructure_interface: { get_input: infrastructure_interface }
             ssh_config:
                 host: { get_input: hpc }
             job_prefix: ecmwf
