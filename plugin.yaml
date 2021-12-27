@@ -59,39 +59,6 @@ data_types:
                 required: false
                 default: '/opt/cesga/sistemas/reservas/sresdelete'
 
-    croupier.datatypes.ssh_config:
-        properties:
-            user:
-                type: string
-                required: false
-                default: ''
-            host:
-                type: string
-                required: true
-            port:
-                type: integer
-                required: false
-                default: 22
-            private_key:
-                type: string
-                required: false
-                default: ''
-            password:
-                type: string
-                required: false
-                default: ''
-            private_key_password:
-                type: string
-                required: false
-                default: ''
-            tunnel:
-                type: string
-                required: false
-                default: ''
-            login_shell:
-                type: string
-                required: false
-                default: ''
 
     croupier.datatypes.monitoring_options:
         properties:
@@ -201,16 +168,6 @@ data_types:
                 required: false
                 default: "1"
 
-    croupier.datatypes.keycloak_credentials:
-        properties:
-            user:
-                type: string
-                required: true
-            pw:
-                type: string
-                required: false
-                default: ''
-
     croupier.datatypes.job.Options:
         properties:
             commands:
@@ -300,7 +257,7 @@ data_types:
 
 # DATA MANAGEMENT
 
-    croupier.datatypes.dm.Credentials:
+    croupier.datatypes.Credentials:
         properties:
             host:
                 description: 'Host for which the credentials are for'
@@ -334,6 +291,18 @@ data_types:
                 default: ''
             private_key_password:
                 description: 'Password for User private key'
+                type: string
+                required: false
+                default: ''
+            ssh_port:
+                type: integer
+                required: false
+                default: 22
+            ssh_tunnel:
+                type: string
+                required: false
+                default: ''
+            ssh_login_shell:
                 type: string
                 required: false
                 default: ''
@@ -387,7 +356,7 @@ node_types:
                 type: croupier.datatypes.wm_config
             ssh_config:
                 description: SSH configuration
-                type: croupier.datatypes.ssh_config
+                type: croupier.datatypes.Credentials
                 default: {}
             job_prefix:
                 description: Job name prefix for this HPC
@@ -557,7 +526,7 @@ node_types:
                 type: list
             credentials:
                 description: 'Credentials to access the data access infrastructure'
-                type: croupier.datatypes.dm.Credentials
+                type: croupier.datatypes.Credentials
                 required: false
             internet_access:
                 description: 'Whether of not this DM infrastructure has external access to Internet'
@@ -619,10 +588,10 @@ node_types:
         properties:
             ssh_config:
                 description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
-                type: croupier.datatypes.ssh_config
+                type: croupier.datatypes.Credentials
             keycloak_credentials:
                 description: login credentials for hidalgo keycloak. Fields- user, pw
-                type: croupier.datatypes.dm.APICredentials
+                type: croupier.datatypes.Credentials
             query:
                 description: ECMWF Query fields.
                 type: croupier.datatypes.ecmwf_query
