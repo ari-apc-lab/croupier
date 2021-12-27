@@ -94,19 +94,20 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
             host = ctx.source.node.properties['ssh_config']['host']
             ssh_credentials = vault.download_credentials(host, token, user, address, cubbyhole)
             if ssh_credentials:
-                ssh_config = ctx.source.node.properties['ssh_config'].update(ssh_credentials)
+                ssh_config = ctx.source.node.properties['ssh_config']
+                ssh_config.update(ssh_credentials)
                 ctx.source.instance.runtime_properties['ssh_config'] = ssh_config
-                ctx.logger.info("SSH credentials downloaded from Vault for host {0}".format(host))
+                ctx.logger.info("SSH credentials downloaded from Vault for host {0}.".format(host))
             else:
-                ctx.logger.info("Using provided ssh credentials: " + ctx.source.node.properties['ssh_config'])
+                ctx.logger.info("Using provided ssh credentials.")
 
         if 'keycloak_credentials' in ctx.source.node.properties:
             keycloak_credentials = vault.download_credentials('keycloak', token, user, address, cubbyhole)
             if keycloak_credentials:
                 ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
-                ctx.logger.info("Keycloak credentials downloaded from Vault for user {0}".format(user))
+                ctx.logger.info("Keycloak credentials downloaded from Vault for user {0}.".format(user))
             else:
-                ctx.logger.info("Using provided credentials: " + ctx.source.node.properties['keycloak_credentials'])
+                ctx.logger.info("Using provided credentials.")
 
         if 'credentials' in ctx.source.node.properties:
             host = ctx.source.node.properties['endpoint']

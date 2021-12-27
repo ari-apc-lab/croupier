@@ -59,6 +59,7 @@ class GraphInstance(object):
         self.audit = {}
         self.runtime_properties = instance._node_instance.runtime_properties
         self.root_nodes = root_nodes
+        self.simulate = self.runtime_properties["simulate"] if 'simulate' in self.runtime_properties else False
 
     def launch(self):
         pass
@@ -92,7 +93,6 @@ class JobGraphInstance(GraphInstance):
         self.completed = False
         self.timezone = self.runtime_properties["timezone"]
         self.host = self.runtime_properties["ssh_config"]["host"]
-        self.simulate = self.runtime_properties["simulate"]
         self.workdir = self.runtime_properties["workdir"]
         self.monitor_type = self.runtime_properties["infrastructure_interface"]
         self.monitor_config = self.runtime_properties["ssh_config"]
@@ -320,22 +320,23 @@ class Monitor(object):
         # first get the instances we need to check
         monitor_jobs = {}
         for _, job_node in self.get_executions_iterator():
-            for job_instance in job_node.instances:
-                if not job_instance.simulate:
-                    if job_instance.host in monitor_jobs:
-                        monitor_jobs[job_instance.host]['names'].append(
-                            job_instance.name)
+            if job_node.is_job:
+                for job_instance in job_node.instances:
+                    if not job_instance.simulate:
+                        if job_instance.host in monitor_jobs:
+                            monitor_jobs[job_instance.host]['names'].append(
+                                job_instance.name)
+                        else:
+                            monitor_jobs[job_instance.host] = {
+                                'config': job_instance.monitor_config,
+                                'type': job_instance.monitor_type,
+                                'workdir': job_instance.workdir,
+                                'names': [job_instance.name],
+                                'period': job_instance.monitor_period,
+                                'timezone': job_instance.timezone
+                            }
                     else:
-                        monitor_jobs[job_instance.host] = {
-                            'config': job_instance.monitor_config,
-                            'type': job_instance.monitor_type,
-                            'workdir': job_instance.workdir,
-                            'names': [job_instance.name],
-                            'period': job_instance.monitor_period,
-                            'timezone': job_instance.timezone
-                        }
-                else:
-                    job_instance.set_status('COMPLETED')
+                        job_instance.set_status('COMPLETED')
 
         # nothing to do if we don't have nothing to monitor
         if not monitor_jobs:
@@ -476,7 +477,8 @@ def build_configure_graph(nodes):
     return jobs, interfaces
 
 
-def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
+@workflow
+def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
     success = True
     root_nodes, job_instances_map = build_graph(ctx.nodes)
@@ -490,7 +492,7 @@ def execute_jobs(force_data, skip_jobs, **kwargs):  # pylint: disable=W0613
         jobs_result_list = []
         for new_node in new_exec_nodes:
             monitor.add_node(new_node)
-            if (force_data or not new_node.is_data) and (not new_node.is_job or not skip_jobs):
+            if new_node.is_job:
                 jobs_result_list += new_node.launch_all_instances()
 
         wait_jobs_to_finish(jobs_result_list)
@@ -600,22 +602,3 @@ def wait_jobs_to_finish(jobs_result_list):
     """Blocks until all jobs have finished"""
     for result in jobs_result_list:
         result.get()
-
-
-@workflow
-def run_jobs(**kwargs):  # pylint: disable=W0613
-    execute_jobs(force_data=False, skip_jobs=False)
-
-
-# TODO: Implement these workflows properly
-
-"""
-@workflow
-def gather_data(**kwargs):  # pylint: disable=W0613
-    execute_jobs(force_data=True, skip_jobs=True, **kwargs)
-
-
-@workflow
-def run_jobs_force_get_data(**kwargs):  # pylint: disable=W0613
-    execute_jobs(force_data=True, skip_jobs=False)
-"""
