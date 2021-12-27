@@ -300,7 +300,7 @@ data_types:
 
 # DATA MANAGEMENT
 
-    croupier.datatype.dm.Credentials:
+    croupier.datatypes.dm.Credentials:
         properties:
             host:
                 description: 'Host for which the credentials are for'
@@ -339,8 +339,8 @@ data_types:
                 default: ''
 
 
-    croupier.datatype.dm.GridFTPCredentials:
-        derived_from: croupier.datatype.dm.Credentials
+    croupier.datatypes.dm.GridFTPCredentials:
+        derived_from: croupier.datatypes.dm.Credentials
         properties:
             cert:
                 description: "GridFTP user's certificate"
@@ -353,7 +353,7 @@ data_types:
                 required: false
                 default: ''
 
-    croupier.datatype.dm.HPCWorkspace:
+    croupier.datatypes.dm.HPCWorkspace:
         properties:
             name:
                 description: 'workspace name'
