@@ -7,6 +7,9 @@ imports:
 inputs:
     ssh_config:
         type: croupier.datatypes.ssh_config
+    infrastructure_interface:
+        type: string
+
 
 node_templates:
     hpc:

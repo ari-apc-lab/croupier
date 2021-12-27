@@ -38,6 +38,8 @@ inputs:
         type: string
     infrastructure_interface:
         type: string
+    partition:
+        type: string
     hpc_host:
         type: string
 
@@ -47,6 +49,8 @@ inputs:
     vault_user:
         type: string
     infrastructure_interface:
+        type: string
+    partition:
         type: string
     hpc_host:
         type: string

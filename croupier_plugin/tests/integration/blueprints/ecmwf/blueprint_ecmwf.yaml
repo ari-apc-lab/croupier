@@ -39,7 +39,7 @@ inputs:
         type: string
     hpc:
         type: string
-    infrastructure_intercafe:
+    infrastructure_interface:
         type: string
     ecmwf_query:
         type: croupier.datatypes.ecmwf_query

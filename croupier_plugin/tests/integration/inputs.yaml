@@ -27,6 +27,8 @@
 # inputs.yaml
 
 
-vault_token: s.tHcccDpAj5QmFMWbrufqSDV5
+vault_token:
 vault_user: jesus
 hpc_host: sodalite-fe.hlrs.de
+infrastructure_interface: TORQUE
+partition: 'batch'

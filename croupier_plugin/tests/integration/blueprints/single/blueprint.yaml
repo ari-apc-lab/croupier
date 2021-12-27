@@ -39,6 +39,8 @@ inputs:
         type: string
     infrastructure_interface:
         type: string
+    partition:
+        type: string
     hpc_host:
         type: string
 
@@ -72,7 +74,7 @@ node_templates:
                 commands:
                 - "ls"
                 max_time: '00:05:00'
-                partition: cola-corta
+                partition: { get_input: partition }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface

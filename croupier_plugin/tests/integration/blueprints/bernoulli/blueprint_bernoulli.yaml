@@ -37,6 +37,8 @@ inputs:
         type: string
     infrastructure_interface:
         type: string
+    partition:
+        type: string
     hpc_host:
         type: string
 
@@ -75,7 +77,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:05:00'
-                partition: cola-corta
+                partition: { get_input: partition }
                 queue: batch
             deployment:
                 bootstrap: "scripts/create_bernoulli_script.sh"
@@ -94,7 +96,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 2
                 max_time: '00:03:00'
-                partition: cola-corta
+                partition: { get_input: partition }
                 queue: batch
             deployment:
                 bootstrap: "scripts/create_bernoulli_script.sh"

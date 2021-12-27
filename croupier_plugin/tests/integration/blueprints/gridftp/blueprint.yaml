@@ -49,6 +49,8 @@ inputs:
 ############## HPC Infrastructures ##############
     infrastructure_interface:
         type: string
+    partition:
+        type: string
     hpc_host:
         type: string
 

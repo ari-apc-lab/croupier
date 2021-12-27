@@ -39,6 +39,8 @@ inputs:
         type: string
     infrastructure_interface:
         type: string
+    partition:
+        type: string
     hpc_host:
         type: string
 
@@ -73,7 +75,7 @@ node_templates:
                 pre:
                     - { mpi_load_command }
                     - { singularity_load_command }
-                partition: cola-corta
+                partition: { get_input: partition }
                 image: { singularity_image_storage } "/" { singularity_image_filename }
                 volumes:
                     - { scratch_voulume_mount_point }

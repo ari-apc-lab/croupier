@@ -36,6 +36,8 @@ inputs:
         type: string
     infrastructure_interface:
         type: string
+    partition:
+        type: string
     hpc_host:
         type: string
 
@@ -65,7 +67,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                partition: cola-corta
+                partition: { get_input: partition }
                 commands: ["touch fourth_example_1.test"]
                 nodes: 1
                 tasks: 1
@@ -80,7 +82,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                partition: cola-corta
+                partition: { get_input: partition }
                 commands: ["touch fourth_example_2.test"]
                 nodes: 1
                 tasks: 1
@@ -104,7 +106,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-                partition: cola-corta
+                partition: { get_input: partition }
             deployment:
                 bootstrap: "scripts/create_script.sh"
                 revert: "scripts/delete_script.sh"
@@ -128,7 +130,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: "00:01:00"
-                partition: cola-corta
+                partition: { get_input: partition }
             deployment:
                 bootstrap: "scripts/create_script.sh"
                 revert: "scripts/delete_script.sh"
