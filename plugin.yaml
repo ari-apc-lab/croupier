@@ -309,7 +309,7 @@ data_types:
 
 
     croupier.datatypes.dm.GridFTPCredentials:
-        derived_from: croupier.datatypes.dm.Credentials
+        derived_from: croupier.datatypes.Credentials
         properties:
             cert:
                 description: "GridFTP user's certificate"
