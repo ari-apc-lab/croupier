@@ -605,6 +605,8 @@ node_types:
                 type: string
                 default: ''
                 required: False
+            resource:
+                required: false
         interfaces:
             cloudify.interfaces.lifecycle:
                 configure:
