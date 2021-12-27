@@ -617,7 +617,7 @@ node_types:
                         query:
                             default: { get_property: [ SELF, query ] }
                         ssh_config:
-                            default: { get_property: [ SELF, ssh_config_ECMWF ] }
+                            default: { get_property: [ SELF, ssh_config ] }
                         keycloak_credentials:
                             default: { get_property: [ SELF, keycloak_credentials ] }
                         cloudify_address:
