@@ -623,7 +623,7 @@ node_types:
                         cloudify_address:
                             default: { get_property: [ SELF, cloudify_address ] }
                         server_port:
-                            default: { get_property: [ SELF, port ] }
+                            default: { get_property: [ SELF, server_port ] }
 
     croupier.nodes.CKAN:
         derived_from: croupier.nodes.WebDataSource
