@@ -607,6 +607,7 @@ node_types:
                 required: False
             resource:
                 required: false
+                default: ''
         interfaces:
             cloudify.interfaces.lifecycle:
                 configure:
