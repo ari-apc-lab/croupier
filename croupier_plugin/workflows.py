@@ -92,11 +92,10 @@ class JobGraphInstance(GraphInstance):
         self._status = 'WAITING'
         self.completed = False
         self.timezone = self.runtime_properties["timezone"]
-        self.host = self.node.cfy_node.properties["credentials"]["host"]
+        self.host = self.runtime_properties["credentials"]["host"]
         self.workdir = self.runtime_properties["workdir"]
         self.monitor_type = self.runtime_properties["infrastructure_interface"]
-        self.monitor_config = self.runtime_properties["credentials"] if "credentials" in self.runtime_properties else \
-            self.node.cfy_node.properties["credentials"]
+        self.monitor_config = self.runtime_properties["credentials"]
 
         monitoring_options = self.runtime_properties["monitoring_options"]
         self.monitor_period = int(monitoring_options["monitor_period"]) if "monitor_period" in monitoring_options \

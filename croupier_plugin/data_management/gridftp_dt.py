@@ -13,7 +13,7 @@ class GridFTPDataTransfer(DataTransfer):
             create_ws = self.dt_config['to_target']['workspace']['create'] if 'workspace' in self.dt_config['to_target'] else None
             ws_lifetime = self.dt_config['to_target']['workspace']['lifetime'] if 'workspace' in self.dt_config['to_target'] else None
 
-            source = self.dt_config['from_source']['filepath']
+            source = self.dt_config[':from_source']['filepath']
             target = self.dt_config['to_target']['filepath']
 
             if _download:

@@ -161,8 +161,9 @@ def configure_data_transfer(**kwargs):
         "type": from_source_node.type,
         "filepath": from_source_node.properties['filepath']
         if "filepath" in from_source_node.properties else None,
-        "resource": from_source_node.properties['resource']
-        if "resource" in from_source_node.properties else None,
+        "resource": from_source_instance.runtime_properties['resource']
+            if 'resource' in from_source_instance.runtime_properties else (from_source_node.properties['resource']
+            if 'resource' in from_source_node.properties else None),
         "located_at": from_source_instance.runtime_properties['located_at']
         if "located_at" in from_source_instance.runtime_properties else None}
     ctx.instance.runtime_properties['from_source'] = from_source
@@ -172,8 +173,9 @@ def configure_data_transfer(**kwargs):
         "type": to_target_node.type,
         "filepath": to_target_node.properties['filepath']
         if "filepath" in to_target_node.properties else None,
-        "resource": to_target_node.properties['resource']
-        if "resource" in to_target_node.properties else None,
+        "resource": to_target_instance.runtime_properties['resource']
+            if 'resource' in to_target_instance.runtime_properties else (to_target_node.properties['resource']
+            if "resource" in to_target_node.properties else None),
         "located_at": to_target_instance.runtime_properties['located_at']
         if "located_at" in to_target_instance.runtime_properties else None}
     ctx.instance.runtime_properties['to_target'] = to_target
@@ -950,13 +952,15 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, credentials, cloud
                         "stdout"])
                 return 200
             elif "file" in data and "stdout" in data:
-                ctx.instance.runtime_properties['resource'] = [data["file"]]
+                ctx.instance.runtime_properties['resource'] = data["file"]
                 ctx.logger.info("Process completed, stdout:\n" + data["stdout"])
-                ctx.logger.info("CKAN URL: " + ctx.instance.runtime_properties['resource'])
+                ctx.logger.info("CKAN URL: " + data["file"])
                 return 200
             else:
                 ctx.logger.error(data)
                 ctx.logger.error("Non valid response from ECMWF received")
+        except Exception as e:
+            ctx.logger.error("There was an error handling response from ECMWF: " + str(e))
         finally:
             sys.stderr.close()
 
@@ -965,48 +969,6 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, credentials, cloud
         bottle.run(host='0.0.0.0', port=server_port)
     except ValueError:
         pass
-
-
-@operation
-def download_data(unzip_data, dest_data, data_urls, **kwargs):
-    if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow'] \
-            and "recurring" not in kwargs:
-        ctx.logger.info('Recurring workflow, data will be downloaded during croupier_configure')
-        return
-    ctx.logger.info('Downloading data...')
-    simulate = ctx.instance.runtime_properties['simulate']
-    if 'data_urls' in ctx.instance.runtime_properties:
-        data_urls = ctx.instance.runtime_properties['data_urls']
-    if not simulate and data_urls:
-        if 'data_urls' in ctx.instance.runtime_properties:
-            data_urls.extend(ctx.instance.runtime_properties['data_urls'])
-        credentials = ctx.instance.runtime_properties['credentials']
-        workdir = dest_data if dest_data else ctx.instance.runtime_properties['workdir']
-        name = "data_download_" + ctx.instance.id + ".sh"
-        interface_type = ctx.instance.runtime_properties['infrastructure_interface']
-        script = data_download_unzip_script() if unzip_data else data_download_script()
-        skip_cleanup = False
-        if deploy_job(script, data_urls, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
-            ctx.logger.info('...data downloaded')
-            files_downloaded = ctx.instance.runtime_properties['files_downloaded'] \
-                if 'files_downloaded' in ctx.instance.runtime_properties else []
-            if 'unzip_data' in ctx.node.properties and ctx.node.properties['unzip_data']:
-                # TODO: save filenames after being unzipped so they can be deleted
-                pass
-            else:
-                for url in data_urls:
-                    files_downloaded.append(url.rpartition('/')[-1])
-
-            ctx.instance.runtime_properties['files_downloaded'] = files_downloaded
-        else:
-            ctx.logger.error('Data could not be downloaded')
-            raise NonRecoverableError("Data failed to download")
-    elif 'data_urls' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['data_urls']:
-        ctx.logger.info("... data download simulated")
-    else:
-        ctx.logger.warning('...nothing to download')
-        raise NonRecoverableError("There was no data to download")
-
 
 def get_hours(cput):
     return int(cput[:cput.index(':')])
@@ -1126,30 +1088,6 @@ def read_processors_per_node(job_id, workdir, ssh_client, logger):
         return 0
     else:
         return int(output[output.find('=') + 1:].rstrip("\n"))
-
-
-def data_download_script():
-    return '#!/bin/bash\n' \
-           'for url in "$@"\n' \
-           'do\n' \
-           '  filename=$(basename "$url")\n' \
-           '  wget "$url" >> ${0##*/}_${filename}.out 2>>${0##*/}_${filename}.err\n' \
-           'done'
-
-
-def data_download_unzip_script():
-    return '#!/usr/bin/env bash\n' \
-           'for url in "$@"\n' \
-           'do\n' \
-           '  filename=$(basename "$url")\n' \
-           '  wget "$url" >> ${0##*/}_${filename}.out 2>>${0##*/}_${filename}.err\n' \
-           '  unzip "$filename"\n' \
-           '  rm "$filename"\n' \
-           'done '
-
-
-def data_delete_script():
-    return '#!/bin/bash\nfor file in "$@"\ndo\n  rm -r "$file"\ndone'
 
 
 def str_to_bool(s):

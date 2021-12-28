@@ -586,11 +586,6 @@ node_types:
             resource:
                 description: 'URI of data source in Web'
                 type: string
-            unzip:
-                description: 'Whether to unzip the file after being downloaded'
-                type: boolean
-                default: False
-                required: False
 
     croupier.nodes.ECMWFVerticalInterpolation:
         derived_from: croupier.nodes.WebDataSource
@@ -607,9 +602,6 @@ node_types:
             server_port:
                 type: string
                 default: 9984
-            unzip:
-                type: boolean
-                default: True
             cloudify_address:
                 type: string
                 default: ''
