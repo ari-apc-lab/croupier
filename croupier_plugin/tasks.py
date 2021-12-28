@@ -102,6 +102,7 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
             else:
                 ctx.logger.info("Using provided ssh credentials.")
 
+
         if 'keycloak_credentials' in ctx.source.node.properties:
             keycloak_credentials = vault.download_credentials('keycloak', token, user, address, cubbyhole)
             if keycloak_credentials:
@@ -886,7 +887,7 @@ def publish(publish_list, **kwargs):
 
 
 @operation
-def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudify_address, server_port, **kwargs):
+def ecmwf_vertical_interpolation(query, keycloak_credentials, credentials, cloudify_address, server_port, **kwargs):
 
     if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow'] \
             and "recurring" not in kwargs:
@@ -902,7 +903,7 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudi
 
     arguments = {"notify": "http://" + server_host + ":" + str(server_port) + "/ready",
                  "user_name": keycloak_credentials["user"],
-                 "password": keycloak_credentials["pw"],
+                 "password": keycloak_credentials["password"],
                  "params": query["params"],
                  "area": query["area"],
                  "max_step": query["max_step"],
@@ -917,9 +918,11 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, ssh_config, cloudi
     if query["date"]:
         arguments["date"] = query["date"]
         arguments["time"] = query["time"]
-
-    client = SshClient(ssh_config)
-
+    try:
+        client = SshClient(credentials)
+    except Exception as e:
+        ctx.logger.error("There was an error trying to connect to ECMWF's VM: {0}".format(str(e)))
+        raise
     command = "cd cloudify && source /opt/anaconda3/etc/profile.d/conda.sh && conda activate && " \
               "nohup python3 interpolator.py"
 

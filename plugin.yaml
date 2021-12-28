@@ -595,7 +595,7 @@ node_types:
     croupier.nodes.ECMWFVerticalInterpolation:
         derived_from: croupier.nodes.WebDataSource
         properties:
-            ssh_config:
+            credentials:
                 description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
                 type: croupier.datatypes.Credentials
             keycloak_credentials:
@@ -625,8 +625,8 @@ node_types:
                     inputs:
                         query:
                             default: { get_property: [ SELF, query ] }
-                        ssh_config:
-                            default: { get_property: [ SELF, ssh_config ] }
+                        credentials:
+                            default: { get_property: [ SELF, credentials ] }
                         keycloak_credentials:
                             default: { get_property: [ SELF, keycloak_credentials ] }
                         cloudify_address:
