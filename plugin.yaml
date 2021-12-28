@@ -354,7 +354,7 @@ node_types:
             config:
                 description: type
                 type: croupier.datatypes.wm_config
-            ssh_config:
+            credentials:
                 description: SSH configuration
                 type: croupier.datatypes.Credentials
                 default: {}
@@ -391,6 +391,15 @@ node_types:
                 type : boolean
                 default: False
                 required: False
+            internet_access:
+                description: True if HPC has access to the internet
+                type: boolean
+                default: False
+                required: False
+            supported_prtocols:
+                type: list
+                default: []
+                description: List of protocols supported for data management
             agent_config:
                 default:
                     install_method: none
