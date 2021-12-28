@@ -57,7 +57,7 @@ node_templates:
       config:
           country_tz: Europe/Madrid
           infrastructure_interface: { get_input: infrastructure_interface }
-      ssh_config:
+      credentials:
           host: { get_input: hpc_host }
       job_prefix: atos
       base_dir: $HOME
@@ -80,7 +80,7 @@ node_templates:
     properties:
       config:
         infrastructure_interface: SHELL
-      ssh_config:
+      credentials:
         host: ''
         password: ''
         private_key: ''

@@ -51,7 +51,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: SHELL
-            ssh_config:
+            credentials:
                 host: { get_input: hpc_host }
             job_prefix: atos
             base_dir: $HOME

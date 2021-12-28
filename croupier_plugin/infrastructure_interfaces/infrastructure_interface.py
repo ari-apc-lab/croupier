@@ -377,11 +377,11 @@ class InfrastructureInterface(object):
             "'_get_envar' not implemented.")
 
     # Monitor
-    def get_states(self, ssh_config, job_names):
+    def get_states(self, credentials, job_names):
         """
         Get the states of the jobs names
-        @type ssh_config: dictionary
-        @param ssh_config: SSH ssh_config to connect to the HPC
+        @type credentials: dictionary
+        @param credentials: SSH credentials to connect to the HPC
         @rtype dict
         @return a dictionary of job names and its states
         """

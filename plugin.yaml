@@ -410,8 +410,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         base_dir:
                             default: { get_property: [SELF, base_dir] }
                         workdir_prefix:
@@ -429,8 +429,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         skip:
                             default: { get_property: [SELF, skip_cleanup] }
                         simulate:
@@ -441,8 +441,8 @@ node_types:
                     inputs:
                         config_infra:
                             default: { get_property: [SELF, config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         monitoring_options:
                             default: { fet_property: [SELF, monitoring_options]}
                         simulate:
@@ -450,8 +450,8 @@ node_types:
                 stop:
                     implementation: croupier.croupier_plugin.tasks.stop_monitoring_hpc
                     inputs:
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -634,22 +634,12 @@ node_types:
                         server_port:
                             default: { get_property: [ SELF, server_port ] }
 
-    croupier.nodes.CKAN:
+    croupier.nodes.CKAN_dataset:
         derived_from: croupier.nodes.WebDataSource
         properties:
             query:
-                description: ECMWF Query fields.
+                description: Query fields.
                 type: croupier.datatypes.ecmwf_query
-            server_port:
-                type: string
-                default: 9984
-            unzip:
-                type: boolean
-                default: True
-            cloudify_address:
-                type: string
-                default: ''
-                required: False
         interfaces:
             cloudify.interfaces.lifecycle:
                 configure:
@@ -658,14 +648,6 @@ node_types:
                     inputs:
                         query:
                             default: { get_property: [ SELF, query ] }
-                        ssh_config:
-                            default: { get_property: [ SELF, ssh_config_ECMWF ] }
-                        keycloak_credentials:
-                            default: { get_property: [ SELF, keycloak_credentials ] }
-                        cloudify_address:
-                            default: { get_property: [ SELF, cloudify_address ] }
-                        server_port:
-                            default: { get_property: [ SELF, port ] }
 
     croupier.nodes.HPCDataSource:
         derived_from: croupier.nodes.FileDataSource
@@ -725,8 +707,8 @@ relationships:
                 preconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface
                     inputs:
-                        ssh_config:
-                            default: { get_property: [SOURCE, ssh_config] }
+                        credentials:
+                            default: { get_property: [SOURCE, credentials] }
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
 
@@ -746,8 +728,8 @@ relationships:
                     inputs:
                         config:
                             default: { get_property: [TARGET, config] }
-                        ssh_config:
-                            default: { get_property: [TARGET, ssh_config] }
+                        credentials:
+                            default: { get_property: [TARGET, credentials] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
                         monitoring_options:

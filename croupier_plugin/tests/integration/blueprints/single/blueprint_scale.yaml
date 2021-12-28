@@ -69,7 +69,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: infrastructure_interface }
-            ssh_config:
+            credentials:
                 host: { get_input: hpc_host }
             job_prefix: atos
             base_dir: $HOME

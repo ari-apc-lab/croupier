@@ -5,8 +5,8 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
 
 inputs:
-    ssh_config:
-        type: croupier.datatypes.ssh_config
+    credentials:
+        type: croupier.datatypes.credentials
     infrastructure_interface:
         type: string
 
@@ -17,7 +17,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: infrastructure_interface }
-            ssh_config: { get_input: ssh_config }
+            credentials: { get_input: credentials }
             job_prefix: test
             base_dir: "$HOME"
             monitoring_options:

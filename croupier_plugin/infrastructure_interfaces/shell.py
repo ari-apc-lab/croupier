@@ -74,10 +74,10 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         return "pkill -f " + name
 
 # Monitor
-    def get_states(self, ssh_config, job_names):
+    def get_states(self, credentials, job_names):
         call = "cat croupier-monitor.dat"
 
-        client = SshClient(ssh_config)
+        client = SshClient(credentials)
 
         output, exit_code = client.execute_shell_command(
             call,
