@@ -73,6 +73,8 @@ class HttpDataTransfer(DataTransfer):
                 if to_target_data_url.startswith('~/'):
                     to_target_data_url = to_target_data_url[2:]
 
+            workdir = self.dt_config['to_target']['located_at']['workdir']
+
             to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
             target_is_file = isFile(to_target_data_url)
@@ -102,12 +104,12 @@ class HttpDataTransfer(DataTransfer):
 
             # Execute data transfer command
 
-            exit_msg, exit_code = ssh_client.execute_shell_command(wget_command, wait_result=True)
+            exit_msg, exit_code = ssh_client.execute_shell_command(wget_command, workdir=workdir, wait_result=True)
             if exit_code != 0:
                 error_msg = 'Could not download using wget, trying with curl (exit code: {0}, error:{1})\n'.format(
                     str(exit_code), exit_msg)
                 ctx.logger.warning(error_msg)
-                exit_msg, exit_code = ssh_client.execute_shell_command(curl_command, wait_result=True)
+                exit_msg, exit_code = ssh_client.execute_shell_command(curl_command, workdir=workdir, wait_result=True)
 
                 if exit_code != 0:
                     error_msg = 'Could not download using curl (exit code: {0}, error:{1})\n'.format(
