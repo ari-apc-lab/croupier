@@ -86,7 +86,7 @@ node_templates:
         properties:
             job_options:
                 commands:
-                    - tar -czf test.tar *.grib test
+                    - cat weather_data.zip
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
@@ -126,6 +126,9 @@ node_templates:
             supported_protocols:
                 - HTTP
             internet_access: true
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
 
     dt_http:
         type: croupier.nodes.DataTransfer
