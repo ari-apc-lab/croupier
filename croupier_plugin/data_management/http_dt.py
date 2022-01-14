@@ -58,8 +58,12 @@ class HttpDataTransfer(DataTransfer):
             #  Invoke command in target infrastructure
 
             # Source DS
-            from_source_data_url = self.dt_config['from_source']['resource']
-            from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
+            resource = self.dt_config['from_source']['resource']
+            endpoint = self.dt_config['from_source']['located_at']['endpoint']
+
+            url = resource if resource.startswith('http') else \
+                '{endpoint}/{resource}'.format(endpoint=endpoint[:-1] if endpoint.endswith('/') else endpoint,
+                                               resource=resource[1:] if resource.startswith('/') else resource)
 
             # Target DS
             to_target_type = self.dt_config['to_target']['type']
@@ -75,37 +79,44 @@ class HttpDataTransfer(DataTransfer):
 
             # Specifying target to copy using wget
             if target_is_file:
-                dt_command_template = 'wget {source_endpoint}/{resource} -O {ds_target}'
+                wget_command = 'wget {url} -O {ds_target}'.format(url=url, ds_target=to_target_data_url)
+                curl_command = 'curl {url} -o {ds_target}'.format(url=url, ds_target=to_target_data_url)
             else:
-                dt_command_template = 'wget {source_endpoint}/{resource} -P {ds_target}'
+                wget_command = 'wget {url} -P {ds_target}'.format(url=url, ds_target=to_target_data_url)
+                curl_command = 'cd {ds_target} & curl -O {url}'.format(url=url, ds_target=to_target_data_url)
 
             source_credentials = self.dt_config['from_source']['located_at']['credentials']
 
             if 'user' in source_credentials and 'password' in source_credentials and \
                     source_credentials['user'] and source_credentials['password']:
-                dt_command_template += ' --user {0} --password {1}'.format(
-                    source_credentials['user'], source_credentials['password'])
+                user = source_credentials['user']
+                password = source_credentials['password']
+                wget_command += ' --user {0} --password {1}'.format(user, password)
+                curl_command += ' -u {0}:{1}'.format(user, password)
             elif 'auth-header' in source_credentials and source_credentials['auth-header']:
-                auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
-                dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
-
-            dt_command = dt_command_template.format(
-                source_endpoint=from_source_infra_endpoint[:-1] if from_source_infra_endpoint.endswith('/')
-                else from_source_infra_endpoint,
-                resource=from_source_data_url[1:] if from_source_data_url.startswith('/')
-                else from_source_data_url, ds_target=to_target_data_url
-            )
-
+                auth_header = ' --header \'' + source_credentials['auth-header-label'] + ': ' + source_credentials['auth-header'] + '\''
+                wget_command += auth_header
+                curl_command += auth_header
 
             ssh_client = SshClient(to_target_infra_credentials)
 
             # Execute data transfer command
 
-            exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
-
+            exit_msg, exit_code = ssh_client.execute_shell_command(wget_command, wait_result=True)
             if exit_code != 0:
-                raise CommandExecutionError("Failed executing data transfer: exit code " + str(exit_code))
+                error_msg = 'Could not download using wget, trying with curl (exit code: {0}, error:{1})\n'.format(
+                    str(exit_code), exit_msg)
+                ctx.logger.warning(error_msg)
+                exit_msg, exit_code = ssh_client.execute_shell_command(curl_command, wait_result=True)
 
+                if exit_code != 0:
+                    error_msg = 'Could not download using curl (exit code: {0}, error:{1})\n'.format(
+                        str(exit_code), exit_msg)
+                    raise CommandExecutionError(error_msg)
+                else:
+                    ctx.logger.info("Data downloaded successfully with curl")
+            else:
+                ctx.logger.info("Data downloaded successfully with wget")
         except Exception as exp:
             ctx.logger.error("There was a problem executing the data transfer: " + str(exp))
             raise
