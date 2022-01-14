@@ -123,7 +123,8 @@ class HttpDataTransfer(DataTransfer):
             ctx.logger.error("There was a problem executing the data transfer: " + str(exp))
             raise
         finally:
-            ssh_client.close_connection()
+            if 'ssh_client' in locals():
+                ssh_client.close_connection()
 
     def process_http_transfer_with_proxy(self):
         temporary_dir = None

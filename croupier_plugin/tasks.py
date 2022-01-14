@@ -959,7 +959,7 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, credentials, cloud
                 ctx.logger.info("CKAN URL: " + data["file"])
                 return 200
             else:
-                ctx.logger.error(data)
+                ctx.logger.error(str(data))
                 ctx.logger.error("Non valid response from ECMWF received")
         except Exception as e:
             ctx.logger.error("There was an error handling response from ECMWF: " + str(e))
