@@ -25,6 +25,7 @@ def revoke_token(vault_token, vault_address):
 
 
 def download_credentials(host, vault_token, vault_user, vault_address, cubbyhole):
+    host.replace('/', '').replace(':', '')
     if cubbyhole:
         secret_endpoint = vault_address + "/v1/cubbyhole/" + host
     else:
