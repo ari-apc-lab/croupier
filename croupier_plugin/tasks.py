@@ -137,7 +137,10 @@ def configure_data_source(**kwargs):
         "credentials": ctx.target.instance.runtime_properties['credentials']
         if "credentials" in ctx.target.instance.runtime_properties else ctx.target.node.properties['credentials'],
         "workdir": ctx.target.instance.runtime_properties['workdir']
-        if 'workdir' in ctx.target.instance.runtime_properties else None}
+        if 'workdir' in ctx.target.instance.runtime_properties else None,
+        "properties": ctx.target.node.properties,
+        "type_hierarchy": ctx.target.node.type_hierarchy
+    }
     ctx.source.instance.runtime_properties['located_at'] = located_at
     ctx.logger.info("Data source infrastructure {0} configured as location for data source {1}"
                     .format(ctx.target.node.name, ctx.source.node.name))

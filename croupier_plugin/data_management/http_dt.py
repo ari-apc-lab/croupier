@@ -5,7 +5,6 @@ from cloudify.exceptions import CommandExecutionError
 import tempfile
 import os
 import shutil
-from urllib.parse import urlparse
 
 target_private_key = None
 
