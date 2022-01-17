@@ -156,6 +156,9 @@ class InfrastructureInterface(object):
         if infrastructure_interface == "SHELL":
             from croupier_plugin.infrastructure_interfaces.shell import Shell
             return Shell(infrastructure_interface, logger, workdir)
+        if infrastructure_interface == "PYCOMPSS":
+            from croupier_plugin.infrastructure_interfaces.pycompss import Pycompss
+            return Pycompss(infrastructure_interface, logger, workdir)
         return None
 
     def submit_job(self,
