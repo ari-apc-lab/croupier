@@ -1,0 +1,27 @@
+# VAULT
+vault_token: 's.RhkE8WDKe9r99u9mYUU0azL8'
+vault_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# HPC1
+hpc1_host: mn1.bsc.es
+hpc1_scheduler: SLURM
+hpc1_queue: main
+
+# HPC2
+#hpc2_host: ft2.cesga.es
+#hpc2_scheduler: SLURM
+#hpc2_queue: cola-corta
+
+# HPC2
+hpc2_host: sodalite-fe.hlrs.de
+hpc2_scheduler: TORQUE
+hpc2_queue: batch
+
+# DATAFLOW
+hpc1_dai_host: dt01.bsc.es
+hpc1_dai_internet_access: false
+
+hpc2_dai_host: sodalite-fe.hlrs.de
+hpc2_dai_internet_access: false
