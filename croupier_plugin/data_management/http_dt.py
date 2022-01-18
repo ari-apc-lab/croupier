@@ -69,8 +69,6 @@ class HttpDataTransfer(DataTransfer):
             to_target_data_url = None
             if 'FileDataSource' in to_target_type:
                 to_target_data_url = self.dt_config['to_target']['filepath']
-                if to_target_data_url.startswith('~/'):
-                    to_target_data_url = to_target_data_url[2:]
 
             workdir = self.dt_config['to_target']['located_at']['workdir']
 
