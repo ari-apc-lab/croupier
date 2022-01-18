@@ -14,8 +14,22 @@ def getDataTransferInstances(direction, job):
         if rel.type == direction:
             if 'dt_instances' in rel.target.instance.runtime_properties:
                 dt_instances = rel.target.instance.runtime_properties['dt_instances']
+                for instance in dt_instances:
+                    from_credentials = instance.get("from_source", {}).get("located_at", {}).get("credentials")
+                    if from_credentials:
+                        filterOutEmptyValueEntries(from_credentials)
+                    to_credentials = instance.get("to_target", {}).get("located_at", {}).get("credentials")
+                    if to_credentials:
+                        filterOutEmptyValueEntries(to_credentials)
                 break
     return dt_instances
+
+
+def filterOutEmptyValueEntries(dictionary):
+    # filter out empty-value entries
+    for key in list(dictionary):
+        if isinstance(dictionary[key], str) and len(dictionary[key]) == 0:
+            del dictionary[key]
 
 
 def processDataTransfer(job, logger, direction):

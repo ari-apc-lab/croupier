@@ -71,9 +71,9 @@ class RSyncDataTransfer(DataTransfer):
             to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
             to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
-            source_username = from_source_infra_credentials['username']
+            source_username = from_source_infra_credentials['user']
             source = source_username + '@' + from_source_infra_endpoint + ':' + from_source_data_url
-            target_username = to_target_infra_credentials['username']
+            target_username = to_target_infra_credentials['user']
             target = target_username + '@' + to_target_infra_endpoint + ':' + to_target_data_url
             source_password = None
             target_password = None
@@ -82,8 +82,8 @@ class RSyncDataTransfer(DataTransfer):
 
             if "password" in to_target_infra_credentials:
                 target_password = to_target_infra_credentials['password']
-            elif "key" in to_target_infra_credentials:
-                target_key = to_target_infra_credentials['key']
+            elif "private_key" in to_target_infra_credentials:
+                target_key = to_target_infra_credentials['private_key']
                 # Save key in temporary file
                 with tempfile.NamedTemporaryFile(delete=False) as key_file:
                     key_file.write(bytes(target_key, 'utf-8'))
@@ -92,8 +92,8 @@ class RSyncDataTransfer(DataTransfer):
 
             if "password" in from_source_infra_credentials:
                 source_password = from_source_infra_credentials['password']
-            elif "key" in from_source_infra_credentials:
-                source_key = from_source_infra_credentials['key']
+            elif "private_key" in from_source_infra_credentials:
+                source_key = from_source_infra_credentials['private_key']
                 # Save key in temporary file
                 with tempfile.NamedTemporaryFile(delete=False) as key_file:
                     key_file.write(bytes(source_key, 'utf-8'))
@@ -241,7 +241,7 @@ class RSyncDataTransfer(DataTransfer):
                         )
                 elif "username" in from_source_infra_credentials and "private_key" in from_source_infra_credentials:
                     source_username = from_source_infra_credentials['user']
-                    source_key = from_source_infra_credentials['key']
+                    source_key = from_source_infra_credentials['private_key']
                     # Save key in temporary file
                     with tempfile.NamedTemporaryFile() as key_file:
                         key_file.write(bytes(source_key, 'utf-8'))
