@@ -12,8 +12,8 @@ class DataMoverProxy(object):
 
     def __init__(self, data_mover_options, source_gridftp_server, target_gridftp_server, logger):
         # Read data_mover_options
-        self.hpc_user_id = ctx.instance.runtime_properties['ssh_config']['user']
-        self.hpc_user_ssh_credentials = ctx.instance.runtime_properties['ssh_config']['private_key']
+        self.hpc_user_id = ctx.instance.runtime_properties['credentials']['user']
+        self.hpc_user_ssh_credentials = ctx.instance.runtime_properties['credentials']['private_key']
         if 'cloud_user' in data_mover_options:
             self.cloud_user = data_mover_options['cloud_user']
         if 'workspace' in data_mover_options:

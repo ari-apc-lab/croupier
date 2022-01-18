@@ -83,7 +83,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc1_scheduler }
-            ssh_config:
+            credentials:
                 host: { get_input: hpc1_host }
             job_prefix: atos
             base_dir: $HOME
@@ -100,7 +100,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc2_scheduler }
-            ssh_config:
+            credentials:
                 host: { get_input: hpc2_host }
             job_prefix: atos
             base_dir: $HOME

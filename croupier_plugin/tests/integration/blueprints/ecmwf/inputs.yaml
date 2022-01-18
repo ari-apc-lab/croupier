@@ -35,3 +35,5 @@ ecmwf_query:
   time: 00
   area: 44/18/43/19
   collection: hidalgo-test
+infrastructure_interface: TORQUE
+hpc: sodalite-fe.hlrs.de

@@ -13,21 +13,21 @@ class GridFTPDataTransfer(DataTransfer):
             create_ws = self.dt_config['to_target']['workspace']['create'] if 'workspace' in self.dt_config['to_target'] else None
             ws_lifetime = self.dt_config['to_target']['workspace']['lifetime'] if 'workspace' in self.dt_config['to_target'] else None
 
-            source = self.dt_config['from_source']['filepath']
+            source = self.dt_config[':from_source']['filepath']
             target = self.dt_config['to_target']['filepath']
 
             if _download:
                 hpc_target = self.dt_config['to_target']['located_at']['endpoint']
                 cloud_target = self.dt_config['from_source']['located_at']['endpoint']
-                cloud_user = self.dt_config['from_source']['located_at']['credentials']['username']
-                grid_userkey = self.dt_config['to_target']['located_at']['credentials']['key']
+                cloud_user = self.dt_config['from_source']['located_at']['credentials']['user']
+                grid_userkey = self.dt_config['to_target']['located_at']['credentials']['private_key']
                 grid_usercert = self.dt_config['to_target']['located_at']['credentials']['cert']
                 grid_certpass = self.dt_config['to_target']['located_at']['credentials']['cert_password']
             else:
                 hpc_target = self.dt_config['from_source']['located_at']['endpoint']
                 cloud_target = self.dt_config['to_target']['located_at']['endpoint']
-                cloud_user = self.dt_config['to_target']['located_at']['credentials']['username']
-                grid_userkey = self.dt_config['from_source']['located_at']['credentials']['key']
+                cloud_user = self.dt_config['to_target']['located_at']['credentials']['user']
+                grid_userkey = self.dt_config['from_source']['located_at']['credentials']['private_key']
                 grid_usercert = self.dt_config['from_source']['located_at']['credentials']['cert']
                 grid_certpass = self.dt_config['from_source']['located_at']['credentials']['cert_password']
             data_mover_options = {
@@ -54,7 +54,7 @@ class GridFTPDataTransfer(DataTransfer):
             source_gridftp_endpoint = self.dt_config['from_source']['located_at']['endpoint']
             source_gridftp_server = source_gridftp_endpoint[:source_gridftp_endpoint.index(':')]
             source_gridftp_port = source_gridftp_endpoint[source_gridftp_endpoint.index(':') + 1:]
-            source_gridftp_user = self.dt_config['from_source']['located_at']['credentials']['username']
+            source_gridftp_user = self.dt_config['from_source']['located_at']['credentials']['user']
             source_ssh_server = self.dt_config['from_source']['located_at']['ssh_endpoint']
             source_workspace_basepath = self.dt_config['from_source']['located_at']['workspace_basepath']
             source_workspace_name = self.dt_config['from_source']['workspace']['name'] \
@@ -70,7 +70,7 @@ class GridFTPDataTransfer(DataTransfer):
             target_gridftp_endpoint = self.dt_config['to_target']['located_at']['endpoint']
             target_gridftp_server = target_gridftp_endpoint[:target_gridftp_endpoint.index(':')]
             target_gridftp_port = target_gridftp_endpoint[target_gridftp_endpoint.index(':') + 1:]
-            target_gridftp_user = self.dt_config['to_target']['located_at']['credentials']['username']
+            target_gridftp_user = self.dt_config['to_target']['located_at']['credentials']['user']
             target_ssh_server = self.dt_config['to_target']['located_at']['ssh_endpoint']
             target_workspace_basepath = self.dt_config['to_target']['located_at']['workspace_basepath']
             target_workspace_name = self.dt_config['to_target']['workspace']['name'] \

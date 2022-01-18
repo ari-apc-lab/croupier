@@ -8,44 +8,35 @@ def isDataManagementRelationship(relationship):
     return isDataManagementNode(relationship.target_node)
 
 
-def ssh_credentials(host, dm_credentials):
-    credentials = {'host': host, 'user': dm_credentials['username']}
-    if 'password' in dm_credentials:
-        credentials['password'] = dm_credentials['password']
-    if 'key' in dm_credentials:
-        credentials['private_key'] = dm_credentials['key']
-    if 'key_password' in dm_credentials:
-        credentials['private_key_password'] = dm_credentials['key_password']
-
-    return credentials
-
-
-def getDataTransferInstances(type, job):
+def getDataTransferInstances(direction, job):
     dt_instances = []
     for rel in job.relationships:
-        if rel.type == type:
+        if rel.type == direction:
             if 'dt_instances' in rel.target.instance.runtime_properties:
                 dt_instances = rel.target.instance.runtime_properties['dt_instances']
+                for instance in dt_instances:
+                    from_credentials = instance.get("from_source", {}).get("located_at", {}).get("credentials")
+                    if from_credentials:
+                        filterOutEmptyValueEntries(from_credentials)
+                    to_credentials = instance.get("to_target", {}).get("located_at", {}).get("credentials")
+                    if to_credentials:
+                        filterOutEmptyValueEntries(to_credentials)
                 break
     return dt_instances
 
 
-def processDataTransferForInputs(job, logger):
-    # Get DT connected to job inputs
-    dt_instances = getDataTransferInstances('input', job)
-    processDataTransfer(dt_instances, logger)
+def filterOutEmptyValueEntries(dictionary):
+    # filter out empty-value entries
+    for key in list(dictionary):
+        if isinstance(dictionary[key], str) and len(dictionary[key]) == 0:
+            del dictionary[key]
 
 
-def processDataTransferForOutputs(job, logger):
-    # Get DT connected to job outputs
-    dt_instances = getDataTransferInstances('output', job)
-    processDataTransfer(dt_instances, logger)
-
-
-def processDataTransfer(dt_instances, logger):
-    # For each data transfer object 
+def processDataTransfer(job, logger, direction):
+    # For each data transfer object
     # execute data_transfer
     # TODO parallel processing of data transfer
+    dt_instances = getDataTransferInstances(direction, job)
     for dt_config in dt_instances:
         dt = DataTransfer.factory(dt_config, logger)
         dt.process()

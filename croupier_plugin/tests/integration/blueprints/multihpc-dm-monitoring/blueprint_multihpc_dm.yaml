@@ -28,8 +28,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin:croupier #For Cloudify
-#    - plugin.yaml #For debugging in PyCharm, comment it out for Cloudify
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment it out for Cloudify
 
 inputs:
 ####################### VAULT ###################
@@ -86,7 +86,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc1_scheduler }
-            ssh_config:
+            credentials:
                 host: { get_input: hpc1_host }
             job_prefix: atos
             base_dir: $HOME
@@ -105,7 +105,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc2_scheduler }
-            ssh_config:
+            credentials:
                 host: { get_input: hpc2_host }
             job_prefix: atos
             base_dir: $HOME
