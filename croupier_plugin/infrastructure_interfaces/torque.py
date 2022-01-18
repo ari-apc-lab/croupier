@@ -228,12 +228,12 @@ class Torque(InfrastructureInterface):
 
     # Monitor
 
-    def get_states(self, ssh_config, job_names):
+    def get_states(self, credentials, job_names):
         return self._get_states_detailed(
-            ssh_config,
+            credentials,
             job_names) if job_names else {}
 
-    def _get_states_detailed(self, ssh_config, job_names):
+    def _get_states_detailed(self, credentials, job_names):
         """
         Get job states by job ids
 
@@ -252,7 +252,7 @@ class Torque(InfrastructureInterface):
         call = "echo {} | xargs -n 1 qselect -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(ssh_config)
+        client = SshClient(credentials)
 
         output, exit_code = client.execute_shell_command(
             call,

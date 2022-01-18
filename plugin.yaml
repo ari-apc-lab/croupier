@@ -35,7 +35,7 @@ plugins:
         # URL to archive containing the plugin or name of directory containing
         # the plugin if it is included in the blueprint directory under the
         # "plugins" directory.
-        source: https://github.com/ari-apc-lab/croupier/archive/grapevine-python.zip
+        source: https://github.com/ari-apc-lab/croupier/archive/master.zip
         install_arguments: -r plugin-requirements.txt
         package_name: croupier
         package_version: "3.2.0"
@@ -59,39 +59,6 @@ data_types:
                 required: false
                 default: '/opt/cesga/sistemas/reservas/sresdelete'
 
-    croupier.datatypes.ssh_config:
-        properties:
-            user:
-                type: string
-                required: false
-                default: ''
-            host:
-                type: string
-                required: true
-            port:
-                type: integer
-                required: false
-                default: 22
-            private_key:
-                type: string
-                required: false
-                default: ''
-            password:
-                type: string
-                required: false
-                default: ''
-            private_key_password:
-                type: string
-                required: false
-                default: ''
-            tunnel:
-                type: string
-                required: false
-                default: ''
-            login_shell:
-                type: string
-                required: false
-                default: ''
 
     croupier.datatypes.monitoring_options:
         properties:
@@ -201,58 +168,22 @@ data_types:
                 required: false
                 default: "1"
 
-    croupier.datatypes.keycloak_credentials:
-        properties:
-            user:
-                type: string
-                required: true
-            pw:
-                type: string
-                required: false
-                default: ''
-
-    croupier.data.infrastructure.Config:
-        properties:
-            country_tz:
-                description: 'Timezone of HPC interface'
-                type: string
-                required: false
-            infrastructure_interface:
-                description: 'Scheduler of HPC interface. Supported Values: SLURM, TORQUE, PBSPRO'
-                type: string
-
-    croupier.data.infrastructure.Credentials:
-        properties:
-            host:
-                description: 'Endpoint of HPC interface'
-                type: string
-            user:
-                description: 'Username of HPC account'
-                type: string
-            password:
-                description: 'Password of HPC account'
-                type: string
-            private_key:
-                description: 'SSH private key to connect to HPC infrastructure'
-                type: string
-            private_key_password:
-                description: 'Password for SSH private key to connect to HPC infrastructure'
-                type: string
-                required: false
-                default: ''
-
-    croupier.data.job.Options:
+    croupier.datatypes.job.Options:
         properties:
             commands:
                 description: 'List of commands to be included in job submission script. It is incompatible with script property'
                 type: list
                 required: false #Either commands or script must be present
-            script:
-                description: 'Script to be launched with job submission. It is incompatible with commands property'
+            remote_script:
+                description: 'Script, present in the HPC workdir, to be launched with job submission. It is incompatible with commands/local_script property'
+                type: string
+                required: false #Either commands or script must be present
+            local_script:
+                description: 'Script to be uploaded from the blueprint folder and launched with job submission. It is incompatible with commands/remote_script property'
                 type: string
                 required: false #Either commands or script must be present
             arguments:
-                description: 'List of arguments to be sent to the script'
+                description: 'List of arguments to be sent to the remote_script or local_script'
                 type: list
                 required: false
             nodes:
@@ -325,78 +256,73 @@ data_types:
                 required: false
 
 # DATA MANAGEMENT
-    croupier.data.dm.Credentials:
+
+    croupier.datatypes.Credentials:
         properties:
-            username:
+            host:
+                description: 'Host for which the credentials are for'
+                type: string
+                required: false
+                default: ''
+            user:
                 description: 'Account username'
                 type: string
                 required: false
+                default: ''
             password:
                 description: 'Account password'
                 type: string
                 required: false
-            key:
+                default: ''
+            auth-header:
+                type: string
+                required: false
+                default: ''
+                description: 'Auth header for http calls, for example API tokens'
+            auth-header-label:
+                type: string
+                required: false
+                default: 'Authorization'
+                description: 'Label to use for authenticating calls to the API'
+            private_key:
                 description: 'User private key'
                 type: string
                 required: false
-            key_password:
+                default: ''
+            private_key_password:
                 description: 'Password for User private key'
                 type: string
                 required: false
-            retrieve_credentials_from_vault:
-                description: 'Whether to retrieve credentials from configured Vault'
-                type: boolean
+                default: ''
+            ssh_port:
+                type: integer
                 required: false
-                default: false
-
-    croupier.data.dm.GridFTPCredentials:
-        derived_from: croupier.data.dm.Credentials
-        properties:
-            cert:
-                description: "GripFTP user's certificate"
+                default: 22
+            ssh_tunnel:
                 type: string
                 required: false
+                default: ''
+            ssh_login_shell:
+                type: string
+                required: false
+                default: ''
+
+
+    croupier.datatypes.dm.GridFTPCredentials:
+        derived_from: croupier.datatypes.Credentials
+        properties:
+            cert:
+                description: "GridFTP user's certificate"
+                type: string
+                required: false
+                default: ''
             cert_password:
                 description: "Password for GripFTP user's certificate"
                 type: string
                 required: false
+                default: ''
 
-
-    croupier.data.dm.DataAccessInfrastructure:
-        properties:
-            endpoint:
-                description: 'accessible (via protocol) endpoint of infrastructure'
-                type: string
-            supported_protocols:
-                description: 'list of supported interfaces to access the data'
-                type: list
-            credentials:
-                description: 'Credentials to access the data access infrastructure'
-                type: croupier.data.dm.Credentials
-                required: false
-            internet_access:
-                description: 'Whether of not this DM infrastructure has external access to Internet'
-                type: boolean
-                required: false
-                default: false
-
-    croupier.data.dm.GridFTPDataAccessInfrastructure:
-        derived_from: croupier.data.dm.DataAccessInfrastructure
-        properties:
-            workspace_basepath:
-                description: 'basepath location for workspace creating'
-                type: string
-                required: false
-            ssh_endpoint:
-                description: 'ssh endpoint for workspace management'
-                type: string
-                required: false
-            credentials:
-                description: 'Credentials to access the data access infrastructure'
-                type: croupier.data.dm.GridFTPCredentials
-                required: false
-
-    croupier.data.dm.HPCWorkspace:
+    croupier.datatypes.dm.HPCWorkspace:
         properties:
             name:
                 description: 'workspace name'
@@ -428,9 +354,9 @@ node_types:
             config:
                 description: type
                 type: croupier.datatypes.wm_config
-            ssh_config:
+            credentials:
                 description: SSH configuration
-                type: croupier.datatypes.ssh_config
+                type: croupier.datatypes.Credentials
                 default: {}
             job_prefix:
                 description: Job name prefix for this HPC
@@ -465,6 +391,15 @@ node_types:
                 type : boolean
                 default: False
                 required: False
+            internet_access:
+                description: True if HPC has access to the internet
+                type: boolean
+                default: False
+                required: False
+            supported_prtocols:
+                type: list
+                default: []
+                description: List of protocols supported for data management
             agent_config:
                 default:
                     install_method: none
@@ -475,8 +410,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         base_dir:
                             default: { get_property: [SELF, base_dir] }
                         workdir_prefix:
@@ -494,8 +429,8 @@ node_types:
                     inputs:
                         config:
                             default: { get_property: [SELF, config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         skip:
                             default: { get_property: [SELF, skip_cleanup] }
                         simulate:
@@ -506,8 +441,8 @@ node_types:
                     inputs:
                         config_infra:
                             default: { get_property: [SELF, config] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         monitoring_options:
                             default: { fet_property: [SELF, monitoring_options]}
                         simulate:
@@ -515,8 +450,8 @@ node_types:
                 stop:
                     implementation: croupier.croupier_plugin.tasks.stop_monitoring_hpc
                     inputs:
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config] }
+                        credentials:
+                            default: { get_property: [SELF, credentials] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -529,7 +464,7 @@ node_types:
                 type: croupier.datatypes.job_deployment_config
             job_options:
                 description: Job main command and options
-                type: croupier.data.job.Options
+                type: croupier.datatypes.job.Options
             publish:
                 description: Config to publish its outputs
                 default: []
@@ -589,28 +524,54 @@ node_types:
         derived_from: croupier.nodes.Job
 
 # DATA MANAGEMENT
+    croupier.nodes.DataAccessInfrastructure:
+        derived_from: cloudify.nodes.Root
+        properties:
+            endpoint:
+                description: 'accessible (via protocol) endpoint of infrastructure'
+                type: string
+            supported_protocols:
+                description: 'list of supported interfaces to access the data'
+                type: list
+            credentials:
+                description: 'Credentials to access the data access infrastructure'
+                type: croupier.datatypes.Credentials
+                required: false
+            internet_access:
+                description: 'Whether of not this DM infrastructure has external access to Internet'
+                type: boolean
+                required: false
+                default: false
+
+    croupier.nodes.GridFTPDataAccessInfrastructure:
+        derived_from: croupier.nodes.DataAccessInfrastructure
+        properties:
+            workspace_basepath:
+                description: 'basepath location for workspace creating'
+                type: string
+                required: false
+            ssh_endpoint:
+                description: 'ssh endpoint for workspace management'
+                type: string
+                required: false
+            credentials:
+                description: 'Credentials to access the data access infrastructure'
+                type: croupier.datatypes.dm.GridFTPCredentials
+                required: false
+
     croupier.nodes.DataTransfer:
         derived_from: cloudify.nodes.Root
         properties:
             transfer_protocol:
                 description: 'protocol to transfer data from source to target'
                 type: string
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.configure_data_transfer
 
     croupier.nodes.DataSource:
         derived_from: cloudify.nodes.Root
-        properties:
-            located_at:
-                description: 'infrastructure where data source is located'
-                type: croupier.data.dm.DataAccessInfrastructure
-                required: true
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                create:
-                    implementation: croupier.croupier_plugin.tasks.configure_data_source
-                    inputs:
-                        located_at:
-                            description: "DataSourceInfrastructure where data source is located"
-                            default: { get_property: [ SELF, located_at ] }
 
     croupier.nodes.FileDataSource:
         derived_from: croupier.nodes.DataSource
@@ -626,12 +587,66 @@ node_types:
                 description: 'URI of data source in Web'
                 type: string
 
+    croupier.nodes.ECMWFVerticalInterpolation:
+        derived_from: croupier.nodes.WebDataSource
+        properties:
+            credentials:
+                description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
+                type: croupier.datatypes.Credentials
+            keycloak_credentials:
+                description: login credentials for hidalgo keycloak. Fields- user, pw
+                type: croupier.datatypes.Credentials
+            query:
+                description: ECMWF Query fields.
+                type: croupier.datatypes.ecmwf_query
+            server_port:
+                type: string
+                default: 9984
+            cloudify_address:
+                type: string
+                default: ''
+                required: False
+            resource:
+                required: false
+                default: ''
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
+                    max_retries: 0
+                    inputs:
+                        query:
+                            default: { get_property: [ SELF, query ] }
+                        credentials:
+                            default: { get_property: [ SELF, credentials ] }
+                        keycloak_credentials:
+                            default: { get_property: [ SELF, keycloak_credentials ] }
+                        cloudify_address:
+                            default: { get_property: [ SELF, cloudify_address ] }
+                        server_port:
+                            default: { get_property: [ SELF, server_port ] }
+
+    croupier.nodes.CKAN_dataset:
+        derived_from: croupier.nodes.WebDataSource
+        properties:
+            query:
+                description: Query fields.
+                type: croupier.datatypes.ecmwf_query
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
+                    max_retries: 0
+                    inputs:
+                        query:
+                            default: { get_property: [ SELF, query ] }
+
     croupier.nodes.HPCDataSource:
         derived_from: croupier.nodes.FileDataSource
         properties:
             workspace:
                 description: 'Workspace where FileDataSource is located'
-                type: croupier.data.dm.HPCWorkspace
+                type: croupier.datatypes.dm.HPCWorkspace
                 required: false
 
 #VAULT
@@ -676,75 +691,6 @@ node_types:
                         address:
                             default: { get_property: [SELF,address] }
 
-    croupier.nodes.Data:
-        derived_from: cloudify.nodes.WebServer
-        properties:
-            data_urls:
-                description: list of URLs of the files to download to the HPC (ckan for example)
-                default: []
-            unzip_data:
-                description: True if the files need to be unzipped after downloading
-                type: boolean
-                default: False
-            dest_data:
-                description: Path where the data needs to be downloaded to. If left blank it will be the job workdir
-                type: string
-                default: ""
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                start:
-                    implementation: croupier.croupier_plugin.tasks.download_data
-                    max_retries: 0
-                    inputs:
-                        data_urls:
-                            default: { get_property: [SELF, data_urls] }
-                        unzip_data:
-                            default: { get_property: [ SELF, unzip_data ] }
-                        dest_data:
-                            default: { get_property: [ SELF, dest_data ] }
-            croupier.interfaces.lifecycle:
-                delete:
-                    implementation: croupier.croupier_plugin.tasks.delete_data
-                    max_retries: 0
-
-    croupier.nodes.ECMWFVerticalInterpolation:
-        derived_from: croupier.nodes.Data
-        properties:
-            ssh_config_ECMWF:
-                description: SSH credentials for the ECMWF VM. Fields- host, user, private_key
-                type: croupier.datatypes.ssh_config
-            keycloak_credentials:
-                description: login credentials for hidalgo keycloak. Fields- user, pw
-                type: croupier.datatypes.keycloak_credentials
-            query:
-                description: ECMWF Query fields. Fields- params, date, time, area, max_steps, [ensemble], [memebers], [input], [keep_input], [algorithm]
-                type: croupier.datatypes.ecmwf_query
-            server_port:
-                type: string
-                default: 9984
-            unzip_data:
-                type: boolean
-                default: True
-            cloudify_address:
-                type: string
-                default: ''
-                required: False
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                configure:
-                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
-                    max_retries: 0
-                    inputs:
-                        query:
-                            default: { get_property: [SELF, query] }
-                        ssh_config:
-                            default: { get_property: [SELF, ssh_config_ECMWF] }
-                        keycloak_credentials:
-                            default: { get_property: [SELF, keycloak_credentials] }
-                        cloudify_address:
-                            default: { get_property: [SELF, cloudify_address] }
-                        server_port:
-                            default: { get_property: [SELF, port] }
 relationships:
     interface_contained_in:
         derived_from: cloudify.relationships.contained_in
@@ -753,8 +699,8 @@ relationships:
                 preconfigure:
                     implementation: croupier.croupier_plugin.tasks.preconfigure_interface
                     inputs:
-                        ssh_config:
-                            default: { get_property: [SOURCE, ssh_config] }
+                        credentials:
+                            default: { get_property: [SOURCE, credentials] }
                         simulate:
                             default: { get_property: [SOURCE, simulate] }
 
@@ -774,8 +720,8 @@ relationships:
                     inputs:
                         config:
                             default: { get_property: [TARGET, config] }
-                        ssh_config:
-                            default: { get_property: [TARGET, ssh_config] }
+                        credentials:
+                            default: { get_property: [TARGET, credentials] }
                         job_prefix:
                             default: { get_property: [TARGET, job_prefix] }
                         monitoring_options:
@@ -783,28 +729,37 @@ relationships:
                         simulate:
                             default: { get_property: [TARGET, simulate] }
 
+    ds_located_at:
+        derived_from: cloudify.relationships.contained_in
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_data_source
+
+
     job_depends_on:
         derived_from: cloudify.relationships.depends_on
 
     from_source:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
 
     to_target:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                postconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
+
 
     input:
         derived_from: cloudify.relationships.connected_to
 
     output:
         derived_from: cloudify.relationships.connected_to
-
-    job_needs_data:
-        derived_from: cloudify.relationships.depends_on
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.pass_data_info
-                    max_retries: 0
 
     retrieve_credentials_from_vault:
         derived_from: cloudify.relationships.depends_on

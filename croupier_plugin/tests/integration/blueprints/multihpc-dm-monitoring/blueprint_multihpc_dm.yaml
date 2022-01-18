@@ -28,8 +28,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-#    - plugin:croupier #For Cloudify
-    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+    - plugin:croupier #For Cloudify
+#    - plugin.yaml #For debugging in PyCharm, comment it out for Cloudify
 
 inputs:
 ####################### VAULT ###################
@@ -72,6 +72,9 @@ inputs:
 
 #################### START WORKFLOW ###################
 node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
     vault:
         type: croupier.nodes.Vault
         properties:
@@ -83,7 +86,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc1_scheduler }
-            credentials:
+            ssh_config:
                 host: { get_input: hpc1_host }
             job_prefix: atos
             base_dir: $HOME
@@ -92,6 +95,8 @@ node_templates:
             skip_cleanup: true
             workdir_prefix: "multihpc-dm"
         relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
             - type: retrieve_credentials_from_vault
               target: vault
 
@@ -100,7 +105,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc2_scheduler }
-            credentials:
+            ssh_config:
                 host: { get_input: hpc2_host }
             job_prefix: atos
             base_dir: $HOME
@@ -109,6 +114,8 @@ node_templates:
             skip_cleanup: true
             workdir_prefix: "multihpc-dm"
         relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
             - type: retrieve_credentials_from_vault
               target: vault
 

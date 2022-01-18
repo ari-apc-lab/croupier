@@ -64,11 +64,13 @@ class JobRequester(object):
                         settings['names'])
                 else:  # internal
                     workdir = settings['workdir']
-                    wm = InfrastructureInterface.factory(settings['type'], logger, workdir, monitor_start_time)
+                    timezone = settings['timezone']
+                    interface_type = settings['type']
+                    wm = InfrastructureInterface.factory(interface_type, logger, workdir, monitor_start_time, timezone)
                     if wm:
                         states, audits = wm.get_states(settings['config'], settings['names'])
                     else:
-                        states, audits = self._no_states(host, settings['type'], settings['names'], logger)
+                        states, audits = self._no_states(host, interface_type, settings['names'], logger)
             return states, audits
 
         def _get_prometheus(self, host, config, names):

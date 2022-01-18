@@ -134,18 +134,19 @@ def get_prevailing_state(state1, state2):
 class InfrastructureInterface(object):
     infrastructure_interface = None
 
-    def __init__(self, infrastructure_interface, logger, workdir, monitor_start_time=None):
+    def __init__(self, infrastructure_interface, logger, workdir, monitor_start_time=None, timezone='UTC'):
         self.infrastructure_interface = infrastructure_interface
         self.monitor_start_time = monitor_start_time
         self.logger = logger
         self.workdir = workdir
+        self.timezone = timezone
         # self.audit_inserted = False
 
     @staticmethod
-    def factory(infrastructure_interface, logger, workdir, monitor_start_time=None):
+    def factory(infrastructure_interface, logger, workdir, monitor_start_time=None, timezone='UTC'):
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
-            return Slurm(infrastructure_interface, logger, workdir, monitor_start_time)
+            return Slurm(infrastructure_interface, logger, workdir, monitor_start_time, timezone)
         if infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
             return Torque(infrastructure_interface, logger, workdir)
@@ -376,11 +377,11 @@ class InfrastructureInterface(object):
             "'_get_envar' not implemented.")
 
     # Monitor
-    def get_states(self, ssh_config, job_names):
+    def get_states(self, credentials, job_names):
         """
         Get the states of the jobs names
-        @type ssh_config: dictionary
-        @param ssh_config: SSH ssh_config to connect to the HPC
+        @type credentials: dictionary
+        @param credentials: SSH credentials to connect to the HPC
         @rtype dict
         @return a dictionary of job names and its states
         """

@@ -46,10 +46,11 @@ setup(
               'croupier_plugin.accounting_client',
               'croupier_plugin.accounting_client.model',
               'croupier_plugin.data_mover',
-              'croupier_plugin.vault'
+              'croupier_plugin.vault',
+              'croupier_plugin.data_management'
               ],
     package_data={'croupier_plugin.infrastructure_interfaces': ['*.sh'],
-                  'croupier_plugin': ['*.cfg']},
+                  'croupier_plugin': ['*.cfg'], 'croupier_plugin.data_management': ['*.sh']},
     include_package_data=True,
     zip_safe=False,
     install_requires=[
