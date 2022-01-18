@@ -345,6 +345,10 @@ data_types:
                 type: string
                 required: false
                 default: ""
+            package_id:
+                type: string
+                required: false
+                default: ""
             title:
                 type: string
                 required: false
@@ -390,6 +394,37 @@ data_types:
                 required: false
                 default: {}
             owner_org:
+                type: string
+                required: false
+                default: ""
+
+    croupier.datatypes.ckan_resource:
+        properties:
+            name:
+                type: string
+                required: false
+                default: ""
+            url:
+                type: string
+                required: false
+                default: ""
+            description:
+                type: string
+                required: false
+                default: ""
+            type:
+                type: string
+                required: false
+                default: ""
+                constraints:
+                    - valid_values:
+                        - file
+                        - file.upload
+                        - api
+                        - visualization
+                        - code
+                        - documentation
+            format:
                 type: string
                 required: false
                 default: ""
@@ -652,11 +687,11 @@ node_types:
                 description: 'URI of data source in Web'
                 type: string
 
-    croupier.nodes.CKAN_datasource:
+    croupier.nodes.CKAN_resource:
         derived_from: croupier.nodes.DataSource
         properties:
-            datasource_info:
-                type: croupier.datatypes.ckan_datasource
+            resource:
+                type: croupier.datatypes.ckan_resource
                 required: true
 
     croupier.nodes.ECMWFVerticalInterpolation:
