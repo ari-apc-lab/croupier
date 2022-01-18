@@ -25,8 +25,6 @@
 
 
 vault_token:
-vault_user:
-difficulty: Test
-phenology_model_url: https://www.stats.govt.nz/assets/Uploads/Annual-enterprise-survey/Annual-enterprise-survey-2020-financial-year-provisional/Download-data/annual-enterprise-survey-2020-financial-year-provisional-size-bands-csv.csv
-phenology_model_filename: annual-enterprise-survey-2020-financial-year-provisional-size-bands-csv.csv
-output_file_location: $GRAPEVINE/ATOS-WORKSHOP/Datos/out.csv
+vault_username:
+reservation_id:
+partition:

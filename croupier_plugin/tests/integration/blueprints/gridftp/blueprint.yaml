@@ -47,6 +47,10 @@ inputs:
         type: croupier.data.dm.GridFTPDataAccessInfrastructure
 
 ############## HPC Infrastructures ##############
+    infrastructure_interface:
+        type: string
+    partition:
+        type: string
     hpc_host:
         type: string
 
@@ -69,7 +73,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc_scheduler }
-            ssh_config:
+            credentials:
                 host: { get_input: hpc_host }
             job_prefix: atos
             base_dir: $HOME
@@ -112,6 +116,9 @@ node_templates:
         properties:
             filepath: ./input_concatenated_files.geojson
             located_at: { get_input: remote_data_access_infra }
+        relationships:
+          - type: retrieve_credentials_from_vault
+            target: vault
 
     job_in:
         type: croupier.nodes.HPCDataSource
@@ -122,6 +129,9 @@ node_templates:
               create: False
               lifetime: 30
             located_at: { get_input: hpc_data_access_infra }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
 
     #OUTPUTS
     job_out:
@@ -129,14 +139,20 @@ node_templates:
         properties:
             filepath: ./output_concatenated_files.geojson
             workspace:
-              name: ws_agroclimatic
+                name: ws_agroclimatic
             located_at: { get_input: hpc_data_access_infra }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
 
     remote_out:
-      type: croupier.nodes.FileDataSource
-      properties:
-        filepath: agroclimatic_zones_scenario_outputs/j.gorronogoitia/frostdates/j.gorronogoitia_output_concatenated_files.geojson
-        located_at: { get_input: remote_data_access_infra }
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: agroclimatic_zones_scenario_outputs/j.gorronogoitia/frostdates/j.gorronogoitia_output_concatenated_files.geojson
+            located_at: { get_input: remote_data_access_infra }
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
 
     # DATA TRANSFER
     dt_gridftp_download:
@@ -150,14 +166,14 @@ node_templates:
               target: job_in
 
     dt_gridftp_upload:
-      type: croupier.nodes.DataTransfer
-      properties:
-        transfer_protocol: GridFTP
-      relationships:
-        - type: from_source
-          target: job_out
-        - type: to_target
-          target: remote_out
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: GridFTP
+        relationships:
+            - type: from_source
+              target: job_out
+            - type: to_target
+              target: remote_out
 
 # END DATA MANAGEMENT
 

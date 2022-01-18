@@ -58,7 +58,7 @@ node_templates:
     properties:
       config:
         infrastructure_interface: SHELL
-      ssh_config:
+      credentials:
         host: ''
           password: ''
           private_key: ''

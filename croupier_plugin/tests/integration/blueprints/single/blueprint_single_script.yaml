@@ -36,6 +36,12 @@ inputs:
         type: string
     vault_user:
         type: string
+    infrastructure_interface:
+        type: string
+    partition:
+        type: string
+    hpc_host:
+        type: string
 
 node_templates:
     vault:
@@ -50,9 +56,9 @@ node_templates:
               target: vault
         properties:
             config:
-                infrastructure_interface: SLURM
-            ssh_config:
-                host: ft2.cesga.es
+                infrastructure_interface: { get_input: infrastructure_interface }
+            credentials:
+                host: { get_input: hpc_host }
             job_prefix: atos
             base_dir: $HOME
             monitoring_options:
@@ -79,7 +85,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
-                partition: cola-corta
+                partition: { get_input: partition }
             deployment:
                 bootstrap: 'scripts/create_script.sh'
                 revert: 'scripts/delete_script.sh'

@@ -133,16 +133,16 @@ class SshClient(object):
     """Represents a ssh client"""
     _client = None
 
-    def __init__(self, ssh_config):
+    def __init__(self, credentials):
         # Build a tunnel if necessary
         self._tunnel = None
-        self._host = ssh_config['host']
-        self._user = ssh_config['user']
-        self._port = int(ssh_config['port']) if 'port' in ssh_config else 22
-        self._passwd = ssh_config['password'] if 'password' in ssh_config else None
+        self._host = credentials['host']
+        self._user = credentials['user']
+        self._port = int(credentials['port']) if 'port' in credentials else 22
+        self._passwd = credentials['password'] if 'password' in credentials else None
         self._tunnel = None
-        if 'tunnel' in ssh_config and ssh_config['tunnel']:
-            self._tunnel = SshForward(ssh_config)
+        if 'tunnel' in credentials and credentials['tunnel']:
+            self._tunnel = SshForward(credentials)
             self._host = "localhost"
             self._port = self._tunnel.port()
 
@@ -151,15 +151,15 @@ class SshClient(object):
 
         # Build the private key if provided
         self._private_key = None
-        if 'private_key' in ssh_config and ssh_config['private_key']:
-            key_data = ssh_config['private_key']
+        if 'private_key' in credentials and credentials['private_key']:
+            key_data = credentials['private_key']
             if not isinstance(key_data, str):
                 key_data = str(key_data, "utf-8")
             key_file = io.StringIO()
             key_file.write(key_data)
             key_file.seek(0)
-            if 'private_key_password' in ssh_config and ssh_config['private_key_password']:
-                self._private_key_password = ssh_config['private_key_password']
+            if 'private_key_password' in credentials and credentials['private_key_password']:
+                self._private_key_password = credentials['private_key_password']
             else:
                 self._private_key_password = None
             self._private_key = RSAKey.from_private_key(key_file, password=self._private_key_password)
@@ -171,7 +171,7 @@ class SshClient(object):
         #   https://stackoverflow.com/questions/32139904/ssh-via-paramiko-load-bashrc
         # @NOTE: think of SSHClient.invoke_shell()
         #        instead of SSHClient.exec_command()
-        self._login_shell = ssh_config['login_shell'] if 'login_shell' in ssh_config else False
+        self._login_shell = credentials['login_shell'] if 'login_shell' in credentials else False
 
         self.open_connection()
 
@@ -346,13 +346,13 @@ class SshClient(object):
 class SshForward(object):
     """Represents a ssh port forwarding"""
 
-    def __init__(self, ssh_config):
-        self._client = SshClient(ssh_config['tunnel'])
+    def __init__(self, credentials):
+        self._client = SshClient(credentials['tunnel'])
         self._remote_port = \
-            int(ssh_config['port']) if 'port' in ssh_config else 22
+            int(credentials['port']) if 'port' in credentials else 22
 
         class SubHander(Handler):
-            chain_host = ssh_config['host']
+            chain_host = credentials['host']
             chain_port = self._remote_port
             ssh_transport = self._client.get_transport()
 

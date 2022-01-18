@@ -235,7 +235,7 @@ class Pbspro(InfrastructureInterface):
         call = read_environment + "echo {} | xargs -n 1 qselect -x -N".format(
             shlex_quote(' '.join(map(shlex_quote, job_names))))
 
-        client = SshClient(self.ssh_config)
+        client = SshClient(self.credentials)
 
         output, exit_code = client.execute_shell_command(
             call,

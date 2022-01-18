@@ -6,7 +6,7 @@
 # Author: Jesus Gorronogoitia, jesus.gorronogoitia@atos.net
 # version 1.24, 19-Nov-2020.
 
-# This script has to be executed with the vendor account it is assumed that the vendor has GridFtp ssh_config,
+# This script has to be executed with the vendor account it is assumed that the vendor has GridFtp credentials,
 # and it is installed the grid-proxy in the machine where this script is executed.
 
 # NOTICE: If -p provide a filename, and the Destination is a folder end with '/', then the file is copied in that
@@ -104,7 +104,7 @@ class Local_gridftp_conf(object):
         try:
             subprocess.check_output(command, shell=True)
         except subprocess.CalledProcessError as grepexc:
-            raise Exception("Error creating loading ssh_config, Error code", grepexc.returncode, grepexc.output)
+            raise Exception("Error creating loading credentials, Error code", grepexc.returncode, grepexc.output)
 
     def place_certificates(self, userkey, usercert, grid_cert_passwd):
         if not os.path.exists(home + "/.globus"):
@@ -123,10 +123,10 @@ class Local_gridftp_conf(object):
         thecertkey = home + "/.globus/userkey.pem"
 
         if not os.path.isfile(thecertpath):
-            raise Exception("Error: missing ssh_config (cert)")
+            raise Exception("Error: missing credentials (cert)")
 
         if not os.path.isfile(thecertkey):
-            raise Exception("Error: missing ssh_config (key)")
+            raise Exception("Error: missing credentials (key)")
 
         os.chmod(home + "/.globus/usercert.pem", 0o0644)
         os.chmod(home + "/.globus/userkey.pem", 0o0600)
@@ -166,7 +166,7 @@ class GridFTPServer(object):
         return self.srv_path
 
 
-# Set a new instance of the class DataMover, it creates the workspace and takes the ssh_config to use.
+# Set a new instance of the class DataMover, it creates the workspace and takes the credentials to use.
 
 
 class DataMover(object):
@@ -177,7 +177,7 @@ class DataMover(object):
         self.new_wspath = ""
 
         home = expanduser("~")
-        # this path is not needed if we receive the ssh ssh_config as parameter
+        # this path is not needed if we receive the ssh credentials as parameter
         user_ssh_credentials = home + "/.ssh/id_rsa_euxdat"
         f = open(user_ssh_credentials, "w+")
         f.write(usersshkey)
@@ -198,7 +198,7 @@ class DataMover(object):
         if userkey and usercert:  # if both certificates are not empty
             # PREPARATION OF THE GRIDFTP CERTIFICATES
             # notice that starting the grid-proxy-init may ask for a password if the keys are encrypted.
-            # it should not be needed it if the gridftp proxy be already running, and not need change ssh_config
+            # it should not be needed it if the gridftp proxy be already running, and not need change credentials
             local_grdiftpconf = Local_gridftp_conf()
             local_grdiftpconf.place_certificates(userkey, usercert, grid_cert_passwd)
 
