@@ -30,28 +30,35 @@ imports:
     # to speed things up, it is possible downloading this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - plugin:croupier
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/join_data_management/plugin.yaml
 
 inputs:
     vault_user:
         type: string
     vault_token:
         type: string
+    hpc:
+        type: string
+    infrastructure_interface:
+        type: string
+    ecmwf_query:
+        type: croupier.datatypes.ecmwf_query
 
 node_templates:
     hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: TORQUE
-            ssh_config:
-                host: sodalite-fe.hlrs.de
+                infrastructure_interface: { get_input: infrastructure_interface }
+            credentials:
+                host: { get_input: hpc }
             job_prefix: ecmwf
             base_dir: "$HOME"
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
             workdir_prefix: "ecmwf"
+            internet_access: true
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -61,7 +68,6 @@ node_templates:
         properties:
             user: { get_input: vault_user }
             token: { get_input: vault_token}
-
 
     job1:
         type: croupier.nodes.Job
@@ -74,43 +80,65 @@ node_templates:
         relationships:
             - type: task_managed_by_interface
               target: hpc
-            - type: job_needs_data
-              target: weather_data
 
     job2:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                    - tar -czf test.tar *.grib test
+                    - cat weather_data.zip
                 max_time: "00:01:00"
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc
-            - type: job_needs_data
-              target: weather_data
+            - type: input
+              target: weather_data_in
             - type: job_depends_on
               target: job1
 
     weather_data:
         type: croupier.nodes.ECMWFVerticalInterpolation
         properties:
-            ssh_config:
-                host: 136.156.90.143
+            credentials:
+                host: 192.168.3.9
             keycloak_credentials:
                 user: { get_input: vault_user }
-            query:
-                area: 45/18/44/19
-                params: u/v
-                date: 20210910
-                time: 00
-                collection: hidalgo-test
+            query: { get_input: ecmwf_query }
         relationships:
-            - type: task_managed_by_interface
-              target: hpc
             - type: retrieve_credentials_from_vault
               target: vault
+            - type: ds_located_at
+              target: ckan
+
+    weather_data_in:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/weather_data.zip
+        relationships:
+            - type: ds_located_at
+              target: hpc
+
+    ckan:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - HTTP
+            internet_access: true
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    dt_http:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: weather_data
+            - type: to_target
+              target: weather_data_in
 
 outputs:
     job1_name:

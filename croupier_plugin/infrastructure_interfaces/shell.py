@@ -32,40 +32,56 @@ from croupier_plugin.infrastructure_interfaces import infrastructure_interface
 class Shell(infrastructure_interface.InfrastructureInterface):
 
     def _get_jobid(self, output):
-        return "SHELL_JOB"
+        if output:
+            return output.split(' ')[-1].strip()
+        else:
+            return "NO_RESPONSE"
 
-    def _parse_job_settings(
-            self,
-            job_id,
-            job_settings,
-            script=False,
-            timezone=None):
-        _settings = ''
+    def _build_job_submission_call(self, name, job_settings, ssh_client, timezone):
+        """
+        Generates submission command line as a string
 
-        # add executable and arguments
-        if not script:
-            _settings += ' ./' + job_settings['script']
-            if 'arguments' in job_settings:
-                for arg in job_settings['arguments']:
-                    _settings += ' '+arg
-            _settings += '; '
+        @type name: string
+        @param name: name of the job
+        @type job_settings: dictionary
+        @param job_settings: dictionary with the job options
+        @rtype dict
+        @return dict with two keys:
+         'call' string to call slurm with its parameters, and
+         'scale_env_mapping_call' to push the scale env variables on
+         the batch scripts
+            None if an error arise.
+        """
+        # Build single line command
 
-            _settings += 'echo ' + job_id + ',$? >> croupier-monitor.data; '
+        call_script_content = "#!/bin/bash\n" \
+                              "nohup ./{name}.script >{name}.out 2>{name}.err &\n" \
+                              "pid=$!\n" \
+                              "wait $pid\n" \
+                              "exit_code=$?\n" \
+                              "echo {name},$exit_code >> croupier-monitor.dat". format(name=name)
+        call_name = name + "_call.sh"
+        if not self.create_shell_script(ssh_client, call_name, call_script_content):
+            return {'error': 'could not create the call script'}
 
-        return {'data': _settings}
+        _call = "nohup ./{call_name} >/dev/null 2>/dev/null &".format(call_name=call_name)
 
-    def _build_job_cancellation_call(self, name, job_settings, logger):
+        response = {'call': _call}
+
+        return response
+
+    def _build_job_cancellation_call(self, name, job_settings):
         return "pkill -f " + name
 
 # Monitor
-    def get_states(self, workdir, ssh_config, job_names, logger):
-        call = "cat croupier-monitor.data"
+    def get_states(self, credentials, job_names):
+        call = "cat croupier-monitor.dat"
 
-        client = SshClient(ssh_config)
+        client = SshClient(credentials)
 
         output, exit_code = client.execute_shell_command(
             call,
-            workdir=workdir,
+            workdir=self.workdir,
             wait_result=True)
 
         client.close_connection()
@@ -73,13 +89,13 @@ class Shell(infrastructure_interface.InfrastructureInterface):
         states = {}
         audits = {}
         if exit_code == 0:
-            states = self._parse_states(output, logger)
+            states = self._parse_states(output)
         for job_name in job_names:
             audits[job_name] = {}
 
         return states, audits
 
-    def _parse_states(self, raw_states, logger):
+    def _parse_states(self, raw_states):
         """ Parse two colums exit codes into a dict """
         jobs = raw_states.splitlines()
         parsed = {}

@@ -530,4 +530,75 @@
       <value xmi:type="uml:InstanceValue" xmi:id="_-9Erwr4sEeuqScZBwsZ67Q" name="InstanceValue0" type="_oVEHsL1pEeuqScZBwsZ67Q" instance="_0fqOgL4oEeuqScZBwsZ67Q"/>
     </slot>
   </packagedElement>
+  <packagedElement xmi:type="uml:Component" xmi:id="_lqRbkAGoEey0LKqIjDNP0w" name="Frontend">
+    <packagedElement xmi:type="uml:Usage" xmi:id="_H6DpMAGqEey0LKqIjDNP0w" client="_lqRbkAGoEey0LKqIjDNP0w" supplier="_I41bEAGpEey0LKqIjDNP0w"/>
+    <packagedElement xmi:type="uml:Dependency" xmi:id="_nxeRQAGrEey0LKqIjDNP0w" name="JWT token" client="_lqRbkAGoEey0LKqIjDNP0w" supplier="_n6pQ0AGqEey0LKqIjDNP0w"/>
+  </packagedElement>
+  <packagedElement xmi:type="uml:Component" xmi:id="_nAzJoAGoEey0LKqIjDNP0w" name="Backend">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="_bYzWUAGpEey0LKqIjDNP0w" client="_nAzJoAGoEey0LKqIjDNP0w" supplier="_I41bEAGpEey0LKqIjDNP0w" contract="_I41bEAGpEey0LKqIjDNP0w"/>
+    <packagedElement xmi:type="uml:Usage" xmi:id="_TIc0QAGqEey0LKqIjDNP0w" client="_nAzJoAGoEey0LKqIjDNP0w" supplier="_LMN9gAGqEey0LKqIjDNP0w"/>
+    <packagedElement xmi:type="uml:Dependency" xmi:id="_sIiYIAGrEey0LKqIjDNP0w" name="Vault token" client="_nAzJoAGoEey0LKqIjDNP0w" supplier="_tax4kAGqEey0LKqIjDNP0w"/>
+  </packagedElement>
+  <packagedElement xmi:type="uml:Component" xmi:id="_otKk0AGoEey0LKqIjDNP0w" name="Cloudify">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="_R0ggIAGqEey0LKqIjDNP0w" client="_otKk0AGoEey0LKqIjDNP0w" supplier="_LMN9gAGqEey0LKqIjDNP0w" contract="_LMN9gAGqEey0LKqIjDNP0w"/>
+    <packagedElement xmi:type="uml:Component" xmi:id="_qly6YAGoEey0LKqIjDNP0w" name="Croupier">
+      <nestedClassifier xmi:type="uml:Interface" xmi:id="_Yxv3sAGtEey0LKqIjDNP0w" name="IInfrastructure"/>
+      <packagedElement xmi:type="uml:Dependency" xmi:id="_xy3dsAGrEey0LKqIjDNP0w" name="secrets" client="_qly6YAGoEey0LKqIjDNP0w" supplier="_tax4kAGqEey0LKqIjDNP0w"/>
+      <packagedElement xmi:type="uml:Dependency" xmi:id="_2ev-AAGrEey0LKqIjDNP0w" name="management" client="_qly6YAGoEey0LKqIjDNP0w" supplier="_YC1DkAGqEey0LKqIjDNP0w"/>
+      <packagedElement xmi:type="uml:Component" xmi:id="_x9cEEAGtEey0LKqIjDNP0w" name="SLURM">
+        <generalization xmi:type="uml:Generalization" xmi:id="_z1WA4AGtEey0LKqIjDNP0w" general="_W59PoAGtEey0LKqIjDNP0w"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Component" xmi:id="_1ObTsAGtEey0LKqIjDNP0w" name="PBS Pro">
+        <generalization xmi:type="uml:Generalization" xmi:id="_2ytJ4AGtEey0LKqIjDNP0w" general="_W59PoAGtEey0LKqIjDNP0w"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Dependency" xmi:id="_gyJAQAGuEey0LKqIjDNP0w" name="monitor" client="_qly6YAGoEey0LKqIjDNP0w" supplier="_YPUDkAGuEey0LKqIjDNP0w"/>
+      <packagedElement xmi:type="uml:Component" xmi:id="_V60b8AGvEey0LKqIjDNP0w" name="Data Management"/>
+      <packagedElement xmi:type="uml:Component" xmi:id="_ZdTrQAGvEey0LKqIjDNP0w" name="RSyncDM">
+        <generalization xmi:type="uml:Generalization" xmi:id="_dDrVAAGvEey0LKqIjDNP0w" general="_V60b8AGvEey0LKqIjDNP0w"/>
+        <packagedElement xmi:type="uml:Dependency" xmi:id="_xnAPIAGvEey0LKqIjDNP0w" name="data access" client="_ZdTrQAGvEey0LKqIjDNP0w" supplier="_YC1DkAGqEey0LKqIjDNP0w"/>
+      </packagedElement>
+      <packagedElement xmi:type="uml:Component" xmi:id="_aylcIAGvEey0LKqIjDNP0w" name="HTTP DM">
+        <generalization xmi:type="uml:Generalization" xmi:id="_d0yB0AGvEey0LKqIjDNP0w" general="_V60b8AGvEey0LKqIjDNP0w"/>
+        <packagedElement xmi:type="uml:Dependency" xmi:id="_mILbYAGvEey0LKqIjDNP0w" name="data access" client="_aylcIAGvEey0LKqIjDNP0w" supplier="_hyqzsAGvEey0LKqIjDNP0w"/>
+      </packagedElement>
+    </packagedElement>
+  </packagedElement>
+  <packagedElement xmi:type="uml:Package" xmi:id="_0HvKsAGoEey0LKqIjDNP0w" name="IAM">
+    <packagedElement xmi:type="uml:Component" xmi:id="_u2TGQAGoEey0LKqIjDNP0w" name="KeyCloak">
+      <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="_2NsfsAGqEey0LKqIjDNP0w" client="_u2TGQAGoEey0LKqIjDNP0w" supplier="_n6pQ0AGqEey0LKqIjDNP0w" contract="_n6pQ0AGqEey0LKqIjDNP0w"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Component" xmi:id="_xdGwcAGoEey0LKqIjDNP0w" name="Vault">
+      <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="_1XyLYAGqEey0LKqIjDNP0w" client="_xdGwcAGoEey0LKqIjDNP0w" supplier="_tax4kAGqEey0LKqIjDNP0w" contract="_tax4kAGqEey0LKqIjDNP0w"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Interface" xmi:id="_n6pQ0AGqEey0LKqIjDNP0w" name="IKeyCloak"/>
+    <packagedElement xmi:type="uml:Interface" xmi:id="_tax4kAGqEey0LKqIjDNP0w" name="IVault"/>
+  </packagedElement>
+  <packagedElement xmi:type="uml:Package" xmi:id="_-D88MAGoEey0LKqIjDNP0w" name="HPC">
+    <packagedElement xmi:type="uml:Component" xmi:id="_8AE_8AGoEey0LKqIjDNP0w" name="HPC Frontend">
+      <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="_e8aKgAGqEey0LKqIjDNP0w" client="_8AE_8AGoEey0LKqIjDNP0w" supplier="_YC1DkAGqEey0LKqIjDNP0w" contract="_YC1DkAGqEey0LKqIjDNP0w"/>
+      <packagedElement xmi:type="uml:Component" xmi:id="_4-q1sAGuEey0LKqIjDNP0w" name="SLURM Scheduler"/>
+      <packagedElement xmi:type="uml:Component" xmi:id="_7TbGkAGuEey0LKqIjDNP0w" name="PBS Pro Scheduler"/>
+    </packagedElement>
+  </packagedElement>
+  <packagedElement xmi:type="uml:Interface" xmi:id="_I41bEAGpEey0LKqIjDNP0w" name="IBackend"/>
+  <packagedElement xmi:type="uml:Interface" xmi:id="_LMN9gAGqEey0LKqIjDNP0w" name="ICloudify"/>
+  <packagedElement xmi:type="uml:Interface" xmi:id="_YC1DkAGqEey0LKqIjDNP0w" name="ssh"/>
+  <packagedElement xmi:type="uml:Component" xmi:id="_W59PoAGtEey0LKqIjDNP0w" name="Infrastructure Interface" isAbstract="true">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="_e2tDwAGtEey0LKqIjDNP0w" client="_W59PoAGtEey0LKqIjDNP0w" supplier="_Yxv3sAGtEey0LKqIjDNP0w" contract="_Yxv3sAGtEey0LKqIjDNP0w"/>
+    <packagedElement xmi:type="uml:Dependency" xmi:id="_Fs4DIAGuEey0LKqIjDNP0w" name="management" client="_W59PoAGtEey0LKqIjDNP0w" supplier="_YC1DkAGqEey0LKqIjDNP0w"/>
+  </packagedElement>
+  <packagedElement xmi:type="uml:Component" xmi:id="_Wi0FgAGuEey0LKqIjDNP0w" name="Monitoring">
+    <interfaceRealization xmi:type="uml:InterfaceRealization" xmi:id="_bbpcsAGuEey0LKqIjDNP0w" client="_Wi0FgAGuEey0LKqIjDNP0w" supplier="_YPUDkAGuEey0LKqIjDNP0w" contract="_YPUDkAGuEey0LKqIjDNP0w"/>
+    <packagedElement xmi:type="uml:Component" xmi:id="_kOMQYAGuEey0LKqIjDNP0w" name="Exporter" isAbstract="true"/>
+    <packagedElement xmi:type="uml:Component" xmi:id="_tgtkoAGuEey0LKqIjDNP0w" name="SLURM Exporter">
+      <generalization xmi:type="uml:Generalization" xmi:id="_ypD-gAGuEey0LKqIjDNP0w" general="_kOMQYAGuEey0LKqIjDNP0w"/>
+      <packagedElement xmi:type="uml:Dependency" xmi:id="_OOiswAGvEey0LKqIjDNP0w" client="_tgtkoAGuEey0LKqIjDNP0w" supplier="_4-q1sAGuEey0LKqIjDNP0w"/>
+    </packagedElement>
+    <packagedElement xmi:type="uml:Component" xmi:id="_v9OqYAGuEey0LKqIjDNP0w" name="PBS Pro Exporter">
+      <generalization xmi:type="uml:Generalization" xmi:id="_z5EN0AGuEey0LKqIjDNP0w" general="_kOMQYAGuEey0LKqIjDNP0w"/>
+      <packagedElement xmi:type="uml:Dependency" xmi:id="_QPYjIAGvEey0LKqIjDNP0w" client="_v9OqYAGuEey0LKqIjDNP0w" supplier="_7TbGkAGuEey0LKqIjDNP0w"/>
+    </packagedElement>
+  </packagedElement>
+  <packagedElement xmi:type="uml:Interface" xmi:id="_YPUDkAGuEey0LKqIjDNP0w" name="iMonitoring"/>
+  <packagedElement xmi:type="uml:Component" xmi:id="_hyqzsAGvEey0LKqIjDNP0w" name="Cloud"/>
 </uml:Model>

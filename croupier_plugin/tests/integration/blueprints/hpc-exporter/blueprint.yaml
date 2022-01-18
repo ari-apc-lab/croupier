@@ -31,12 +31,20 @@ imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master_dev/plugin.yaml
 
 inputs:
+    inputs:
     vault_token:
         type: string
     vault_user:
         type: string
+    infrastructure_interface:
+        type: string
+    partition:
+        type: string
+    hpc_host:
+        type: string
 
 node_templates:
+
     hpc_exporter:
         type: croupier.nodes.HPCExporter
 
@@ -50,8 +58,8 @@ node_templates:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
-                infrastructure_interface: TORQUE
-            ssh_config:
+                infrastructure_interface: { get_input: infrastructure_interface }
+            credentials:
                 host: sodalite-fe.hlrs.de
             job_prefix: atos
             base_dir: $HOME

@@ -1,0 +1,89 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jeus Ramos Rivas
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.2.ramos@atos.net
+#
+# blueprint_four.yaml
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    # to speed things up, it is possible downloading this file,
+    - http://www.getcloudify.org/spec/cloudify/6.2.0/types.yaml
+    # relative import of plugin.yaml that resides in the blueprint directory
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
+
+inputs:
+    vault_token:
+        type: string
+    vault_user:
+        type: string
+    infrastructure_interface:
+        type: string
+    partition:
+        type: string
+    hpc_host:
+        type: string
+
+node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
+
+    cesga_hpc:
+        type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+        properties:
+            config:
+                infrastructure_interface: { get_input: infrastructure_interface }
+            credentials:
+                host: { get_input: hpc_host }
+            job_prefix: ''
+            base_dir: $GRAPEVINE/ATOS-WORKSHOP
+            monitoring_options:
+                monitor_period: 15
+                deployment_label: THREDDS
+            skip_cleanup: true
+            #simulate: True # COMMENT to test against a real HPC
+            workdir_prefix: "THREDDS"
+
+    job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - module load miniconda3/4.7.10
+                    - conda activate $GRAPEVINE/THREDDS_EXAMPLE/thredds
+                    - python /mnt/netapp_ext2/Grapevine/THREDDS_EXAMPLE/get_data_thredds.py
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:30:00'
+                partition: { get_input: partition }
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: cesga_hpc

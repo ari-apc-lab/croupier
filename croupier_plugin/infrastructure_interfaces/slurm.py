@@ -33,7 +33,7 @@ from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (
 from croupier_plugin.ssh import SshClient
 
 
-def _parse_audit_metrics(metrics_string, logger):
+def _parse_audit_metrics(metrics_string):
     audits = {}
     start_time = None
     completion_time = None
@@ -108,7 +108,7 @@ def get_job_metrics(job_name, ssh_client, workdir, monitor_start_time_str, logge
         workdir=workdir,
         wait_result=True)
     if exit_code == 0:
-        audits = _parse_audit_metrics(output, logger)
+        audits = _parse_audit_metrics(output)
     else:
         logger.error("Failed to get job metrics")
     return audits
@@ -122,7 +122,8 @@ def execute_ssh_command(command, workdir, ssh_client, logger):
     return True
 
 
-def start_time_tostr(start_time):
+def start_time_tostr(start_time, timezone):
+    start_time = start_time.astimezone(pytz.timezone(timezone))
     return start_time.strftime("%m/%d/%y-%H:%M:%S")
 
 
@@ -239,7 +240,7 @@ class Slurm(InfrastructureInterface):
 
         return {'data': _settings}
 
-    def _build_job_cancellation_call(self, name, job_settings, logger):
+    def _build_job_cancellation_call(self, name, job_settings):
         return "scancel --name " + name
 
     def _get_envar(self, envar, default):
@@ -278,32 +279,29 @@ class Slurm(InfrastructureInterface):
     #     return job_settings
 
     # Monitor
-    def get_states(self, workdir, ssh_config, job_names, logger):
+    def get_states(self, credentials, job_names):
 
-        monitor_start_time_str = start_time_tostr(self.monitor_start_time)
+        monitor_start_time_str = start_time_tostr(self.monitor_start_time, self.timezone)
 
         call = "sacct -n -o JobName,State -X -P --name=" + ','.join(job_names) + " -S " + monitor_start_time_str
 
-        client = SshClient(ssh_config)
+        client = SshClient(credentials)
 
-        output, exit_code = client.execute_shell_command(
-            call,
-            workdir=workdir,
-            wait_result=True)
+        output, exit_code = client.execute_shell_command(call, workdir=self.workdir, wait_result=True)
         states = {}
         if exit_code == 0:
-            states = _parse_states(output, logger)
+            states = _parse_states(output, self.logger)
         else:
-            logger.error("Failed to get job states: " + output)
+            self.logger.error("Failed to get job states: " + output)
 
         # Get job execution audits for monitoring metrics
         audits = {}
         for name in job_names:
             if name in states:
                 if states[name] != 'PENDING':
-                    audits[name] = get_job_metrics(name, client, workdir, monitor_start_time_str, logger)
+                    audits[name] = get_job_metrics(name, client, self.workdir, monitor_start_time_str, self.logger)
             else:
-                logger.warning("Could not parse the state of job: " + name + "Parsed dict:" + str(states))
+                self.logger.warning("Could not parse the state of job: " + name + "Parsed dict:" + str(states))
 
         client.close_connection()
 

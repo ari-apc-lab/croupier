@@ -23,6 +23,10 @@ license information in the project root.
 @author: Jesus Gorronogoitia
          Atos Research & Innovation, Atos Spain S.A.
          e-mail: jesus.gorronogoitia@atos.net
+@author: Jesus Ramos Rivas
+         Atos Research & Innovation, Atos Spain S.A.
+         e-mail: jesus.2.ramos@atos.net
+
 workflow_tests.py
 """
 
@@ -35,14 +39,14 @@ import errno
 import yaml
 from cloudify.test_utils import workflow_test
 
+
 class TestPlugin(unittest.TestCase):
     """ Test workflows class """
-
 
     def load_inputs(self, *args, **kwargs):
         """ Parse inputs yaml file """
         if args:
-            folder = args[0]
+            folder = ''.join(args)
             path = os.path.join('croupier_plugin', 'tests', 'integration', 'blueprints', folder, 'inputs.yaml')
         else:
             path = os.path.join('croupier_plugin', 'tests', 'integration', 'inputs.yaml')
@@ -60,11 +64,13 @@ class TestPlugin(unittest.TestCase):
         return inputs
 
     # Run every test
-    def run_test(self, cfy_local, revoke_vault_token=False):
+    def run_test(self, cfy_local, revoke_vault_token=False, recurring=False):
         if revoke_vault_token:
             cfy_local.execute('croupier_install', task_retries=0)
         else:
             cfy_local.execute('install', task_retries=0)
+        if recurring:
+            cfy_local.execute('croupier_configure', task_retries=0)
         cfy_local.execute('run_jobs', task_retries=0)
         cfy_local.execute('uninstall', task_retries=0)
 
@@ -103,6 +109,16 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ------------------------------ Single No Vault --------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'no-vault.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='single')
+    def test_single_no_vault(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ------------------------------- Single Script ---------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(
@@ -117,6 +133,19 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ---------------------------- Single Shell Script ------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'blueprint_single_shell_script.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'single', 'scripts', 'execute.sh'), 'scripts')
+        ],
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_single_shell_script(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ------------------------------ Single Scale -----------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(
@@ -126,8 +155,18 @@ class TestPlugin(unittest.TestCase):
     def test_single_scale(self, cfy_local):
         self.run_test(cfy_local)
 
+    # -------------------------------------------------------------------------------
+    # ------------------------------- Reservation -----------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'reservation', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='reservation')
+    def test_reservation(self, cfy_local):
+        self.run_test(cfy_local)
+
     # ------------------------------------------------------------------------------
-    # ------------------------------------ Four ------------------------------------
+    # ---------------------------------- Four --------------------------------------
     # ------------------------------------------------------------------------------
     @workflow_test(
         os.path.join('blueprints', 'four', 'blueprint_four.yaml'),
@@ -160,8 +199,30 @@ class TestPlugin(unittest.TestCase):
     @workflow_test(
         os.path.join('blueprints', 'multihpc', 'blueprint_multihpc.yaml'),
         copy_plugin_yaml=True,
-        inputs='load_inputs')
+        inputs='load_inputs', input_func_args='multihpc')
     def test_multihpc(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- MultiHPC-DM -----------------------------------
+    # -------------------------------------------------------------------------------
+
+    @workflow_test(
+        os.path.join('blueprints', 'multihpc-dm', 'blueprint_multihpc_dm.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='multihpc-dm')
+    def test_multihpc_dm(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- GridFTP-DM -----------------------------------
+    # -------------------------------------------------------------------------------
+
+    @workflow_test(
+        os.path.join('blueprints', 'gridftp', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='gridftp')
+    def test_gridftp_dm(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
@@ -237,6 +298,37 @@ class TestPlugin(unittest.TestCase):
         inputs='load_inputs', input_func_args='ecmwf')
     def test_ecmwf(self, cfy_local):
         self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # -------------------------------- ITAINNOVA ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'itainnova', 'blueprint.yaml'),
+        resources_to_copy=[(os.path.join('blueprints', 'itainnova', 'scripts', 'bootstrap.sh'), 'scripts')],
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='itainnova')
+    def test_itainnova(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # -------------------------------- RECURRING ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'single', 'blueprint_recurring.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_recurring(self, cfy_local):
+        self.run_test(cfy_local, recurring=True)
+
+    # -------------------------------------------------------------------------------
+    # --------------------------------- THREDDS- ------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'thredds', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_thredds(self, cfy_local):
+        self.run_test(cfy_local, recurring=True)
 
 
 if __name__ == '__main__':

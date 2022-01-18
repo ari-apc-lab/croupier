@@ -1,0 +1,85 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Javier Carnero
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: javier.carnero@atos.net
+#
+# blueprint_single_script.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    # to speed things up, it is possible downloading this file,
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    # relative import of plugin.yaml that resides in the blueprint directory
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
+
+inputs:
+    vault_token:
+        type: string
+    vault_user:
+        type: string
+    infrastructure_interface:
+        type: string
+    partition:
+        type: string
+    hpc_host:
+        type: string
+
+node_templates:
+
+    hpc_interface:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: SHELL
+            credentials:
+                host: { get_input: hpc_host }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: false
+            #simulate: True  # COMMENT to test against a real HPC
+            workdir_prefix: "single_script"
+            relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
+
+    single_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                local_script: "scripts/execute.sh"
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc_interface
+
+outputs:
+    single_job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [single_job, job_name] }

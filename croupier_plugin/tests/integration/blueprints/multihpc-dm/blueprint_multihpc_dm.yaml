@@ -1,0 +1,260 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint_multihpc_dm.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+
+inputs:
+####################### VAULT ###################
+    vault_token:
+        type: string
+    vault_user:
+        type: string
+
+############## HPC Infrastructures ##############
+    hpc1_host:
+        type: string
+
+    hpc1_scheduler:
+        type: string
+
+    hpc1_queue:
+        type: string
+
+    hpc2_host:
+        type: string
+
+    hpc2_scheduler:
+        type: string
+
+    hpc2_queue:
+        type: string
+############## DS Infrastructures ##############
+    hpc1_dai_host:
+        type: string
+
+    hpc1_dai_internet_access:
+        type: boolean
+
+    hpc2_dai_host:
+        type: string
+
+    hpc2_dai_internet_access:
+        type: boolean
+
+
+#################### START WORKFLOW ###################
+node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
+
+    hpc1:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc1_scheduler }
+            credentials:
+                host: { get_input: hpc1_host }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "multihpc-dm"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    hpc2:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc2_scheduler }
+            credentials:
+                host: { get_input: hpc2_host }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "multihpc-dm"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    job1:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "module load python"
+                - "python ~/croupier/dm_test/unzip.py -i ~/cantrbry.zip -o ~/croupier/dm_test/cantbry/"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                partition: { get_input: hpc1_queue }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc1
+            - type: input
+              target: canterbury_corpus_in
+            - type: output
+              target: alice_out
+
+    job2:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "module load python"
+                    - "python ~/croupier/dm_test/word_count.py -i ~/croupier/dm_test/alice.txt -o ~/croupier/dm_test/alice.output"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                queue: { get_input: hpc2_queue }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc2
+            - type: job_depends_on
+              target: job1
+            - type: input
+              target: alice_in
+#################### END WORKFLOW ###################
+
+#################### START DATAFLOW #################
+
+    #DATA ACCESS INFRASTRUCTURES
+    #HPC1 DataManagement Infrastructure
+    hpc1_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: hpc1_dai_host }
+            internet_access: { get_input: hpc1_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #HPC2 DataManagement Infrastructure
+    hpc2_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: hpc2_dai_host }
+            internet_access: { get_input: hpc2_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #CLOUD DataManagement Infrastructure
+    cloud_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: http://corpus.canterbury.ac.nz/
+            supported_protocols:
+                - HTTP
+
+    #INPUTS
+    canterbury_corpus_in:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/cantrbry.zip
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    canterbury_corpus_web:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /resources/cantrbry.zip
+        relationships:
+            - type: ds_located_at
+              target: cloud_data_access_infra
+
+    alice_in:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/croupier/dm_test/alice.txt
+        relationships:
+            - type: ds_located_at
+              target: hpc2_data_access_infra
+
+    #OUTPUTS
+    alice_out:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/croupier/dm_test/cantbry/alice29.txt
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    # DATA TRANSFER
+    dt_http:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: canterbury_corpus_web
+            - type: to_target
+              target: canterbury_corpus_in
+
+    dt_rsync:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSync
+        relationships:
+            - type: from_source
+              target: alice_out
+            - type: to_target
+              target: alice_in
+
+#################### START DATAFLOW ###################
+
+outputs:
+    job1_name:
+        description: single job name in the HPC
+        value: { get_attribute: [job1, job_name] }
+    job2_name:
+        description: single job name in the HPC
+        value: { get_attribute: [ job2, job_name ] }

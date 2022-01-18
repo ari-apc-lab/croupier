@@ -1,0 +1,38 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/grapevine-python3/plugin.yaml
+
+inputs:
+    credentials:
+        type: croupier.datatypes.credentials
+    infrastructure_interface:
+        type: string
+
+
+node_templates:
+    hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: infrastructure_interface }
+            credentials: { get_input: credentials }
+            job_prefix: test
+            base_dir: "$HOME"
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "test"
+
+    job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - 'ls -la'
+                max_time: "00:01:00"
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
