@@ -416,14 +416,6 @@ data_types:
                 type: string
                 required: false
                 default: ""
-                constraints:
-                    - valid_values:
-                        - file
-                        - file.upload
-                        - api
-                        - visualization
-                        - code
-                        - documentation
             format:
                 type: string
                 required: false
