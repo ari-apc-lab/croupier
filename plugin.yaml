@@ -582,6 +582,53 @@ node_types:
                 description: True to not clean after execution (debug purposes)
                 type: boolean
                 default: False
+        interfaces:
+            cloudify.interfaces.lifecycle:
+                configure:
+                    implementation: croupier.croupier_plugin.tasks.configure_job
+                    inputs:
+                        deployment:
+                            description: Deployment scripts and inputs
+                            default: { get_property: [ SELF, deployment ] }
+                        skip_cleanup:
+                            default: { get_property: [ SELF, skip_cleanup ] }
+                        job_options:
+                            default: { get_property: [ SELF, job_options ] }
+                    max_retries: 0
+                stop:
+                    implementation: croupier.croupier_plugin.tasks.revert_job
+                    inputs:
+                        deployment:
+                            description: Undeployment script and inputs
+                            default: { get_property: [ SELF, deployment ] }
+                        skip_cleanup:
+                            default: { get_property: [ SELF, skip_cleanup ] }
+            croupier.interfaces.lifecycle:
+                queue:
+                    implementation: croupier.croupier_plugin.tasks.send_job
+                    inputs:
+                        job_options:
+                            default: { get_property: [ SELF, job_options ] }
+                    max_retries: 0
+                publish:
+                    implementation: croupier.croupier_plugin.tasks.publish
+                    inputs:
+                        publish_list:
+                            default: { get_property: [ SELF, publish ] }
+                cleanup:
+                    implementation: croupier.croupier_plugin.tasks.cleanup_job
+                    inputs:
+                        job_options:
+                            default: { get_property: [ SELF, job_options ] }
+                        skip:
+                            default: { get_property: [ SELF, skip_cleanup ] }
+                cancel:
+                    implementation: croupier.croupier_plugin.tasks.stop_job
+                    inputs:
+                        job_options:
+                            default: { get_property: [ SELF, job_options ] }
+                delete_reservation:
+                    implementation: croupier.croupier_plugin.tasks.delete_reservation
 
     croupier.nodes.PyCOMPSsJob:
         derived_from: croupier.nodes.HPCJob
@@ -610,53 +657,6 @@ node_types:
             job_options:
                 description: Job main command and options
                 type: croupier.datatypes.job.Options
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                configure:
-                    implementation: croupier.croupier_plugin.tasks.configure_job
-                    inputs:
-                        deployment:
-                            description: Deployment scripts and inputs
-                            default: { get_property: [SELF, deployment] }
-                        skip_cleanup:
-                            default: { get_property: [SELF, skip_cleanup] }
-                        job_options:
-                            default: { get_property: [SELF, job_options] }
-                    max_retries: 0
-                stop:
-                    implementation: croupier.croupier_plugin.tasks.revert_job
-                    inputs:
-                        deployment:
-                            description: Undeployment script and inputs
-                            default: { get_property: [SELF, deployment] }
-                        skip_cleanup:
-                            default: { get_property: [SELF, skip_cleanup] }
-            croupier.interfaces.lifecycle:
-                queue:
-                    implementation: croupier.croupier_plugin.tasks.send_job
-                    inputs:
-                        job_options:
-                            default: { get_property: [SELF, job_options] }
-                    max_retries: 0
-                publish:
-                    implementation: croupier.croupier_plugin.tasks.publish
-                    inputs:
-                        publish_list:
-                            default: { get_property: [SELF, publish] }
-                cleanup:
-                    implementation: croupier.croupier_plugin.tasks.cleanup_job
-                    inputs:
-                        job_options:
-                            default: { get_property: [SELF, job_options] }
-                        skip:
-                            default: { get_property: [SELF, skip_cleanup] }
-                cancel:
-                    implementation: croupier.croupier_plugin.tasks.stop_job
-                    inputs:
-                        job_options:
-                            default: { get_property: [SELF, job_options] }
-                delete_reservation:
-                    implementation: croupier.croupier_plugin.tasks.delete_reservation
 
     croupier.nodes.SingularityJob:
         derived_from: croupier.nodes.Job
