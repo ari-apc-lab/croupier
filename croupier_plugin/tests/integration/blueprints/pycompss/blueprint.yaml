@@ -73,22 +73,23 @@ node_templates:
     job:
         type: croupier.nodes.PyCOMPSsJob
         properties:
-            name: matmul
-            env:
-                - ComputingUnits: 1
-            compss_args:
-                num_nodes: 2
-                exec_time: 10
-                master_working_dir: {COMPS_APP_PATH}
-                worker_working_dir: local_disk
-                tracing: false
-                pythonpath: {COMPS_APP_PATH}/src
-                lang: python
-                qos: debug
-            app_file: {COMPS_APP_PATH}/src/matmul_files.py
-            app_args:
-                - 4
-                - 4
+            job_options:
+                app_name: matmul
+                env:
+                    - ComputingUnits: 1
+                compss_args:
+                    num_nodes: 2
+                    exec_time: 10
+                    master_working_dir: '{COMPS_APP_PATH}'
+                    worker_working_dir: local_disk
+                    tracing: false
+                    pythonpath: '{COMPS_APP_PATH}/src'
+                    lang: python
+                    qos: debug
+                app_file: '{COMPS_APP_PATH}/src/matmul_files.py'
+                app_args:
+                    - 4
+                    - 4
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
