@@ -1,0 +1,167 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Ramos Rivas
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.2.ramos@atos.net
+#
+# blueprint_ecmwf.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    # to speed things up, it is possible downloading this file,
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    # relative import of plugin.yaml that resides in the blueprint directory
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/ckan/plugin.yaml
+
+inputs:
+    vault_user:
+        type: string
+    vault_token:
+        type: string
+    hpc:
+        type: string
+    infrastructure_interface:
+        type: string
+
+node_templates:
+    hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: infrastructure_interface }
+            credentials:
+                host: { get_input: hpc }
+            job_prefix: ckan
+            base_dir: "$HOME"
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "ckan"
+            internet_access: true
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            user: { get_input: vault_user }
+            token: { get_input: vault_token}
+
+    job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - touch weather_data_zippity.zip
+                max_time: "00:01:00"
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+            - type: input
+              target: weather_data_in
+            - type: output
+              target: weather_data_out
+
+    weather_data_ckan_in:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: 225e91c6-f99c-483f-b8ae-f96e7fef0d04.zip
+        relationships:
+            - type: ds_located_at
+              target: ckan_ecmwf
+
+    weather_data_ckan_out:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: weather_data_zap.zip
+        relationships:
+            - type: ds_located_at
+              target: ckan_atos
+
+    weather_data_in:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: weather_data.zip
+        relationships:
+            - type: ds_located_at
+              target: hpc
+
+    weather_data_out:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: weather_data_zippity.zip
+        relationships:
+            - type: ds_located_at
+              target: hpc
+
+    ckan_atos:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                name: test_croupier
+                owner_org: atos
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    ckan_ecmwf:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                name: ecmwf-vertical-interpolator
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    dt_in:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: weather_data_ckan_in
+            - type: to_target
+              target: weather_data_in
+
+    dt_out:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: weather_data_out
+            - type: to_target
+              target: weather_data_ckan_out
