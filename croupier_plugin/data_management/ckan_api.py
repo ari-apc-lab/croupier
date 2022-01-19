@@ -1,6 +1,6 @@
 from croupier_plugin.data_management.data_management import DataTransfer
 from croupier_plugin.ssh import SshClient
-from ckanapi import RemoteCKAN, ServerIncompatibleError, NotAuthorized
+from ckanapi import RemoteCKAN, ServerIncompatibleError, NotAuthorized, ValidationError
 
 
 class CKANAPIDataTransfer(DataTransfer):
@@ -126,7 +126,12 @@ class CKANAPIDataTransfer(DataTransfer):
         self.dataset_info['package_id'] = api_search['results'][0]['id']
 
     def _create_dataset(self):
-        r = self.api.call_action('package_create', self.dataset_info)
+        try:
+            r = self.api.call_action('package_create', self.dataset_info)
+        except (ValidationError, NotAuthorized) as e:
+            self.logger.error('Could not create CKAN dataset:\n{0}'.format(str(e.error_dict)))
+            return
+
         self.ckan_dataset['package_id'] = r['id']
 
     def _resource_exists(self):
