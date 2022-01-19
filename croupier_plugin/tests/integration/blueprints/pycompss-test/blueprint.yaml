@@ -1,0 +1,106 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+
+inputs:
+####################### VAULT ###################
+    vault_token:
+        type: string
+    vault_user:
+        type: string
+
+############## HPC Infrastructures ##############
+    hpc_host:
+        type: string
+
+    hpc_scheduler:
+        type: string
+
+#################### START WORKFLOW ###################
+node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
+
+    hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc_scheduler }
+            credentials:
+                host: { get_input: hpc_host }
+            job_prefix: croupier
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "pycompss-test"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    job:
+        type: croupier.nodes.PyCOMPSsJob
+        properties:
+            name: matmul
+            env:
+                - ComputingUnits: 1
+            compss_args:
+                num_nodes: 2
+                exec_time: 10
+                master_working_dir: {COMPS_APP_PATH}
+                worker_working_dir: local_disk
+                tracing: false
+                pythonpath: {COMPS_APP_PATH}/src
+                lang: python
+                qos: debug
+            app_file: {COMPS_APP_PATH}/src/matmul_files.py
+            app_args:
+                - 4
+                - 4
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+
+#################### END WORKFLOW ###################
+
+#################### START DATAFLOW #################
+
+#################### START DATAFLOW ###################
+
+outputs:
+    job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [job, job_name] }

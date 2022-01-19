@@ -1,0 +1,9 @@
+# VAULT
+vault_token: 's.iIccoyV33QjJyLF8nllsqNmk'
+vault_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# HPC
+hpc_host: mn1.bsc.es
+hpc_scheduler: PYCOMPSS

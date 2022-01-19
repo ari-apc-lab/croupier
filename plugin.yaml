@@ -255,7 +255,42 @@ data_types:
                 type: string
                 required: false
 
-# DATA MANAGEMENT
+    croupier.datatypes.pycompss_options:
+        properties:
+            num_nodes:
+                description: 'Number of nodes to use'
+                type: integer
+                required: false
+            exec_time:
+                description: 'Expected execution time of the application (in minutes)'
+                type: integer
+                required: false
+            master_working_dir:
+                description: 'Working directory of the application'
+                type: string
+                required: false
+            worker_working_dir:
+                description: 'Worker directory. Use: local_disk | shared_disk | <path>'
+                type: string
+                required: false
+            tracing:
+                description: 'Set generation of traces and/or tracing level ( [ true | basic ] | advanced | scorep | arm-map | arm-ddt | false). True and basic levels will produce the same traces. When no value is provided it is set to 1'
+                type: string
+                required: false
+            pythonpath:
+                description: 'Additional folders or paths to add to the PYTHONPATH'
+                type: string
+                required: false
+            lang:
+                description: 'Language of the application (java/c/python)'
+                type: string
+                required: false
+            qos:
+                description: 'Quality of Service to pass to the queue system'
+                type: string
+                required: false
+
+    # DATA MANAGEMENT
 
     croupier.datatypes.Credentials:
         properties:
@@ -455,16 +490,13 @@ node_types:
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
-    croupier.nodes.Job:
+    croupier.nodes.HPCJob:
         derived_from: cloudify.nodes.Root
         properties:
             deployment:
                 description: Deployment script and inputs
                 default: {}
                 type: croupier.datatypes.job_deployment_config
-            job_options:
-                description: Job main command and options
-                type: croupier.datatypes.job.Options
             publish:
                 description: Config to publish its outputs
                 default: []
@@ -472,6 +504,34 @@ node_types:
                 description: True to not clean after execution (debug purposes)
                 type: boolean
                 default: False
+
+    croupier.nodes.PyCOMPSsJob:
+        derived_from: croupier.nodes.HPCJob
+        properties:
+            app_name:
+                description: Aapplication name
+                type: string
+            env:
+                description: 'List of environment variables as key:value'
+                default: []
+            comps_args:
+                description: 'enqueue_compss options'
+                default: {}
+                type: croupier.datatypes.pycompss_options
+            app_file:
+                description: Application executable file path
+                type: string
+            app_args:
+                description: 'List of application arguments'
+                default: []
+
+
+    croupier.nodes.Job:
+        derived_from: croupier.nodes.HPCJob
+        properties:
+            job_options:
+                description: Job main command and options
+                type: croupier.datatypes.job.Options
         interfaces:
             cloudify.interfaces.lifecycle:
                 configure:
