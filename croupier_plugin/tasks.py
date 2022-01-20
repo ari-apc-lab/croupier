@@ -580,6 +580,17 @@ def configure_job(
         else:
             ctx.logger.info('..nothing to bootstrap')
 
+    #  Deploy job if WM scheduler is PyCOMPSs
+    interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+    if interface_type == "PYCOMPSS":
+        credentials = ctx.instance.runtime_properties['credentials']
+        workdir = ctx.instance.runtime_properties['workdir']
+        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
+        if not wm:
+            raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
+        ssh_client = SshClient(credentials)
+        wm.deploy_app(job_options, workdir, ssh_client)
+
 
 @operation
 def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613

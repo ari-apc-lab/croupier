@@ -75,7 +75,7 @@ node_templates:
         properties:
             job_options:
                 app_name: matmul
-                app_source: tutorial_apps/python/matmul_files
+                app_source: pycompss_tutorial_apps/python/matmul_files
                 env:
                     - ComputingUnits: 1
                 compss_args:
