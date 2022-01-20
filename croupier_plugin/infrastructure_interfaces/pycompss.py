@@ -25,9 +25,30 @@ pycompss.py
 """
 from cloudify.exceptions import NonRecoverableError
 
-from croupier_plugin.infrastructure_interfaces.infrastructure_interface import InfrastructureInterface
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import InfrastructureInterface, \
+    get_prevailing_state
+from croupier_plugin.infrastructure_interfaces.slurm import start_time_tostr, get_job_metrics, _parse_audit_metrics, \
+    _parse_states
 from croupier_plugin.ssh import SshClient
 from past.builtins import basestring
+
+
+def get_job_metrics(job_name, ssh_client, workdir, logger):
+    # Get job execution audits for monitoring metrics
+    audits = {}
+    audit_metrics = "JobID,JobName,User,Partition,ExitCode,Submit,Start,End,TimeLimit,CPUTimeRaw,NCPUS"
+    audit_command = "sacct --name {job_name} -o {metrics} -p --noheader -X" \
+        .format(job_name=job_name, metrics=audit_metrics)
+
+    output, exit_code = ssh_client.execute_shell_command(
+        audit_command,
+        workdir=workdir,
+        wait_result=True)
+    if exit_code == 0:
+        audits = _parse_audit_metrics(output)
+    else:
+        logger.error("Failed to get job metrics")
+    return audits
 
 
 class Pycompss(InfrastructureInterface):
@@ -91,7 +112,7 @@ class Pycompss(InfrastructureInterface):
         pass
 
     def _get_jobid(self, output):
-        return output.split(' ')[-1].strip()
+        return output.split('\n')[0].split(' ')[-1].strip()
 
     def _build_job_cancellation_call(self, name, job_settings):
         """
@@ -99,11 +120,35 @@ class Pycompss(InfrastructureInterface):
         """
         pass
 
-    def get_states(self, ssh_config, job_names):
+    def get_states(self, credentials, job_names):
         """
-        Uses PyCOMPSs Manager for getting job state and accounting audits
+        Uses PyCOMPSs Manager|SLURM for getting job state and accounting audits
+        sacct -o jobname,state -n -X -P --name <job_name>
+        croupierjob_sqq4ic|FAILED
         """
-        pass
+        call = "sacct -o jobname,state -n -X -P --name " + ''.join(job_names)
+
+        client = SshClient(credentials)
+
+        output, exit_code = client.execute_shell_command(call, workdir=self.workdir, wait_result=True)
+        states = {}
+        if exit_code == 0:
+            states = _parse_states(output, self.logger)
+        else:
+            self.logger.error("Failed to get job states: " + output)
+
+        # Get job execution audits for monitoring metrics
+        audits = {}
+        for name in job_names:
+            if name in states:
+                if states[name] != 'PENDING':
+                    audits[name] = get_job_metrics(name, client, self.workdir, self.logger)
+            else:
+                self.logger.warning("Could not parse the state of job: " + name + "Parsed dict:" + str(states))
+
+        client.close_connection()
+
+        return states, audits
 
     def delete_reservation(self, ssh_client, reservation_id, deletion_path):
         # Not required
@@ -201,6 +246,7 @@ class Pycompss(InfrastructureInterface):
         if 'compss_args' in job_settings:
             for key in job_settings['compss_args']:
                 _command += ' --' + key + '=' + str(job_settings['compss_args'][key])
+        _command += ' --job_name=' + name
 
         _command += ' ' + job_settings['app_file']
 
