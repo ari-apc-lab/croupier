@@ -55,7 +55,36 @@ class Pycompss(InfrastructureInterface):
             raise NonRecoverableError(
                 "Failed PyCOMPSs initialization on the infrastructure with exit code: {code} and msg: {msg}".format(
                     code=str(exit_code), msg=msg)
-                )
+            )
+
+    def deploy_app(self, job_settings, workdir, ssh_client):
+        if 'app_name' not in job_settings:
+            message = "PyCOMPSs Initialization: app_name not located in job_options"
+            self.logger.error(message)
+            raise NonRecoverableError(str(message))
+        if 'app_source' not in job_settings:
+            message = "PyCOMPSs Initialization: app_source not located in job_options"
+            self.logger.error(message)
+            raise NonRecoverableError(str(message))
+
+        app_source: str = job_settings["app_source"]
+        if not app_source.startswith("/"):
+            app_source = "$HOME/" + app_source
+
+        # Build PyCOMPSs app deployment command
+        _command = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; ' \
+                   'pycompss app deploy {app_name} --local_source {local_source} --remote_dir {remote_dir}'.format(
+            app_name=job_settings["app_name"], local_source=app_source, remote_dir=workdir)
+
+        # Execute PyCOMPSs app deployment
+        msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
+
+        if exit_code != 0:
+            ssh_client.close_connection()
+            raise NonRecoverableError(
+                "Failed PyCOMPSs app deployment on the infrastructure with exit code: {code} and msg: {msg}".format(
+                    code=str(exit_code), msg=msg)
+            )
 
     def _parse_job_settings(self, job_id, job_settings, script=False, timezone=None):
         # Not required
