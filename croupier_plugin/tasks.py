@@ -289,6 +289,7 @@ def configure_execution(
         wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir_prefix)
         if not wm:
             raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
+
         if 'credentials' in ctx.instance.runtime_properties:
             credentials = ctx.instance.runtime_properties['credentials']
         try:
@@ -305,11 +306,12 @@ def configure_execution(
         if exit_code != 0:
             client.close_connection()
             raise NonRecoverableError("Failed executing on the infrastructure: exit code " + str(exit_code))
-
         ctx.instance.runtime_properties['login'] = exit_code == 0
 
-        prefix = workdir_prefix if workdir_prefix else ctx.blueprint.name
+        # Initialize Scheduler (required by some but not all schedulers: e.g. PyCOMPSs)
+        wm.initialize(credentials, client)
 
+        prefix = workdir_prefix if workdir_prefix else ctx.blueprint.name
         workdir = wm.create_new_workdir(client, base_dir, prefix)
         client.close_connection()
         if workdir is None:

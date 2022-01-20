@@ -130,6 +130,9 @@ def start_time_tostr(start_time, timezone):
 class Slurm(InfrastructureInterface):
     """ Slurm Workload Manger Driver """
 
+    def initialize(self, credentials, ssh_client):
+        pass  # Not required
+
     def _get_jobid(self, output):
         return output.split(' ')[-1].strip()
 

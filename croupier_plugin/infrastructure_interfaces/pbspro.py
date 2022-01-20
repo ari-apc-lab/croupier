@@ -30,6 +30,7 @@ torque.py
 from __future__ import absolute_import
 
 from future import standard_library
+
 standard_library.install_aliases()
 from builtins import str
 from builtins import map
@@ -42,6 +43,9 @@ import datetime, time
 
 class Pbspro(InfrastructureInterface):
     """ Holds the PBS functions. Acts similarly to the class `Slurm`."""
+
+    def initialize(self, credentials, ssh_client):
+        pass  # Not required
 
     def _get_jobid(self, output):
         return output.split(' ')[-1].strip()
@@ -459,7 +463,7 @@ def getSeconds(cput):
 
 
 def convert_to_seconds(cput):
-    hours = getHours(cput)*3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
+    hours = getHours(cput) * 3600 + getMinutes(cput) * 60.0 + getSeconds(cput)
     return hours
 
 
