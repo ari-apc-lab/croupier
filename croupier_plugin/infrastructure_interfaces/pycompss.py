@@ -23,12 +23,40 @@ license information in the project root.
 
 pycompss.py
 """
+from cloudify.exceptions import NonRecoverableError
+
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import InfrastructureInterface
 from croupier_plugin.ssh import SshClient
 from past.builtins import basestring
 
 
 class Pycompss(InfrastructureInterface):
+    def initialize(self, credentials, ssh_client):
+        if "host" not in credentials:
+            message = "PyCOMPSs Initialization: host not located in credentials"
+            self.logger.error(message)
+            raise NonRecoverableError(str(message))
+        if "user" not in credentials:
+            message = "PyCOMPSs Initialization: user not located in credentials"
+            self.logger.error(message)
+            raise NonRecoverableError(str(message))
+        host = credentials["host"]
+        user = credentials["user"]
+
+        # Build PyCOMPSs initialization command
+        _command = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; ' \
+                   'pycompss init cluster -l {user}@{host}'.format(user=user, host=host)
+
+        # Execute PyCOMPSs initialization
+        msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
+
+        if exit_code != 0:
+            ssh_client.close_connection()
+            raise NonRecoverableError(
+                "Failed PyCOMPSs initialization on the infrastructure with exit code: {code} and msg: {msg}".format(
+                    code=str(exit_code), msg=msg)
+                )
+
     def _parse_job_settings(self, job_id, job_settings, script=False, timezone=None):
         # Not required
         pass

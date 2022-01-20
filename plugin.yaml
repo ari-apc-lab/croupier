@@ -261,6 +261,10 @@ data_types:
                 description: Application name
                 type: string
                 required: true
+            app_source:
+                description: Path to the Application source
+                type: string
+                required: true
             env:
                 description: 'List of environment variables as key:value'
                 default: []

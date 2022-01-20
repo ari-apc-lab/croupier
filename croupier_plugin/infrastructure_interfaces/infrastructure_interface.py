@@ -691,7 +691,7 @@ class InfrastructureInterface(object):
         """
         Adds extra audit support for job execution
 
-         @type job_id: string
+        @type job_id: string
         @param job_id: name of the job
         @type job_settings: dictionary
         @param job_settings: dictionary with the job options
@@ -707,4 +707,15 @@ class InfrastructureInterface(object):
          'error' if an error arise.
         """
         raise NotImplementedError(
-            "'_build_job_cancellation_call' not implemented.")
+            "'_add_audit' not implemented.")
+
+    def initialize(self, credentials, ssh_client):
+        """
+        Initialize scheduler for user (given credentials) in infrastructure if required (e.g. PyCOMPSs)
+        @type credentials: dictionary
+        @param credentials: user's credentials for infrastructure
+        @type ssh_client: SshClient
+        @param ssh_client: ssh client
+        """
+        raise NotImplementedError(
+            "'initialize' not implemented.")

@@ -59,6 +59,9 @@ def convert_to_seconds(cput):
 class Torque(InfrastructureInterface):
     """ Holds the Torque functions. Acts similarly to the class `Slurm`."""
 
+    def initialize(self, credentials, ssh_client):
+        pass  # Not required
+
     def _get_jobid(self, output):
         return output.split(' ')[-1].strip()
 
