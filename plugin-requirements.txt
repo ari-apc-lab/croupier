@@ -1,2 +1,3 @@
 paramiko==2.7.2
 wget
+ckanapi

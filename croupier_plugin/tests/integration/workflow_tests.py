@@ -321,7 +321,7 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local, recurring=True)
 
     # -------------------------------------------------------------------------------
-    # --------------------------------- THREDDS- ------------------------------------
+    # --------------------------------- THREDDS -------------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(
         os.path.join('blueprints', 'thredds', 'blueprint.yaml'),
@@ -329,6 +329,16 @@ class TestPlugin(unittest.TestCase):
         inputs='load_inputs')
     def test_thredds(self, cfy_local):
         self.run_test(cfy_local, recurring=True)
+
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- CKAN ---------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'ckan', 'blueprint_ckan.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_ckan(self, cfy_local):
+        self.run_test(cfy_local)
 
 
 if __name__ == '__main__':
