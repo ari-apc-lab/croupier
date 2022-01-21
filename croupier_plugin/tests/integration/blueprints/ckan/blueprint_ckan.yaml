@@ -37,9 +37,11 @@ inputs:
         type: string
     vault_token:
         type: string
-    hpc:
+    hpc_host:
         type: string
     infrastructure_interface:
+        type: string
+    partition:
         type: string
 
 node_templates:
@@ -49,7 +51,7 @@ node_templates:
             config:
                 infrastructure_interface: { get_input: infrastructure_interface }
             credentials:
-                host: { get_input: hpc }
+                host: { get_input: hpc_host }
             job_prefix: ckan
             base_dir: "$HOME"
             monitoring_options:
@@ -74,6 +76,7 @@ node_templates:
                 commands:
                     - touch weather_data_zippity.zip
                 max_time: "00:01:00"
+                partition: { get_input: partition }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
@@ -87,7 +90,7 @@ node_templates:
         type: croupier.nodes.CKAN_resource
         properties:
             resource:
-                name: 225e91c6-f99c-483f-b8ae-f96e7fef0d04.zip
+                name: 19718233-e95d-42a4-a8c3-b6727d308d9f.zip
         relationships:
             - type: ds_located_at
               target: ckan_ecmwf

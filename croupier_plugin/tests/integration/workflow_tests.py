@@ -338,7 +338,7 @@ class TestPlugin(unittest.TestCase):
         copy_plugin_yaml=True,
         inputs='load_inputs')
     def test_ckan(self, cfy_local):
-        self.run_test(cfy_local, recurring=True)
+        self.run_test(cfy_local)
 
 
 if __name__ == '__main__':
