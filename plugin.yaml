@@ -390,9 +390,9 @@ data_types:
                 required: false
                 default: ""
             tags:
-                type: dict
+                type: list
                 required: false
-                default: {}
+                default: []
             owner_org:
                 type: string
                 required: false
@@ -649,7 +649,7 @@ node_types:
                 required: true
             supported_protocols:
                 default:
-                    - CKAN_API
+                    - CKANAPI
 
     croupier.nodes.DataTransfer:
         derived_from: cloudify.nodes.Root
