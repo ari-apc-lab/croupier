@@ -138,7 +138,8 @@ def configure_data_source(**kwargs):
         if "credentials" in ctx.target.instance.runtime_properties else ctx.target.node.properties['credentials'],
         "workdir": ctx.target.instance.runtime_properties['workdir']
         if 'workdir' in ctx.target.instance.runtime_properties else None,
-        "properties": ctx.target.node.properties,
+        "dataset_info": ctx.target.node.properties['dataset_info']
+        if 'dataset_info' in ctx.target.node.properties else None,
         "type_hierarchy": ctx.target.node.type_hierarchy
     }
     ctx.source.instance.runtime_properties['located_at'] = located_at
