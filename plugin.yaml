@@ -381,10 +381,6 @@ data_types:
                 type: string
                 required: false
                 default: ""
-            url:
-                type: string
-                required: false
-                default: ""
             version:
                 type: string
                 required: false
