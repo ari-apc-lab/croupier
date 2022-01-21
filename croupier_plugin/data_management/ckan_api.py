@@ -10,11 +10,11 @@ class CKANAPIDataTransfer(DataTransfer):
         self.from_infra = data_transfer_config['from_source']['located_at']
         self.to_infra = data_transfer_config['to_target']['located_at']
 
-        if 'CKAN_dataset' in  self.from_infra['type_hierarchy']:
+        if 'croupier.nodes.CKAN_dataset' in self.from_infra['type_hierarchy']:
             self.direction = 'download'
             self.ckan_dataset = self.from_infra
             self.ckan_resource = data_transfer_config['from_source']['resource']
-        elif 'CKAN_dataset' in self.to_infra['type_hierarchy']:
+        elif 'croupier.nodes.CKAN_dataset' in self.to_infra['type_hierarchy']:
             self.direction = 'upload'
             self.ckan_dataset = self.to_infra
             self.ckan_resource = data_transfer_config['to_target']['resource']
@@ -22,13 +22,12 @@ class CKANAPIDataTransfer(DataTransfer):
             logger.error('CKANAPI Data Transfer must have a "CKAN_dataset" as one of its endpoints')
             raise Exception
 
-        self.dataset_info = self.ckan_dataset['properties']['dataset_info']
+        self.dataset_info = self.ckan_dataset['dataset_info']
         self.endpoint = self.ckan_dataset['endpoint']
         self.apikey = self.ckan_dataset['credentials']['auth-header']
-
+        self.api = RemoteCKAN(self.endpoint, apikey=self.apikey)
         if not self.dataset_info['package_id']:
             self._find_dataset()
-        self.api = RemoteCKAN(self.endpoint, apikey=self.apikey)
 
         try:
             self.api.action.site_read()
@@ -44,20 +43,25 @@ class CKANAPIDataTransfer(DataTransfer):
     def _download_data(self):
         if not self.ckan_resource['url']:
             resource = self._get_resource()
-            self.ckan_resource['url'] = resource['url']
+            if not resource:
+                self.logger.error("Could not find resource in CKAN")
+                raise Exception
+            else:
+                self.ckan_resource['url'] = resource['url']
         dt_config = {
             'transfer_protocol': 'HTTP',
             'to_target': self.dt_config['to_target'],
             'from_source': {
                 'resource': self.ckan_resource['url'],
-                'located_at': self.ckan_resource
+                'located_at': self.ckan_dataset,
+                'name': 'CKAN-'+self.dataset_info['name']
             }
         }
-        dt = DataTransfer(dt_config, self.logger)
+        dt = DataTransfer.factory(dt_config, self.logger)
         dt.process()
 
     def _upload_data(self):
-        if not self.ckan_dataset['package_id']:
+        if not self.dataset_info['package_id']:
             self._create_dataset()
         ssh_credentials = self.from_infra['credentials']
 
@@ -67,7 +71,7 @@ class CKANAPIDataTransfer(DataTransfer):
         action = 'update' if self._resource_exists() else 'create'
         command = 'curl {0}/api/action/resource_{1}'.format(self.endpoint, action)
         command += ' --form upload=@{0}'.format(filepath)
-        command += ' --form package_id={0}'.format(self.ckan_dataset['package_id'])
+        command += ' --form package_id={0}'.format(self.dataset_info['package_id'])
 
         for arg in self.ckan_resource:
             if self.ckan_resource[arg]:
@@ -110,29 +114,38 @@ class CKANAPIDataTransfer(DataTransfer):
         if not self.dataset_info['name']:
             self.logger.error("No name given for dataset. Dataset search not implemented yet.")
             raise NotImplementedError("CKAN Dataset search not implemented yet. Must identify it by name.")
-
+        search_dict = {
+            'fq': 'name:' + self.dataset_info['name'],
+            'include_private': True
+        }
         try:
-            api_search = self.api.action.package_search(fq='name:'+self.dataset_info['name'])
+            api_search = self.api.call_action('package_search', search_dict)
         except NotAuthorized:
-            self.logger.error('Got unauthorized error when trying to access CKAN')
+            self.logger.error('Got unauthorized error when trying to search dataset: ' + self.dataset_info['name'])
             raise
 
         if api_search['count'] > 1:
             self.logger.error('Got more than 1 result for the given CKAN dataset name.')
             raise Exception
         if api_search['count'] == 0:
+            self.dataset_info['package_id'] = ''
             return
 
         self.dataset_info['package_id'] = api_search['results'][0]['id']
 
     def _create_dataset(self):
+        create_dict = {}
+        for key in self.dataset_info:
+            if not self.dataset_info[key]:
+                continue
+            create_dict[key] = self.dataset_info[key]
         try:
-            r = self.api.call_action('package_create', self.dataset_info)
+            r = self.api.call_action('package_create', create_dict)
         except (ValidationError, NotAuthorized) as e:
             self.logger.error('Could not create CKAN dataset:\n{0}'.format(str(e.error_dict)))
-            return
+            raise Exception
 
-        self.ckan_dataset['package_id'] = r['id']
+        self.dataset_info['package_id'] = r['id']
 
     def _resource_exists(self):
         if self._get_resource():

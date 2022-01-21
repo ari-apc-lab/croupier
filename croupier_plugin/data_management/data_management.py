@@ -45,10 +45,11 @@ class DataTransfer:
         elif dt_config['transfer_protocol'].upper() == "GRIDFTP":
             from croupier_plugin.data_management.gridftp_dt import GridFTPDataTransfer
             return GridFTPDataTransfer(dt_config, logger)
-        elif dt_config['transfer_protocol'].upper() == "CKAN_API":
+        elif dt_config['transfer_protocol'].upper() == "CKANAPI":
             from croupier_plugin.data_management.ckan_api import CKANAPIDataTransfer
             return CKANAPIDataTransfer(dt_config, logger)
+        else:
+            return DataTransfer(dt_config, logger)
 
     def process(self):
-        raise NotImplementedError(
-            "'process' not implemented.")
+        raise NotImplementedError("'process' not implemented.")
