@@ -339,6 +339,84 @@ data_types:
                 required: false
                 default: 1
 
+    croupier.datatypes.ckan_dataset:
+        properties:
+            name:
+                type: string
+                required: false
+                default: ""
+            package_id:
+                type: string
+                required: false
+                default: ""
+            title:
+                type: string
+                required: false
+                default: ""
+            private:
+                type: boolean
+                required: false
+                default: true
+            author:
+                type: string
+                required: false
+                default: ""
+            author_email:
+                type: string
+                required: false
+                default: ""
+            maintainer:
+                type: string
+                required: false
+                default: ""
+            maintainer_email:
+                type: string
+                required: false
+                default: ""
+            license_id:
+                type: string
+                required: false
+                default: ""
+            notes:
+                type: string
+                required: false
+                default: ""
+            version:
+                type: string
+                required: false
+                default: ""
+            tags:
+                type: list
+                required: false
+                default: []
+            owner_org:
+                type: string
+                required: false
+                default: ""
+
+    croupier.datatypes.ckan_resource:
+        properties:
+            name:
+                type: string
+                required: false
+                default: ""
+            url:
+                type: string
+                required: false
+                default: ""
+            description:
+                type: string
+                required: false
+                default: ""
+            type:
+                type: string
+                required: false
+                default: ""
+            format:
+                type: string
+                required: false
+                default: ""
+
 workflows:
     run_jobs:
         mapping: croupier.croupier_plugin.workflows.run_jobs
@@ -559,6 +637,16 @@ node_types:
                 type: croupier.datatypes.dm.GridFTPCredentials
                 required: false
 
+    croupier.nodes.CKAN_dataset:
+        derived_from: croupier.nodes.DataAccessInfrastructure
+        properties:
+            dataset_info:
+                type: croupier.datatypes.ckan_dataset
+                required: true
+            supported_protocols:
+                default:
+                    - CKANAPI
+
     croupier.nodes.DataTransfer:
         derived_from: cloudify.nodes.Root
         properties:
@@ -586,6 +674,13 @@ node_types:
             resource:
                 description: 'URI of data source in Web'
                 type: string
+
+    croupier.nodes.CKAN_resource:
+        derived_from: croupier.nodes.DataSource
+        properties:
+            resource:
+                type: croupier.datatypes.ckan_resource
+                required: true
 
     croupier.nodes.ECMWFVerticalInterpolation:
         derived_from: croupier.nodes.WebDataSource
@@ -626,20 +721,7 @@ node_types:
                         server_port:
                             default: { get_property: [ SELF, server_port ] }
 
-    croupier.nodes.CKAN_dataset:
-        derived_from: croupier.nodes.WebDataSource
-        properties:
-            query:
-                description: Query fields.
-                type: croupier.datatypes.ecmwf_query
-        interfaces:
-            cloudify.interfaces.lifecycle:
-                configure:
-                    implementation: croupier.croupier_plugin.tasks.ecmwf_vertical_interpolation
-                    max_retries: 0
-                    inputs:
-                        query:
-                            default: { get_property: [ SELF, query ] }
+
 
     croupier.nodes.HPCDataSource:
         derived_from: croupier.nodes.FileDataSource
