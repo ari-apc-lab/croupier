@@ -34,7 +34,7 @@ setup(
     # Do not use underscores in the plugin name.
     name='croupier',
 
-    version='3.2.0',
+    version='3.3.0',
     author='Jesus Gorronogoitia',
     author_email='jesus.gorronogoitia@atos.net',
     description='Plugin to use HPC resources in Cloudify',
@@ -42,7 +42,6 @@ setup(
     # This must correspond to the actual packages in the plugin.
     packages=['croupier_plugin',
               'croupier_plugin.infrastructure_interfaces',
-              'croupier_plugin.external_repositories',
               'croupier_plugin.accounting_client',
               'croupier_plugin.accounting_client.model',
               'croupier_plugin.data_mover',

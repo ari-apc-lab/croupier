@@ -45,7 +45,6 @@ from cloudify.exceptions import NonRecoverableError
 
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
-from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
 # from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
 import croupier_plugin.vault.vault as vault
 from croupier_plugin.accounting_client.model.user import (User)
@@ -868,18 +867,6 @@ def publish(publish_list, **kwargs):
                     ctx.logger.error(
                         'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
                         'Croupier instance not registered in Accounting'.format(workflow_id=ctx.workflow_id))
-
-            for publish_item in publish_list:
-                if not published:
-                    break
-                exrep = ExternalRepository.factory(publish_item)
-                if not exrep:
-                    client.close_connection()
-                    raise NonRecoverableError(
-                        "External repository '" +
-                        publish_item['dataset']['type'] +
-                        "' not supported.")
-                published = exrep.publish(client, ctx.logger, workdir)
 
             client.close_connection()
         else:
