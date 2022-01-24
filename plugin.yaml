@@ -543,9 +543,6 @@ node_types:
             job_options:
                 description: Job main command and options
                 type: croupier.datatypes.job.Options
-            publish:
-                description: Config to publish its outputs
-                default: []
             skip_cleanup:
                 description: True to not clean after execution (debug purposes)
                 type: boolean
