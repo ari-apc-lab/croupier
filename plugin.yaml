@@ -577,9 +577,6 @@ node_types:
                     max_retries: 0
                 publish:
                     implementation: croupier.croupier_plugin.tasks.publish
-                    inputs:
-                        publish_list:
-                            default: { get_property: [SELF, publish] }
                 cleanup:
                     implementation: croupier.croupier_plugin.tasks.cleanup_job
                     inputs:
