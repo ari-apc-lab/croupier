@@ -1,4 +1,4 @@
-from requests import get, post
+from requests import post
 import os
 import configparser
 
@@ -36,4 +36,6 @@ def get_keycloak_config():
 
     except configparser.NoSectionError:
         raise Exception('Could not find Keycloak section in the croupier config file.')
+
+    kc_conf['address'] = kc_conf['address'] if kc_conf['address'].startswith("http") else "http://" + kc_conf['address']
     return kc_conf
