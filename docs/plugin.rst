@@ -34,7 +34,10 @@ Requirements
 -------------------
 
 - Python version
-   - 2.7.x
+   - > 3.6.0
+
+- Cloudify version
+   - > 6.2.0
 
 .. _compatibility:
 
@@ -48,86 +51,72 @@ Compatibility
 - Tested with `Openstack plugin
   <https://docs.cloudify.co/4.5.5/working_with/official_plugins/openstack>`__.
 
-   **Tip**
-
-   Example blueprints can be found at the `Croupier resources repository
-   <https://github.com/ari-apc-lab/croupier-resources>`__.
-
-
 .. _configuration:
 
-Configuration
+Credentials
 ------------------------
 
-The Croupier plugin requires credentials, endpoint and other setup
-information in order to authenticate and interact with the computing
+The Croupier plugin requires credentials to interact with the computing and data
 infrastructures.
 
-This configuration properties are defined in
-*credentials* and *config* properties.
+This configuration is defined in the infrastructure's
+*credentials* properties.
 
 .. _credentials:
 
 .. code:: yaml
 
   credentials:
-    host: "[HPC-HOST]"
-    user: "[HPC-SSH-USER]"
+    host: "[SSH Host]"
+    user: "[SSH/HTTP User]"
     private_key: |
       ----BEGIN RSA PRIVATE KEY----
       ......
       -----END RSA PRIVATE KEY-----
     private_key_password: "[PRIVATE-KEY-PASSWORD]"
-    password: "[HPC-SSH-PASS]"
+    password: "[HPC/HTTP Password]"
     login_shell: {true|false}
     tunnel:
         host: ...
         ...
+    auth-header-label: "[Authorization label to add to headers in HTTP calls to this infrastructure. e.g 'Authorization']"
+    auth-header: "[Authorization token to use in HTTP tokens for this infrastructure. e.g. 'd.Akf8ldp30z7Fe6Y9']"
 
-1. HPC and ssh credentials. At least ``private_key`` or ``password``
+1. ``host`` must always be provided.
+
+2. If the infrastructure is accessed through SSH, ``host`` and ``user`` and either ``private_key`` or ``password``
    must be provided.
 
-   a. *tunnel*: Follows the same structure as its parent (credentials),
-      to connect to the infrastructure through a tunneled SSH connection.
+   a. *tunnel*: Follows the same structure as its parent (credentials), to connect to the infrastructure through a tunneled SSH connection.
 
-   b. *login_shell*: Some systems may require to connect to them using a
-   login shell. Default ``false``.
+   b. *login_shell*: Some systems may require to connect to them using a login shell. Default ``false``.
 
-.. _config:
+3. If the infrastructure is accessed through HTTP (for example CKAN_dataset), there are 3 options:
 
-.. code:: yaml
+   a. No authorization is necessary, in which case all the fields can be left blank.
 
-  config:
-    country_tz: "Europe/Madrid"
-    infrastructure_interface: {SLURM|TORQUE|SHELL}
+   b. Basic authorization is needed. In this case ``user`` and ``password`` must be provided.
 
-1. *country_tz*: Country Time Zone configured in the the HPC.
+   c. Authorization is granted through a token, like an API-token. In this case ``auth-label`` must be provided.
+      If the label in the header is different from 'Authorization', ``auth-header-label`` must also be provided.
 
-2. *infrastructure_interface*: Infrastructure Interface used by the HPC.
+All these credentials can be provided through Vault for added security. In such case only the ``host`` must be provided
+for infrastructures that use SSH, for infrastructures that use HTTP, no fields are necessary.
 
-..
-
-   **Warning**
-
-   Only Slurm and Torque are currently accepted as infrastructure interfaces
-   for HPC.
-   For cloud providers, SHELL is used as interface.
 
 .. _types:
 
 Types
------
+-------------------------------
 
 This section describes the `node
-type <http://docs.getcloudify.org/4.1.0/blueprints/spec-node-types/>`__
-definitions. Nodes describe resources in your HPC infrastructures. For
-more information, see `node
-type <http://docs.getcloudify.org/4.1.0/blueprints/spec-node-types/>`__.
+type <http://docs.getcloudify.org/6.2.0/blueprints/spec-node-types/>`__
+definitions. Nodes describe resources in your application.
 
 .. _croupier_nodes_interface:
 
 croupier.nodes.InfrastructureInterface
---------------------------------------
+========================================
 
 **Derived From:**
 `cloudify.nodes.Compute
@@ -138,7 +127,7 @@ Use this type to describe the interface of a computing infrastructure
 
 **Properties:**
 
--  ``config``: type of interface and system time zone, as described in config_.
+-  ``config``: type of interface and system time zone.
 
 -  ``credentials``: Access credentials, as described in credentials_.
 
@@ -150,9 +139,8 @@ Use this type to describe the interface of a computing infrastructure
 -  ``job_prefix``: Job name prefix for the jobs created by this
    interface. Default ``cfyhpc``.
 
--  ``monitor_period``: Seconds to check job status. This is necessary
-   because infrastructure interfaces can be overloaded if asked too much times
-   in a short period of time. Default ``60``.
+-  ``monitoring_options``: Configuration options for the monitoring collector created in a HPC Exporter and for the
+   internal croupier monitoring. See monitoring_options_.
 
 -  ``skip_cleanup``: True to not clean all files when destroying the
    deployment. Default ``False``.
@@ -161,21 +149,54 @@ Use this type to describe the interface of a computing infrastructure
    executed and simulate that they finish inmediately. Useful for testing.
    Default ``False``.
 
--  ``external_monitor_entrypoint``: Entrypoint of the external monitor
-   that Cloudify will use instead of the internal one.
+- ``accounting_options``: Dictionary containing the accounting options. Empty by default.
 
--  ``external_monitor_type``: Type of the monitoring system when using an
-   external one. Default ``{uri-prometheus}[PROMETHEUS]``.
+- ``internet_access``: By default ``False``. Set to ``True`` if the infrastructure has internet access.
 
--  ``external_monitor_port``: Port of the monitor when using an external
-   monitoring system. Default ``:9090``.
+- ``recurring_workflow``: By default ``False``. Set to ``True`` if this infrastructure will host jobs that are run
+  in a recurring schedule.
 
--  ``external_monitor_orchestrator_port``: Port of the external monitor to
-   connect with Croupier. Default ``:8079``.
+- ``supported_protocols``: List of protocols supported by this infrastructure for data management. See data_management_.
+
+
+.. _config:
+
+**config:**
+
+.. code:: yaml
+
+  config:
+    country_tz: "Europe/Madrid"
+    infrastructure_interface: { SLURM |  PBSPRO | TORQUE | SHELL }
+
+1. *country_tz*: Country Time Zone configured in the the HPC.
+
+2. *infrastructure_interface*: Infrastructure Interface used by the HPC.
+
+..
+
+   **Warning**
+
+   Only Slurm, PBSPRO and Torque are currently accepted as infrastructure interfaces
+   for HPC.
+   For cloud providers, SHELL is used as interface.
+
+.. _monitoring_options:
+
+**monitoring_options:**
+
+.. code:: yaml
+
+  monitoring_options:
+    monitor_period: "[Min time in seconds between pings to the interface to retrieve metrics]"
+    hpc_label: "[Human readable descriptor to identify the infrastructur in Prometheus metrics]"
+    deployment_label: "[Human readable descriptor to identify the deployment in PRometheus metrics]"
+    only_jobs: "[Default ``False``. ``True`` to set HPC Collector to not collect information about queues/partitions]"
+    
 
 **Example**
 
-This example demonstrates how to describe a SLURM interface on an HPC.
+This example demonstrates how to describe a SLURM interface on an HPC, which gets credentials from Vault.
 
 .. code:: yaml
 
@@ -183,14 +204,17 @@ This example demonstrates how to describe a SLURM interface on an HPC.
     type: croupier.nodes.InfrastructureInterface
     properties:
       credentials:
-        host: "[HPC-HOST]"
-        user: "[HPC-SSH-USER]"
-        password: "[HPC-SSH-PASS]"
+        host: "ft2.cesga.es"
       config:
         country_tz: "Europe/Madrid"
         infrastructure_interface: "SLURM"
       job_prefix: crp
       workdir_prefix: test
+      monitoring_options:
+        monitor_period: 15
+        hpc_label: "CESGA"
+        deployment_label: "FACS_Madrid_28_06_2021"
+      internet_access: True
    ...
 
 **Mapped Operations:**
@@ -202,13 +226,9 @@ This example demonstrates how to describe a SLURM interface on an HPC.
 -  ``cloudify.interfaces.lifecycle.delete`` Clean up all data generated
    by the execution.
 
--  ``cloudify.interfaces.monitoring.start`` If the external monitor
-   orchestrator is available, sends a notification to start monitoring
-   the infrastructure.
+-  ``cloudify.interfaces.monitoring.start`` Creates a collector in the HPC Exporter, if there is one.
 
--  ``cloudify.interfaces.monitoring.stop`` If the external monitor
-   orchestrator is available, sends a notification to end monitoring the
-   infrastructure.
+-  ``cloudify.interfaces.monitoring.stop`` Deletes a collector in the HPC Exporter, if there is one.
 
 .. _croupier_nodes_job:
 
@@ -222,23 +242,16 @@ Use this type to describe a job
 
 -  ``job_options``: Job parameters and needed resources.
 
-   -  ``pre``: List of commands to be executed before running the job.
-      Optional.
-
-   -  ``post``: List of commands to be executed after running the job.
-      Optional.
-
-   -  ``partition``: Partition in which the job will be executed. If not
-      provided, the HPC default will be used.
-
-   -  ``commands``: List of commands to be executed. Mandatory if `script`
+   - ``commands``: List of commands to be executed. Mandatory if `local_script` or `remote_script`
       property is not present.
-
-   -  ``script``: Script to be executed. Mandatory if `commands`
-      property is not present.
-
-   - ``arguments``: List of arguments to be passed to execution command.
-     Variables must be scaped like `"\\$USER"`
+   
+   - ``remote_script``: Path to a script in the infrsatructure to be executed. Mandatory if `commands` or `local_script`
+   property is not present.
+   
+   - ``local_script``: Path to a script in the blueprint folder to be executed. Mandatory if `commands` or `remote_script`
+   property is not present.
+   
+   - ``arguments``: List of arguments to be passed to execution command/script. Variables must be scaped like `"\\$USER"`
 
    -  ``nodes``: Nodes to use in job. Default ``1``.
 
@@ -250,25 +263,16 @@ Use this type to describe a job
       allocation. Mandatory if no script is provided, or if the script does
       not define such property.
 
-   -  ``scale``: Execute in parallel the job N times according to this
-      property. Only for HPC. Default ``1`` (no scale).
-
-   -  ``scale_max_in_parallel``: Maximum number of scaled job instances
-      that can be run in parallel. Only works with scale > ``1``.
-      Default same as scale.
+   - ``partition``: (SLURM) partition where to submit the job to
+   
+   - ``queue``: (TORQUE) partition where to submit the job to
+           
+   -  ``scale``: 'Specifies the task ids of a job array TORQUE (-t 0-XX), SLURM (--array=0-XX)'
 
    -  ``memory``: Specify the real memory required per node. Different
       units can be specified using the suffix [``K|M|G|T``]. Default
       value ``""`` lets the infrastructure interface assign the default memory
       to the job.
-
-   -  ``stdout_file``: Define the file where to gather the standard
-      output of the job. Default value ``""`` sets ``<job-name>.err``
-      filename.
-
-   -  ``stderr_file``: Define the file where to gather the standard
-      error output. Default value ``""`` sets ``<job-name>.out``
-      filename.
 
    -  ``mail-user``: Email to receive notification of job state changes.
       Default value ``""`` does not send any mail.
@@ -277,10 +281,22 @@ Use this type to describe a job
       several events separated by comma. Valid values
       ``NONE, BEGIN, END, FAIL, TIME_LIMIT, REQUEUE, ALL``. Default
       value ``""`` does not send any mail.
-
+      
+   - ``account``: Defines the account string associated with the job TORQUE (-A XX), SLURM (--A XX)
+   
+   -  ``stderr_file``: Define the file where to gather the standard
+      error output. Default value ``""`` sets ``<job-name>.out``
+      filename.
+      
+   -  ``stdout_file``: Define the file where to gather the standard
+      output of the job. Default value ``""`` sets ``<job-name>.err``
+      filename.
+      
    -  ``reservation``: Allocate resources for the job from the named
       reservation. Default value ``""`` does not allocate from any named
       reservation.
+      
+   - ``recurring_reservation``: If ``reservation`` is a format string compliant with python datetime format <https://docs.python.org/3/library/datetime.html#strftime-and-strptime-format-codes>`__ and its value changes according to date and time fo workflow execution, set this as ``True``. Default ``False``
 
    -  ``qos``: Request a quality of service for the job. Default value
       ``""`` lets de infrastructure interface assign the default user ``qos``.
@@ -288,8 +304,8 @@ Use this type to describe a job
 -  ``deployment``: Scripts to perform deployment operations. Optional.
 
    -  ``bootstrap``: Relative path to blueprint to the script that will
-      be executed in the HPC at the install workflow to bootstrap the
-      job (like data movements, binary download, etc.)
+      be executed in the HPC at the install/croupier_configure workflow to bootstrap the
+      job
 
    -  ``revert``: Relative path to blueprint to the script that will be
       executed in the HPC at the uninstall workflow, reverting the
@@ -297,29 +313,6 @@ Use this type to describe a job
 
    -  ``inputs``: List of inputs that will be passed to the scripts when
       executed in the HPC.
-
--  ``publish``: A list of outputs to be published after job execution.
-   Each list item is a dictionary containing:
-
-   -  ``type``: Type of the external repository to be published. Only
-      ``CKAN`` is supported for now. The rest of the parameters depends
-      on the type.
-
-   -  ``type: CKAN``
-
-      -  ``entrypoint``: ckan entrypoint
-
-      -  ``api_key``: Individual user ckan api key.
-
-      -  ``dataset``: Id of the dataset in which the file will be
-         published.
-
-      -  ``file_path``: Local path of the output file in the computation
-         node.
-
-      -  ``name``: Name used to publish the file in the repository.
-
-      -  ``description``: Text describing the data file.
 
 -  ``skip_cleanup``: Set to true to not clean up orchestrator auxiliar
    files. Default ``False``.
@@ -357,7 +350,7 @@ This example demonstrates how to describe a job.
         scale: 4
       skip_cleanup: True
     relationships:
-    - type: task_managed_by_interface
+    - type: job_managed_by_interface
       target: hpc_interface
    ...
 
@@ -369,7 +362,7 @@ This example demonstrates how to describe an script job.
     type: croupier.nodes.Job
     properties:
       job_options:
-        script: "touch.script"
+        remote_script: "touch.script"
         arguments:
             - "job-\\$SCALE_INDEX.test"
         nodes: 1
@@ -385,7 +378,7 @@ This example demonstrates how to describe an script job.
           - "script-"
       skip_cleanup: True
     relationships:
-      - type: task_managed_by_interface
+      - type: job_managed_by_interface
         target: hpc_interface
    ...
 
