@@ -478,10 +478,6 @@ node_types:
                 type: list
                 default: []
                 description: List of protocols supported for data management
-            keycloak_credentials:
-                type: croupier.datatypes.Credentials
-                default: {}
-                description: Keycloak User/password. Used to generate dashboards on Grafana and a collector in HPC Exporter for this Interface.
             agent_config:
                 default:
                     install_method: none
@@ -763,6 +759,11 @@ node_types:
                 type: string
                 required: false
                 default: ''
+            keycloak_credentials:
+                type: croupier.datatypes.Credentials
+                required: False
+                default: { }
+                description: Keycloak User/password. Used to generate dashboards on Grafana.
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
