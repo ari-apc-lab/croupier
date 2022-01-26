@@ -44,16 +44,8 @@ inputs:
         type: string
 
 node_templates:
-    vault:
-        type: croupier.nodes.Vault
-        properties:
-            token: { get_input: vault_token }
-            user: { get_input: vault_token }
     hpc_interface:
         type: croupier.nodes.InfrastructureInterface
-        relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
         properties:
             config:
                 infrastructure_interface: { get_input: infrastructure_interface }

@@ -34,6 +34,6 @@ cat >$FILE <<-EOM
 
 cd $CURRENT_WORKDIR
 
-eval touch $1\$1
+eval touch $1
 
 EOM

@@ -60,9 +60,9 @@ node_templates:
             skip_cleanup: false
             #simulate: True  # COMMENT to test against a real HPC
             workdir_prefix: "single_script"
-            relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
+        relationships:
+        - type: retrieve_credentials_from_vault
+          target: vault
     vault:
         type: croupier.nodes.Vault
         properties:

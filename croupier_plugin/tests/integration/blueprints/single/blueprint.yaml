@@ -45,7 +45,7 @@ inputs:
         type: string
 
 node_templates:
-    cesga_hpc:
+    hpc:
         type: croupier.nodes.InfrastructureInterface
         properties:
             config:
@@ -62,11 +62,13 @@ node_templates:
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
+
     vault:
         type: croupier.nodes.Vault
         properties:
             token: { get_input: vault_token }
             user: { get_input: vault_user }
+
     easy_job:
         type: croupier.nodes.Job
         properties:
@@ -78,7 +80,7 @@ node_templates:
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
-              target: cesga_hpc
+              target: hpc
 
 outputs:
     single_job_name:

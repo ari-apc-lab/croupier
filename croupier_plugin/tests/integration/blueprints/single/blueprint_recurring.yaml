@@ -63,11 +63,13 @@ node_templates:
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
+
     vault:
         type: croupier.nodes.Vault
         properties:
             token: { get_input: vault_token }
             user: { get_input: vault_user }
+
     easy_job:
         type: croupier.nodes.Job
         properties:
