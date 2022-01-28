@@ -828,7 +828,7 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
 
 
 @operation
-def publish(publish_list, **kwargs):
+def publish(**kwargs):
     """ Publish the job outputs """
     try:
         simulate = ctx.instance.runtime_properties['simulate']
