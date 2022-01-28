@@ -285,13 +285,121 @@ data_types:
 
     croupier.datatypes.pycompss_options:
         properties:
-            num_nodes:
-                description: 'Number of nodes to use'
-                type: integer
+            sc_cfg:
+                description: 'SuperComputer configuration file to use. Must exist inside queues/cfgs/'
+                type: string
                 required: false
             exec_time:
                 description: 'Expected execution time of the application (in minutes)'
                 type: integer
+                required: false
+            job_name:
+                description: 'Job name'
+                type: string
+                required: false
+            queue:
+                description: 'Queue name to submit the job. Depends on the queue system. For example (MN3): bsc_cs | bsc_debug | debug | interactive'
+                type: string
+                required: false
+            reservation:
+                description: 'Reservation to use when submitting the job'
+                type: string
+                required: false
+            env_script:
+                description: 'Script to source the required environment for the application.'
+                type: string
+                required: false
+            extra_submit_flag:
+                description: 'Flag to pass queue system flags not supported by default command flags. Spaces must be added as '#''
+                type: string
+                required: false
+            cpus_per_task:
+                description: 'Number of cpus per task the queue system must allocate per task. Note that this will be equal to the cpus_per_node in a worker node and equal to the worker_in_master_cpus in a master node respectively.'
+                type: integer
+                required: false
+            job_dependency:
+                description: 'Postpone job execution until the job dependency has ended'
+                type: string
+                required: false
+            forward_time_limit:
+                description: 'Forward the queue system time limit to the runtime. It will stop the application in a controlled way.'
+                type: boolean
+                required: false
+            storage_home:
+                description: 'Root installation dir of the storage implementation'
+                type: string
+                required: false
+            storage_props:
+                description: 'Absolute path of the storage properties file. Mandatory if storage_home is defined'
+                type: string
+                required: false
+            agents:
+                description: 'Hierarchy of agents for the deployment. Accepted values: plain|tree'
+                type: string
+                required: false
+            num_nodes:
+                description: 'Number of nodes to use'
+                type: integer
+                required: false
+            num_switches:
+                description: 'Maximum number of different switches. Select 0 for no restrictions. Maximum nodes per switch: 18. Only available for at least 4 nodes.'
+                type: integer
+                required: false
+            type_cfg:
+                description: 'Location of the file with the descriptions of node type requests'
+                type: string
+                required: false
+            master:
+                description: 'Node type for the master (Node type descriptions are provided in the --type_cfg flag)'
+                type: string
+                required: false
+            workers:
+                description: 'Node type and number of nodes per type for the workers (Node type descriptions are provided in the --type_cfg flag)'
+                type: string
+                required: false
+            cpus_per_node:
+                description: 'Available CPU computing units on each node'
+                type: integer
+                required: false
+            gpus_per_node:
+                description: 'Available GPU computing units on each node'
+                type: integer
+                required: false
+            fpgas_per_node:
+                description: 'Available FPGA computing units on each node'
+                type: integer
+                required: false
+            io_executors:
+                description: 'Number of IO executors on each node'
+                type: integer
+                required: false
+            fpga_reprogram:
+                description: 'Specify the full command that needs to be executed to reprogram the FPGA with the desired bitstream. The location must be an absolute path.'
+                type: string
+                required: false
+            max_tasks_per_node:
+                description: 'Maximum number of simultaneous tasks running on a node'
+                type: integer
+                required: false
+            node_memory:
+                description: 'Maximum node memory: disabled | <int> (MB)'
+                type: integer
+                required: false
+            node_storage_bandwidth:
+                description: 'Maximum node storage bandwidth: <int> (MB)'
+                type: integer
+                required: false
+            network:
+                description: 'Communication network for transfers: default | ethernet | infiniband | data.'
+                type: string
+                required: false
+            prolog:
+                description: 'Task to execute before launching COMPSs (Notice the quotes). If the task has arguments split them by "," rather than spaces. This argument can appear multiple times for more than one prolog action'
+                type: string
+                required: false
+            epilog:
+                description: 'Task to execute after executing the COMPSs application (Notice the quotes). If the task has arguments split them by "," rather than spaces. This argument can appear multiple times for more than one epilog action'
+                type: string
                 required: false
             master_working_dir:
                 description: 'Working directory of the application'
@@ -301,18 +409,266 @@ data_types:
                 description: 'Worker directory. Use: local_disk | shared_disk | <path>'
                 type: string
                 required: false
+            worker_in_master_cpus:
+                description: 'Maximum number of CPU computing units that the master node can run as worker. Cannot exceed cpus_per_node.'
+                type: integer
+                required: false
+            worker_in_master_memory:
+                description: 'Maximum memory in master node assigned to the worker. Cannot exceed the node_memory. Mandatory if worker_in_master_cpus is specified.'
+                type: integer
+                required: false
+            worker_port_range:
+                description: 'Port range used by the NIO adaptor at the worker side'
+                type: string
+                required: false
+            jvm_worker_in_master_opts:
+                description: 'Extra options for the JVM of the COMPSs Worker in the Master Node. Each option separed by "," and without blank spaces (Notice the quotes)'
+                type: string
+                required: false
+            container_image:
+                description: 'Runs the application by means of a container engine image'
+                type: string
+                required: false
+            container_compss_path:
+                description: 'Path where compss is installed in the container image'
+                type: string
+                required: false
+            container_opts:
+                description: 'Options to pass to the container engine'
+                type: string
+                required: false
+            elasticity:
+                description: 'Activate elasticity specifiying the maximum extra nodes (ONLY AVAILABLE FORM SLURM CLUSTERS WITH NIO ADAPTOR)'
+                type: integer
+                required: false
+            automatic_scaling:
+                description: 'Enable or disable the runtime automatic scaling (for elasticity)'
+                type: boolean
+                required: false
+            jupyter_notebook:
+                description: 'Swap the COMPSs master initialization with jupyter notebook from the specified path.'
+                type: string
+                required: false
+            ipython:
+                description: 'Swap the COMPSs master initialization with ipython.'
+                type: string
+                required: false
+            graph:
+                description: 'Generation of the complete graph (true/false)'
+                type: boolean
+                required: false
             tracing:
                 description: 'Set generation of traces and/or tracing level ( [ true | basic ] | advanced | scorep | arm-map | arm-ddt | false). True and basic levels will produce the same traces. When no value is provided it is set to 1'
                 type: string
                 required: false
-            pythonpath:
-                description: 'Additional folders or paths to add to the PYTHONPATH'
+            monitoring:
+                description: 'Period between monitoring samples (milliseconds)'
+                type: integer
+                required: false
+            external_debugger:
+                description: 'Enables external debugger connection on the specified port (or 9999 if empty)'
+                type: boolean
+                required: false
+            jmx_port:
+                description: 'Enable JVM profiling on specified port'
+                type: integer
+                required: false
+            task_execution:
+                description: 'Task execution under COMPSs or Storage.'
+                type: string
+                required: false
+            storage_impl:
+                description: 'Path to an storage implementation. Shortcut to setting pypath and classpath. See Runtime/storage in your installation folder.'
+                type: string
+                required: false
+            storage_conf:
+                description: 'Path to the storage configuration file'
+                type: string
+                required: false
+            project:
+                description: 'Path to the project XML file'
+                type: string
+                required: false
+            resources:
+                description: 'Path to the resources XML file'
                 type: string
                 required: false
             lang:
                 description: 'Language of the application (java/c/python)'
                 type: string
                 required: false
+            summary:
+                description: 'Displays a task execution summary at the end of the application execution'
+                type: boolean
+                required: false
+            log_level:
+                description: 'Set the debug level: off | info | api | debug | trace'
+                type: string
+                required: false
+            extrae_config_file:
+                description: 'Sets a custom extrae config file. Must be in a shared disk between all COMPSs workers.'
+                type: string
+                required: false
+            extrae_config_file_python:
+                description: 'Sets a custom extrae config file for python. Must be in a shared disk between all COMPSs workers.'
+                type: string
+                required: false
+            trace_label:
+                description: 'Add a label in the generated trace file. Only used in the case of tracing is activated.'
+                type: string
+                required: false
+            tracing_task_dependencies:
+                description: 'Adds communication lines for the task dependencies ( [ true | false ] )'
+                type: boolean
+                required: false
+            comm:
+                description: 'Class that implements the adaptor for communications'
+                type: string
+                required: false
+            conn:
+                description: 'Class that implements the runtime connector for the cloud'
+                type: string
+                required: false
+            streaming:
+                description: 'Enable the streaming mode for the given type. Supported types: FILES, OBJECTS, PSCOS, ALL, NONE'
+                type: string
+                required: false
+            streaming_master_name:
+                description: 'Use an specific streaming master node name.'
+                type: string
+                required: false
+            streaming_master_port:
+                description: 'Use an specific port for the streaming master.'
+                type: integer
+                required: false
+            scheduler:
+                description: 'Class that implements the Scheduler for COMPSs'
+                type: string
+                required: false
+            scheduler_config_file:
+                description: 'Path to the file which contains the scheduler configuration.'
+                type: string
+                required: false
+            library_path:
+                description: 'Non-standard directories to search for libraries (e.g. Java JVM library, Python library, C binding library)'
+                type: string
+                required: false
+            classpath:
+                description: 'Path for the application classes / modules'
+                type: string
+                required: false
+            appdir:
+                description: 'Path for the application class folder.'
+                type: string
+                required: false
+            pythonpath:
+                description: 'Additional folders or paths to add to the PYTHONPATH'
+                type: string
+                required: false
+            base_log_dir:
+                description: 'Base directory to store COMPSs log files (a .COMPSs/ folder will be created inside this location)'
+                type: string
+                required: false
+            specific_log_dir:
+                description: 'Use a specific directory to store COMPSs log files (no sandbox is created). Warning: Overwrites --base_log_dir option'
+                type: string
+                required: false
+            uuid:
+                description: 'Preset an application UUID'
+                type: integer
+                required: false
+            master_name:
+                description: 'Hostname of the node to run the COMPSs master'
+                type: string
+                required: false
+            master_port:
+                description: 'Port to run the COMPSs master communications. Only for NIO adaptor'
+                type: integer
+                required: false
+            jvm_master_opts:
+                description: 'Extra options for the COMPSs Master JVM. Each option separed by "," and without blank spaces (Notice the quotes)'
+                type: string
+                required: false
+            jvm_workers_opts:
+                description: 'Extra options for the COMPSs Workers JVMs. Each option separed by "," and without blank spaces (Notice the quotes)'
+                type: string
+                required: false
+            cpu_affinity:
+                description: 'Sets the CPU affinity for the workers'
+                type: string
+                required: false
+            gpu_affinity:
+                description: 'Sets the GPU affinity for the workers'
+                type: string
+                required: false
+            fpga_affinity:
+                description: 'Sets the FPGA affinity for the workers'
+                type: string
+                required: false
+            task_count:
+                description: 'Only for C/Python Bindings. Maximum number of different functions/methods, invoked from the application, that have been selected as tasks'
+                type: string
+                required: false
+            input_profile:
+                description: 'Path to the file which stores the input application profile'
+                type: string
+                required: false
+            output_profile:
+                description: 'Path to the file to store the application profile at the end of the execution'
+                type: string
+                required: false
+            PyObject_serialize:
+                description: 'Only for Python Binding. Enable the object serialization to string when possible (true/false).'
+                type: boolean
+                required: false
+            persistent_worker_c:
+                description: 'Only for C Binding. Enable the persistent worker in c (true/false).'
+                type: boolean
+                required: false
+            enable_external_adaptation:
+                description: 'Enable external adaptation. This option will disable the Resource Optimizer.'
+                type: boolean
+                required: false
+            gen_coredump:
+                description: 'Enable master coredump generation'
+                type: boolean
+                required: false
+            keep_workingdir:
+                description: 'Do not remove the worker working directory after the execution'
+                type: boolean
+                required: false
+            python_interpreter:
+                description: 'Python interpreter to use (python/python2/python3).'
+                type: string
+                required: false
+            python_propagate_virtual_environment:
+                description: 'Propagate the master virtual environment to the workers (true/false).'
+                type: boolean
+                required: false
+            python_mpi_worker:
+                description: 'Use MPI to run the python worker instead of multiprocessing. (true/false).'
+                type: boolean
+                required: false
+            python_memory_profile:
+                description: 'Generate a memory profile of the master.'
+                type: boolean
+                required: false
+            python_worker_cache:
+                description: 'Python worker cache (true/size/false). Only for NIO without mpi worker and python >= 3.8.'
+                type: string
+                required: false
+            wall_clock_limit:
+                description: 'Maximum duration of the application (in seconds).'
+                type: integer
+                required: false
+            shutdown_in_node_failure:
+                description: 'Stop the whole execution in case of Node Failure.'
+                type: boolean
+                required: false
+
+
+
+
             qos:
                 description: 'Quality of Service to pass to the queue system'
                 type: string
