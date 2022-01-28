@@ -200,8 +200,6 @@ class InfrastructureInterface(object):
         else:
             if is_singularity:
                 script_content = self._build_container_script(name, job_settings, ssh_client)
-            elif 'script' in job_settings and job_settings['script']:
-                script_content = job_settings['script']
             elif 'local_script' in job_settings:
                 script_content = context.get_resource(job_settings['local_script'])
             else:

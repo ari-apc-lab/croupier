@@ -53,13 +53,21 @@ class Shell(infrastructure_interface.InfrastructureInterface):
             None if an error arise.
         """
         # Build single line command
+        script_name = job_settings['script']
+        args = ''
+        if 'arguments' in job_settings:
+            for arg in job_settings['arguments']:
+                args += arg + ' '
+
+        script_name = script_name if '/' in script_name else './' + script_name
 
         call_script_content = "#!/bin/bash\n" \
-                              "nohup ./{name}.script >{name}.out 2>{name}.err &\n" \
+                              "nohup {script_name} {args}>{name}.out 2>{name}.err &\n" \
                               "pid=$!\n" \
                               "wait $pid\n" \
                               "exit_code=$?\n" \
-                              "echo {name},$exit_code >> croupier-monitor.dat". format(name=name)
+                              "echo {name},$exit_code >> croupier-monitor.dat".\
+            format(script_name=script_name, name=name, args=args)
         call_name = name + "_call.sh"
         if not self.create_shell_script(ssh_client, call_name, call_script_content):
             return {'error': 'could not create the call script'}
