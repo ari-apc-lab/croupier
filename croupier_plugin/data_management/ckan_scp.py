@@ -3,7 +3,7 @@ from croupier_plugin.ssh import SshClient
 from ckanapi import RemoteCKAN, ServerIncompatibleError, NotAuthorized, ValidationError
 
 
-class CKANAPIDataTransfer(DataTransfer):
+class CKANSCPDataTransfer(DataTransfer):
     def __init__(self, data_transfer_config, logger):
         super().__init__(data_transfer_config, logger)
 
