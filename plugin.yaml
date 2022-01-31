@@ -257,6 +257,10 @@ data_types:
 
     croupier.datatypes.pycompssjob.Options:
         properties:
+            modules:
+                description: 'Modules to load before submitting the job'
+                type: list
+                required: false
             app_name:
                 description: Application name
                 type: string

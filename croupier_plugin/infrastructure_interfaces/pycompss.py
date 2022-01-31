@@ -234,8 +234,13 @@ class Pycompss(InfrastructureInterface):
         if 'app_file' not in job_settings:
             return {'error': "app_file not provided"}
 
+        _command = self.pycompss_command_prefix
+        if 'modules' in job_settings:
+            for module in job_settings['modules']:
+                _command += module + '; '
+
         # Build PyCOMPSs submission command from job_settings
-        _command = self.pycompss_command_prefix + ' pycompss job submit'
+        _command += ' pycompss job submit'
 
         if 'env' in job_settings:
             for env_entry in job_settings['env']:
