@@ -52,6 +52,8 @@ def get_job_metrics(job_name, ssh_client, workdir, logger):
 
 
 class Pycompss(InfrastructureInterface):
+    pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3-ML; module load COMPSs/2.10; '
+
     def initialize(self, credentials, ssh_client):
         if "host" not in credentials:
             message = "PyCOMPSs Initialization: host not located in credentials"
@@ -65,8 +67,7 @@ class Pycompss(InfrastructureInterface):
         user = credentials["user"]
 
         # Build PyCOMPSs initialization command
-        _command = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; ' \
-                   'pycompss init cluster -l {user}@{host}'.format(user=user, host=host)
+        _command = self.pycompss_command_prefix + 'pycompss init cluster -l {user}@{host}'.format(user=user, host=host)
 
         # Execute PyCOMPSs initialization
         msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
@@ -93,9 +94,9 @@ class Pycompss(InfrastructureInterface):
             app_source = "$HOME/" + app_source
 
         # Build PyCOMPSs app deployment command
-        _command = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; ' \
-                   'pycompss app deploy {app_name} --local_source {local_source} --remote_dir {remote_dir}'.format(
-            app_name=job_settings["app_name"], local_source=app_source, remote_dir=workdir)
+        _command = self.pycompss_command_prefix + \
+            'pycompss app deploy {app_name} --local_source {local_source} --remote_dir {remote_dir}'.format(
+                app_name=job_settings["app_name"], local_source=app_source, remote_dir=workdir)
 
         # Execute PyCOMPSs app deployment
         msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
@@ -234,7 +235,7 @@ class Pycompss(InfrastructureInterface):
             return {'error': "app_file not provided"}
 
         # Build PyCOMPSs submission command from job_settings
-        _command = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; pycompss job submit'
+        _command = self.pycompss_command_prefix + ' pycompss job submit'
 
         if 'env' in job_settings:
             for env_entry in job_settings['env']:
