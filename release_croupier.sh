@@ -1,5 +1,4 @@
 #!/bin/bash
-echo $# arguments
 if [ "$#" -ne 1 ]; then
     echo "Error: croupier branch not provided. Use: release_croupier <branch>" >&2
     exit 2
