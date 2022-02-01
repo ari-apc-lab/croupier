@@ -31,19 +31,55 @@ imports:
 #    - plugin:croupier #For Cloudify
     - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
+##################### COVID 19 ARGS ###################
+data_types:
+    permedcoe.covid19.args:
+        properties:
+            metadata:
+                type: string
+                required: true
+            model_prefix:
+                type: string
+                required: true
+            outdir:
+                type: string
+                required: true
+            ko_file:
+                type: string
+                required: true
+            reps:
+                type: integer
+                required: true
+            model:
+                type: string
+                required: true
+            data_folder:
+                type: string
+                required: true
+
 inputs:
-####################### VAULT ###################
+########################## VAULT ######################
     vault_token:
         type: string
     vault_user:
         type: string
 
-############## HPC Infrastructures ##############
+################# HPC Infrastructures #################
     hpc_host:
         type: string
 
     hpc_scheduler:
         type: string
+
+################# Covid 19 application ################
+    covid19_args:
+        type: permedcoe.covid19.args
+
+##################### PYCOMPSs args ###################
+    num_nodes:
+        type: integer
+    exec_time:
+        type: integer
 
 #################### START WORKFLOW ###################
 node_templates:
@@ -85,22 +121,15 @@ node_templates:
                     - COVID19_BB_ASSETS: '${COVID19_BB_ASSETS}'
                     - dataset: '${COVID19_PILOT_DATASET}'
                 compss_args:
-                    num_nodes: 2
-                    exec_time: 45
+                    num_nodes: { get_input: num_nodes }
+                    exec_time: { get_input: exec_time }
                     worker_working_dir: '$(pwd)'
                     log_level: off
                     graph: true
                     tracing: true
                     python_interpreter: python3
                 app_file: '{COMPS_APP_PATH}/covid19_pilot.py'
-                app_args:
-                    - '${dataset}metadata_clean.tsv'
-                    - '${dataset}epithelial_cell_2'
-                    - '$(pwd)/results/'
-                    - '$(pwd)/ko_file.txt'
-                    - '2'
-                    - 'epithelial_cell_2'
-                    - '${dataset}'
+                app_args: { get_input: covid19_args }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface

@@ -257,7 +257,11 @@ class Pycompss(InfrastructureInterface):
         _command += ' ' + job_settings['app_file']
 
         if 'app_args' in job_settings:
-            for arg in job_settings['app_args']:
+            app_args = job_settings['app_args']
+            if isinstance(app_args, dict):  # App arguments encoded as a dictionary
+                app_args = app_args.values()
+
+            for arg in app_args:
                 _command += ' ' + str(arg)
 
         response['command'] = _command
