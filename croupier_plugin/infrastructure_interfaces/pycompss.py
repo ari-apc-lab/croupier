@@ -119,7 +119,7 @@ class Pycompss(InfrastructureInterface):
         """
         Creates the PyCOMPSs job cancellation command
         """
-        pass
+        return "scancel --name " + name
 
     def get_states(self, credentials, job_names):
         """
@@ -251,7 +251,10 @@ class Pycompss(InfrastructureInterface):
 
         if 'compss_args' in job_settings:
             for key in job_settings['compss_args']:
-                _command += ' --' + key + '=' + str(job_settings['compss_args'][key])
+                value = str(job_settings['compss_args'][key])
+                # if value in ["True", "False"]:
+                #     value = value.lower()
+                _command += ' --' + key + '=' + value
         _command += ' --job_name=' + name
 
         _command += ' ' + job_settings['app_file']
