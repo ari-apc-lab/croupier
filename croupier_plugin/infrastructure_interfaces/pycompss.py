@@ -52,7 +52,7 @@ def get_job_metrics(job_name, ssh_client, workdir, logger):
 
 
 class Pycompss(InfrastructureInterface):
-    pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3-ML; module load COMPSs/2.10; '
+    pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3-ML; module load COMPSs/2.10_cli; '
 
     def initialize(self, credentials, ssh_client):
         if "host" not in credentials:
