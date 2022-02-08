@@ -2,7 +2,7 @@
 
 # read arguments
 
-if [ "$#" -ne 6 ]; then
+if [ "$#" -lt 6 ]; then
     echo "Illegal number of parameters. Usage deploy: -u|--user <user> -p|--password <password -k|--private_key <key> - h|--host <host>. Provide either the password or the key" >&2
     exit 2
 fi
@@ -81,10 +81,10 @@ unzip main.zip PilotWorkflow-main/covid19_pilot_workflow/PyCOMPSs/*
 
 #Rsync transfer Covid19 app and data to target HPC using user user's credentials and ssh
 if [ -n "$pkey" ]; then
-  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $pkey" PilotWorkflow-main $user@$host:covid19
+  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $pkey" PilotWorkflow-main $user@$host:permedcoe_apps/covid19
 fi
 if [ -n "$password" ]; then
-  rsync -ratlz --rsh="/usr/bin/sshpass -p $password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $user" PilotWorkflow-main  $host:covid19
+  rsync -ratlz --rsh="/usr/bin/sshpass -p $password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $user" PilotWorkflow-main  $host:permedcoe_apps/covid19
 fi
 
 # Remove temp folder

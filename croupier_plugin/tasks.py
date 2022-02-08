@@ -37,6 +37,7 @@ import socket
 import traceback
 from datetime import datetime
 import pytz
+import tempfile
 
 import requests
 from cloudify import ctx
@@ -565,7 +566,9 @@ def configure_job(
         name = "bootstrap_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         bootstrap = deployment['bootstrap']
-        if deploy_job(bootstrap, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+        execution_in_hpc = deployment['hpc_execution']
+        if deploy_job(bootstrap, inputs, execution_in_hpc, credentials, interface_type, workdir, name,
+                      ctx.logger, skip_cleanup):
             ctx.logger.info('..job bootstraped')
         else:
             ctx.logger.error('Job not bootstraped')
@@ -605,7 +608,8 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
             name = "revert_" + ctx.instance.id + ".sh"
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
             revert = deployment['revert']
-            if deploy_job(revert, inputs, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+            execution_in_hpc = deployment['hpc_execution']
+            if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
                 ctx.logger.info('..job reverted')
             else:
                 ctx.logger.error('Job not reverted')
@@ -620,7 +624,7 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
         ctx.logger.warning('Job {0} was not reverted as it was not configured'.format(ctx.instance.id))
 
 
-def deploy_job(script, inputs, credentials, interface_type, workdir, name, logger,
+def deploy_job(script, inputs, execution_in_hpc, credentials, interface_type, workdir, name, logger,
                skip_cleanup):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH credentials as input """
 
@@ -630,16 +634,70 @@ def deploy_job(script, inputs, credentials, interface_type, workdir, name, logge
 
     # Execute the script and manage the output
     success = False
+    if execution_in_hpc:  # execute the deployment script in target hpc
+        success = remote_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir)
+    else:  # execute the deployment script in local Croupier server
+        success = local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir)
+
+    return success
+
+
+def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir):
+    #  Inject credentials as input is deployment script.
+    #  Execute script in forked process, wait for result
+    success = False
+    #  Save deploy script in temporary folder
+    deploy_script_content = script if script[0] == '#' else ctx.get_resource(script)
+    with tempfile.NamedTemporaryFile(suffix='.sh') as temp_file:
+        temp_file.write(deploy_script_content)
+        temp_file.flush()
+        deploy_script_filepath = temp_file.name
+        #  Inject HPC credentials to script invocation: ./script.sh -u <user> -k <path_to_pkey> -h <host> -p <passwd>
+        deploy_cmd = 'sh ' + deploy_script_filepath + " -u {user} -h {host}".format(
+            user=credentials["user"], host=credentials["host"]
+        )
+        if "password" in credentials and len(credentials["password"]) > 0:
+            deploy_cmd += " -p " + credentials["password"]
+
+        private_key = None
+        if "private_key" in credentials and len(credentials["private_key"]) > 0:
+            # Save key in temporary file
+            with tempfile.NamedTemporaryFile(delete=False) as key_file:
+                key_file.write(bytes(credentials["private_key"], 'utf-8'))
+                key_file.flush()
+                private_key = key_file.name
+            deploy_cmd += " -k " + private_key
+
+        #  Inject deployment inputs
+        deploy_cmd = inject_deploy_inputs(deploy_cmd, inputs)
+
+        #  Execute deploy script
+        try:
+            logger.info('deploying job with script: {}'.format(script))
+            cmd_output = os.popen(deploy_cmd)
+            cmd_msg = cmd_output.read()
+            exit_code = cmd_output.close()
+            if exit_code is not None:
+                logger.warning("job deploying failed with exit code {code} and msg: {msg}"
+                               .format(code=str(exit_code), msg=cmd_msg))
+            else:
+                success = True
+        finally:
+            #  Clean up
+            if private_key and os.path.exists(private_key):
+                # Remove key temporary file
+                os.remove(private_key)
+
+    return success
+
+
+def remote_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir):
+    success = False
     client = SshClient(credentials)
     script_content = script if script[0] == '#' else ctx.get_resource(script)
     if wm.create_shell_script(client, name, script_content):
         call = "./" + name
-        for dinput in inputs:
-            str_input = str(dinput)
-            if ('\n' in str_input or ' ' in str_input) and str_input[0] != '"':
-                call += ' "' + str_input + '"'
-            else:
-                call += ' ' + str_input
+        call = inject_deploy_inputs(call, inputs)
         _, exit_code = client.execute_shell_command(call, workdir=workdir, wait_result=True)
         if exit_code != 0:
             logger.warning("failed to deploy job: call '" + call + "', exit code " + str(exit_code))
@@ -649,10 +707,18 @@ def deploy_job(script, inputs, credentials, interface_type, workdir, name, logge
         if not skip_cleanup:
             if not client.execute_shell_command("rm " + name, workdir=workdir):
                 logger.warning("failed removing bootstrap script")
-
     client.close_connection()
-
     return success
+
+
+def inject_deploy_inputs(call, inputs):
+    for dinput in inputs:
+        str_input = str(dinput)
+        if ('\n' in str_input or ' ' in str_input) and str_input[0] != '"':
+            call += ' "' + str_input + '"'
+        else:
+            call += ' ' + str_input
+    return call
 
 
 @operation

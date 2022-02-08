@@ -218,6 +218,10 @@ class TestPlugin(unittest.TestCase):
     # -------------------------------------------------------------------------------
     @workflow_test(
         os.path.join('blueprints', 'pycompss-covid19', 'blueprint.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'pycompss-covid19', 'scripts', 'deploy.sh'), 'scripts'),
+            (os.path.join('blueprints', 'pycompss-covid19', 'scripts', 'revert.sh'), 'scripts')
+        ],
         copy_plugin_yaml=True,
         inputs='load_inputs', input_func_args='pycompss-covid19')
     def test_pycompss_covid19(self, cfy_local):

@@ -100,6 +100,11 @@ data_types:
                 default: ''
                 required: false
                 type: string
+            hpc_execution:
+                default: true
+                required: false
+                type: boolean
+                description: "if true, bootstrap|revert scripts are executed in target HPC, otherwise, locally in Croupier host"
 
     croupier.datatypes.dataset:
         properties:
