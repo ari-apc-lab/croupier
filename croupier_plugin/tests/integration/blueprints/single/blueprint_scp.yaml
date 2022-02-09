@@ -1,0 +1,133 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Ramos
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.2.ramos@atos.net
+#
+# blueprint.yaml
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    # to speed things up, it is possible downloading this file,
+    # - http://www.getcloudify.org/spec/cloudify/4.1/types.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    # relative import of plugin.yaml that resides in the blueprint directory
+    - plugin:croupier
+
+
+inputs:
+    credentials:
+        type: croupier.datatypes.Credentials
+    ckan_credentials:
+        type: croupier.datatypes.Credentials
+    hpc_interface:
+        type: string
+    partition_name:
+        type: string
+    ckan_dataset_id:
+        type: string
+    
+
+node_templates:
+    hpc_interface:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc_interface }
+            credentials: { get_input: credentials }
+            job_prefix: PSNC_
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "single_script"
+            internet_access: True
+
+    single_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                remote_script: "touch.script"
+                arguments:
+                    - "single.test"
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: "00:01:00"
+                partition: { get_input: partition_name }
+            deployment:
+                bootstrap: "scripts/create_script.sh"
+                revert: "scripts/delete_script.sh"
+                inputs:
+                    - "single"
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc_interface
+            - type: output
+              target: data_out
+
+    data_out:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: single.test
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    ckan_resource:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: single.test
+                description: "output test"
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset
+
+    ckan_dataset:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: "https://ckan.hidalgo-project.eu"
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+                - SCP
+            internet_access: True
+            dataset_info:
+                package_id: { get_input: ckan_dataset_id }
+                owner_org: psnc      
+            credentials: { get_input: ckan_credentials }  
+
+    data_transfer:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: SCP
+        relationships:
+            - type: from_source
+              target: data_out
+            - type: to_target
+              target: ckan_resource
+
+outputs:
+    single_job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [single_job, job_name] }
