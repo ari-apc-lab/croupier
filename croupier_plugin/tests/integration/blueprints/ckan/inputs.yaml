@@ -3,7 +3,7 @@ credentials:
   user:
   private_key:
 ckan_credentials:
-  auth_header:
+  auth-header:
 hpc_interface: SLURM
 partition_name:
 ckan_dataset_id:
