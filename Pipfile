@@ -8,7 +8,7 @@ pylint = "*"
 
 [packages]
 ConfigParser = "*"
-cloudify_rest_client = "~=4.3.3"
+cloudify_rest_client = "~=6.2.0"
 
 [requires]
-python_version = "2.7"
+python_version = "3.6"
