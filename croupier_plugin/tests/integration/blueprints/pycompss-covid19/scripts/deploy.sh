@@ -3,7 +3,7 @@
 # read arguments
 
 if [ "$#" -lt 6 ]; then
-    echo "Illegal number of parameters. Usage deploy: -u|--user <user> -p|--password <password -k|--private_key <key> - h|--host <host>. Provide either the password or the key" >&2
+    echo "Illegal number of parameters. Usage deploy -u|--user <user> -p|--password <password -k|--private_key <key> - h|--host <host>. Provide either the password or the key" >&2
     exit 2
 fi
 

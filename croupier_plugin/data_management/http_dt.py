@@ -1,3 +1,5 @@
+import re
+
 from croupier_plugin.data_management.data_management import DataTransfer
 from croupier_plugin.ssh import SshClient
 from cloudify import ctx
@@ -5,7 +7,6 @@ from cloudify.exceptions import CommandExecutionError
 import tempfile
 import os
 import shutil
-from urllib.parse import urlparse
 
 target_private_key = None
 
@@ -48,7 +49,6 @@ class HttpDataTransfer(DataTransfer):
             self.process_http_transfer()
 
     def process_http_transfer(self):
-
         try:
             ctx.logger.info('Processing http data transfer from source {} to target {}'.format(
                 self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
@@ -60,7 +60,6 @@ class HttpDataTransfer(DataTransfer):
             # Source DS
             resource = self.dt_config['from_source']['resource']
             endpoint = self.dt_config['from_source']['located_at']['endpoint']
-
             url = resource if resource.startswith('http') else \
                 '{endpoint}/{resource}'.format(endpoint=endpoint[:-1] if endpoint.endswith('/') else endpoint,
                                                resource=resource[1:] if resource.startswith('/') else resource)
@@ -70,41 +69,17 @@ class HttpDataTransfer(DataTransfer):
             to_target_data_url = None
             if 'FileDataSource' in to_target_type:
                 to_target_data_url = self.dt_config['to_target']['filepath']
-                if to_target_data_url.startswith('~/'):
-                    to_target_data_url = to_target_data_url[2:]
 
             workdir = self.dt_config['to_target']['located_at']['workdir']
-
             to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
-
             target_is_file = isFile(to_target_data_url)
 
             # Specifying target to copy using wget
-            if target_is_file:
-                wget_command = 'wget {url} -O {ds_target}'.format(url=url, ds_target=to_target_data_url)
-                curl_command = 'curl {url} -o {ds_target}'.format(url=url, ds_target=to_target_data_url)
-            else:
-                wget_command = 'wget {url} -P {ds_target}'.format(url=url, ds_target=to_target_data_url)
-                curl_command = 'cd {ds_target} & curl -O {url}'.format(url=url, ds_target=to_target_data_url)
-
-            source_credentials = self.dt_config['from_source']['located_at']['credentials']
-
-            if 'user' in source_credentials and 'password' in source_credentials and \
-                    source_credentials['user'] and source_credentials['password']:
-                user = source_credentials['user']
-                password = source_credentials['password']
-                wget_command += ' --user {0} --password {1}'.format(user, password)
-                curl_command += ' -u {0}:{1}'.format(user, password)
-            elif 'auth-header' in source_credentials and source_credentials['auth-header']:
-                auth_header = ' --header \'' + source_credentials['auth-header-label'] + ': ' + source_credentials['auth-header'] + '\''
-                wget_command += auth_header
-                curl_command += auth_header
-
-            ssh_client = SshClient(to_target_infra_credentials)
+            curl_command, get_command = self.create_http_get_commands(target_is_file, to_target_data_url, url)
 
             # Execute data transfer command
-
-            exit_msg, exit_code = ssh_client.execute_shell_command(wget_command, workdir=workdir, wait_result=True)
+            ssh_client = SshClient(to_target_infra_credentials)
+            exit_msg, exit_code = ssh_client.execute_shell_command(get_command, workdir=workdir, wait_result=True)
             if exit_code != 0:
                 error_msg = 'Could not download using wget, trying with curl (exit code: {0}, error:{1})\n'.format(
                     str(exit_code), exit_msg)
@@ -126,6 +101,84 @@ class HttpDataTransfer(DataTransfer):
             if 'ssh_client' in locals():
                 ssh_client.close_connection()
 
+    def create_http_get_command_template(self, from_source_data_url, from_source_infra_endpoint):
+        # Support transfer data from GitHub
+        dt_command_template = 'cd {temp_dir} & '
+        if "github.com" in from_source_infra_endpoint:
+            if 'tree' in from_source_infra_endpoint:
+                pattern = None
+                replacement = None
+                if 'main' in from_source_infra_endpoint:
+                    pattern = "tree/main"
+                    replacement = "trunk"
+                else:
+                    pattern = "tree"
+                    replacement = "branches"
+                from_source_infra_endpoint = re.sub("tree", "branches", from_source_infra_endpoint)
+            if 'tree' in from_source_data_url:
+                pattern = None
+                replacement = None
+                if 'main' in from_source_data_url:
+                    pattern = "tree/main"
+                    replacement = "trunk"
+                else:
+                    pattern = "tree"
+                    replacement = "branches"
+                from_source_data_url = re.sub("tree", "branches", from_source_data_url)
+            dt_command_template += 'svn export {source_endpoint}/{resource}'
+        else:
+            dt_command_template += 'wget {source_endpoint}/{resource}'
+        source_credentials = self.dt_config['from_source']['located_at']['credentials']
+        if 'user' in source_credentials and 'password' in source_credentials and \
+                source_credentials['user'] and source_credentials['password']:
+            dt_command_template += ' --user {0} --password {1}'.format(
+                source_credentials['user'], source_credentials['password'])
+        elif 'auth-header' in source_credentials and source_credentials['auth-header']:
+            auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
+            dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
+        return dt_command_template, from_source_data_url, from_source_infra_endpoint
+
+    def create_http_get_commands(self, target_is_file, to_target_data_url, url):
+        #  Support transfer data from GitHub
+        curl_command = None
+        get_command = None
+        if "github.com" in url:
+            pattern = None
+            replacement = None
+            if 'tree' in url:
+                if 'main' in url:
+                    pattern = "tree/main"
+                    replacement = "trunk"
+                else:
+                    pattern = "tree"
+                    replacement = "branches"
+            url = re.sub(pattern, replacement, url)
+            to_target = '/'.join(to_target_data_url.split('/')[:-2])
+            get_command = 'cd {ds_target}; svn export {url}'.\
+                format(url=url, ds_target=to_target)
+        else:
+            if to_target_data_url.startswith('~/'):
+                to_target_data_url = to_target_data_url[2:]
+            if target_is_file:
+                get_command = 'wget {url} -O {ds_target}'.format(url=url, ds_target=to_target_data_url)
+                curl_command = 'curl {url} -o {ds_target}'.format(url=url, ds_target=to_target_data_url)
+            else:
+                get_command = 'wget {url} -P {ds_target}'.format(url=url, ds_target=to_target_data_url)
+                curl_command = 'cd {ds_target} & curl -O {url}'.format(url=url, ds_target=to_target_data_url)
+            source_credentials = self.dt_config['from_source']['located_at']['credentials']
+            if 'user' in source_credentials and 'password' in source_credentials and \
+                    source_credentials['user'] and source_credentials['password']:
+                user = source_credentials['user']
+                password = source_credentials['password']
+                get_command += ' --user {0} --password {1}'.format(user, password)
+                curl_command += ' -u {0}:{1}'.format(user, password)
+            elif 'auth-header' in source_credentials and source_credentials['auth-header']:
+                auth_header = ' --header \'' + source_credentials['auth-header-label'] + ': ' + source_credentials[
+                    'auth-header'] + '\''
+                get_command += auth_header
+                curl_command += auth_header
+        return curl_command, get_command
+
     def process_http_transfer_with_proxy(self):
         temporary_dir = None
         try:
@@ -135,30 +188,12 @@ class HttpDataTransfer(DataTransfer):
 
             # Copy source data into croupier temporary folder using wget
             # Source DS
-
             from_source_data_url = self.dt_config['from_source']['resource']
             from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
 
-            dt_command_template = 'cd {temp_dir}; wget {source_endpoint}/{resource}'
-
-            source_credentials = self.dt_config['from_source']['located_at']['credentials']
-
-            if 'user' in source_credentials and 'password' in source_credentials and \
-                    source_credentials['user'] and source_credentials['password']:
-                dt_command_template += ' --user {0} --password {1}'.format(
-                    source_credentials['user'], source_credentials['password'])
-            elif 'auth-header' in source_credentials and source_credentials['auth-header']:
-                auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
-                dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
-
-            temporary_dir = tempfile.mkdtemp()
-            dt_command = dt_command_template.format(
-                source_endpoint=from_source_infra_endpoint[:-1] if from_source_infra_endpoint.endswith('/')
-                else from_source_infra_endpoint,
-                resource=from_source_data_url[1:] if from_source_data_url.startswith('/')
-                else from_source_data_url,
-                temp_dir=temporary_dir
-            )
+            dt_command, temporary_dir = self.create_http_get_command_for_proxy(from_source_data_url,
+                                                                               from_source_infra_endpoint,
+                                                                               temporary_dir)
 
             # Execute data transfer command
             ctx.logger.info('http(wget) data transfer: executing command: {}'.format(dt_command))
@@ -254,3 +289,54 @@ class HttpDataTransfer(DataTransfer):
                 os.remove(target_private_key)
             if temporary_dir and os.path.exists(temporary_dir):
                 shutil.rmtree(temporary_dir)
+
+    def create_http_get_command_for_proxy(self, from_source_data_url, from_source_infra_endpoint, temporary_dir):
+        dt_command_template, from_source_data_url, from_source_infra_endpoint, temporary_dir, temp_dir = \
+            self.create_http_get_command_template_for_proxy(from_source_data_url, from_source_infra_endpoint)
+
+        dt_command = dt_command_template.format(
+            source_endpoint=from_source_infra_endpoint[:-1] if from_source_infra_endpoint.endswith('/')
+            else from_source_infra_endpoint,
+            resource=from_source_data_url[1:] if from_source_data_url.startswith('/')
+            else from_source_data_url,
+            temp_dir=temporary_dir
+        )
+        return dt_command, temp_dir
+
+    def create_http_get_command_template_for_proxy(self, from_source_data_url, from_source_infra_endpoint):
+        # Support transfer data from GitHub
+        global pattern, replacement
+        temporary_dir = tempfile.mkdtemp()
+        temp_dir = temporary_dir
+        dt_command_template = 'cd {temp_dir}; '
+        if "github.com" in from_source_infra_endpoint:
+            if 'tree' in from_source_infra_endpoint:
+                if 'main' in from_source_infra_endpoint:
+                    pattern = "tree/main"
+                    replacement = "trunk"
+                else:
+                    pattern = "tree"
+                    replacement = "branches"
+                from_source_infra_endpoint = re.sub("tree", "branches", from_source_infra_endpoint)
+            if 'tree' in from_source_data_url:
+                if 'main' in from_source_data_url:
+                    pattern = "tree/main"
+                    replacement = "trunk"
+                else:
+                    pattern = "tree"
+                    replacement = "branches"
+            from_source_data_url = re.sub(pattern, replacement, from_source_data_url)
+            dt_command_template += 'svn export {source_endpoint}/{resource}'
+            temp_dir += '/' + from_source_data_url.split('/')[-1] + '/'
+        else:
+            dt_command_template += 'wget {source_endpoint}/{resource}'
+        source_credentials = self.dt_config['from_source']['located_at']['credentials']
+        if 'user' in source_credentials and 'password' in source_credentials and \
+                source_credentials['user'] and source_credentials['password']:
+            dt_command_template += ' --user {0} --password {1}'.format(
+                source_credentials['user'], source_credentials['password'])
+        elif 'auth-header' in source_credentials and source_credentials['auth-header']:
+            auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
+            dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
+
+        return dt_command_template, from_source_data_url, from_source_infra_endpoint, temporary_dir, temp_dir
