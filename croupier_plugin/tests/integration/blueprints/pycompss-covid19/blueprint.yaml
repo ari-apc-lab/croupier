@@ -71,6 +71,14 @@ inputs:
     hpc_scheduler:
         type: string
 
+################## DS Infrastructures #################
+    hpc_dai_host:
+        type: string
+
+    hpc_dai_internet_access:
+        type: boolean
+
+
 ################# Covid 19 application ################
     covid19_args:
         type: permedcoe.covid19.args
@@ -128,6 +136,7 @@ node_templates:
                     graph: true
                     tracing: true
                     python_interpreter: python3
+                    qos: debug
                 app_file: '{COMPS_APP_PATH}/covid19_pilot.py'
                 app_args: { get_input: covid19_args }
             deployment:
@@ -138,12 +147,62 @@ node_templates:
         relationships:
             - type: task_managed_by_interface
               target: hpc
+            - type: input
+              target: data_small_target
 
 #################### END WORKFLOW ###################
 
 #################### START DATAFLOW #################
 
-#################### START DATAFLOW ###################
+    #HPC1 DataManagement Infrastructure
+    hpc_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: hpc_dai_host }
+            internet_access: { get_input: hpc_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #GitHub DataManagement Infrastructure
+    github_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: https://github.com/
+            supported_protocols:
+                - HTTP
+
+    #INPUTS
+    data_small_target:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe_apps/covid19/PilotWorkflow-main/resources/data/small/
+        relationships:
+            - type: ds_located_at
+              target: hpc_data_access_infra
+
+    data_small_source:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /PerMedCoE/PilotWorkflow/tree/main/resources/data/small
+        relationships:
+            - type: ds_located_at
+              target: github_data_access_infra
+
+    # DATA TRANSFER
+    dt_http:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: data_small_source
+            - type: to_target
+              target: data_small_target
+
+#################### END DATAFLOW ###################
 
 outputs:
     job_name:

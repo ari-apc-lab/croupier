@@ -74,10 +74,10 @@ class Pycompss(InfrastructureInterface):
 
         if exit_code != 0:
             ssh_client.close_connection()
-            raise NonRecoverableError(
-                "Failed PyCOMPSs initialization on the infrastructure with exit code: {code} and msg: {msg}".format(
+            msg = "Failed PyCOMPSs initialization on the infrastructure with exit code: {code} and msg: {msg}".format(
                     code=str(exit_code), msg=msg)
-            )
+            self.logger.error(msg)
+            raise NonRecoverableError(msg)
 
     def deploy_app(self, job_settings, workdir, ssh_client):
         if 'app_name' not in job_settings:
@@ -237,7 +237,7 @@ class Pycompss(InfrastructureInterface):
         _command = self.pycompss_command_prefix
         if 'modules' in job_settings:
             for module in job_settings['modules']:
-                _command += module + '; '
+                _command += 'module ' + module + '; '
 
         # Build PyCOMPSs submission command from job_settings
         _command += ' pycompss job submit'
@@ -252,8 +252,8 @@ class Pycompss(InfrastructureInterface):
         if 'compss_args' in job_settings:
             for key in job_settings['compss_args']:
                 value = str(job_settings['compss_args'][key])
-                # if value in ["True", "False"]:
-                #     value = value.lower()
+                if value in ["True", "False"]:
+                    value = value.lower()
                 _command += ' --' + key + '=' + value
         _command += ' --job_name=' + name
 

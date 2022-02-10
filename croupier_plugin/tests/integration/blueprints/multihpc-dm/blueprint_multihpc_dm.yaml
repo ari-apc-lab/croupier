@@ -249,7 +249,7 @@ node_templates:
             - type: to_target
               target: alice_in
 
-#################### START DATAFLOW ###################
+#################### END DATAFLOW ###################
 
 outputs:
     job1_name:
