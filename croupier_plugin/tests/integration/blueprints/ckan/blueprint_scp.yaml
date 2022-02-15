@@ -58,26 +58,17 @@ node_templates:
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: "single_script"
+            workdir_prefix: "ckan"
             internet_access: True
-
+              
     single_job:
         type: croupier.nodes.Job
         properties:
             job_options:
-                remote_script: "touch.script"
-                arguments:
-                    - "single.test"
-                nodes: 1
-                tasks: 1
-                tasks_per_node: 1
+                commands:
+                    - touch file_to_upload.txt
                 max_time: "00:01:00"
-                partition: { get_input: partition_name }
-            deployment:
-                bootstrap: "scripts/create_script.sh"
-                revert: "scripts/delete_script.sh"
-                inputs:
-                    - "single"
+                partition: { get_input: partition }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
@@ -97,8 +88,8 @@ node_templates:
         type: croupier.nodes.CKAN_resource
         properties:
             resource:
-                name: single.test
-                description: "output test"
+                name: file_to_upload.txt
+                description: "file to upload via scp"
         relationships:
             - type: ds_located_at
               target: ckan_dataset
