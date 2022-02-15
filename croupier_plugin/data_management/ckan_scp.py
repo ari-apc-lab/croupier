@@ -25,11 +25,11 @@ class CKANSCPDataTransfer(DataTransfer):
 
         self.dataset_info = self.ckan_dataset['dataset_info']
         self.endpoint = self.ckan_dataset['endpoint']
-        self.apikey = self.ckan_dataset['credentials']['auth-header']
+        self.apikey = self.ckan_dataset['credentials']['user']
         self.api = RemoteCKAN(self.endpoint, apikey=self.apikey)
 
-        self.scp_username = "cloudify"
-        self.scp_sshkey = "make key"
+        self.scp_username = self.ckan_dataset['credentials']['user']
+        self.scp_sshkey = self.ckan_dataset['credentials']['private_key']
 
         if not self.dataset_info['package_id']:
             self._find_dataset()
@@ -73,13 +73,12 @@ class CKANSCPDataTransfer(DataTransfer):
         filepath = self.dt_config['from_source']['filepath']
         workdir = self.from_infra['workdir']
 
-        command = 'echo "' + self.scp_sshkey + '" > ~/.priv_ckan.key'
-        command += '; scp -i ~/.priv_ckan.key ' + filepath + ' ' + self.scp_username + '@62.3.171.150:~/ckan/' + \
+        command = 'echo "' + self.scp_sshkey + '" > .priv_ckan.key; chmod 0600 .priv_ckan.key'
+        command += '; scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .priv_ckan.key ' + filepath + ' ' + self.scp_username + '@62.3.171.150:~/ckan/' + \
                    os.path.basename(filepath)
-        command += '; rm ~/.priv_ckan.key'
-
+        #command += '; rm .priv_ckan.key'
         action = 'update' if self._resource_exists() else 'create'
-        command = '; curl {0}/api/action/resource_{1}'.format(self.endpoint, action)
+        command += '; curl {0}/api/action/resource_{1}'.format(self.endpoint, action)
         command += ' --form url=https://ckan.hidalgo-project.eu:8443/{0}/{1}'.format(self.scp_username, os.path.basename(filepath))
         command += ' --form package_id={0}'.format(self.dataset_info['package_id'])
 
@@ -89,7 +88,7 @@ class CKANSCPDataTransfer(DataTransfer):
 
         if self.apikey:
             command += " -H 'Authorization: {0}'".format(self.apikey)
-
+        print(command)
         ssh_client = SshClient(ssh_credentials)
         exit_code, exit_msg = ssh_client.execute_shell_command(command, workdir, wait_result=True)
         if exit_code != 0:

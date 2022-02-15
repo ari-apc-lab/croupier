@@ -127,3 +127,13 @@ class Shell(infrastructure_interface.InfrastructureInterface):
             return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.CANCELLED]
         else:
             return infrastructure_interface.JOBSTATESLIST[infrastructure_interface.FAILED]
+
+    def _parse_job_settings(
+            self,
+            job_id,
+            job_settings,
+            script=False,
+            timezone=None):
+        _settings = ''
+
+        return {'data': _settings}

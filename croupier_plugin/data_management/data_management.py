@@ -63,7 +63,7 @@ class DataTransfer:
             from croupier_plugin.data_management.ckan_api import CKANAPIDataTransfer
             return CKANAPIDataTransfer(dt_config, logger)
         elif dt_config['transfer_protocol'].upper() == "SCP":
-            from croupier_plugin.data_management.ckan_api import CKANSCPDataTransfer
+            from croupier_plugin.data_management.ckan_scp import CKANSCPDataTransfer
             return CKANSCPDataTransfer(dt_config, logger)
         else:
             return DataTransfer(dt_config, logger)

@@ -44,7 +44,8 @@ inputs:
         type: string
     ckan_dataset_id:
         type: string
-    
+    ckan_dataset_owner:
+        type: string
 
 node_templates:
     hpc_interface:
@@ -105,7 +106,7 @@ node_templates:
             internet_access: True
             dataset_info:
                 package_id: { get_input: ckan_dataset_id }
-                owner_org: psnc      
+                owner_org: { get_input: ckan_dataset_owner }
             credentials: { get_input: ckan_credentials }  
 
     data_transfer:

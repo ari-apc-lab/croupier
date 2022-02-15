@@ -97,3 +97,7 @@ ENV/
 
 #Croupier
 keys_repo/
+.idea/croupier.iml
+.idea/misc.xml
+.idea/croupier.iml
+.idea/misc.xml

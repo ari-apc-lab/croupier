@@ -1,9 +1,18 @@
 credentials:
-  host:
-  user:
-  private_key:
+  host: 
+  user: cloudify
+  private_key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    ...
+    -----END RSA PRIVATE KEY-----
 ckan_credentials:
-  auth-header:
+  auth-header: "CKAN_API_KEY"
+  user: cloudify
+  private_key: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    ...
+    -----END OPENSSH PRIVATE KEY-----
 hpc_interface: SHELL
-partition:
-ckan_dataset_id:
+partition: standard
+ckan_dataset_id: "DATASET"
+ckan_dataset_owner: psnc
