@@ -79,7 +79,7 @@ node_templates:
     data_out:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: single.test
+            filepath: file_to_upload.txt
         relationships:
             - type: ds_located_at
               target: hpc_interface
