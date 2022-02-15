@@ -5,5 +5,5 @@ credentials:
 ckan_credentials:
   auth-header:
 hpc_interface: SLURM
-partition_name:
+partition:
 ckan_dataset_id:

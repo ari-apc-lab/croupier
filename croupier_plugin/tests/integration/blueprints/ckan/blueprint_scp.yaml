@@ -40,7 +40,7 @@ inputs:
         type: croupier.datatypes.Credentials
     hpc_interface:
         type: string
-    partition_name:
+    partition:
         type: string
     ckan_dataset_id:
         type: string
