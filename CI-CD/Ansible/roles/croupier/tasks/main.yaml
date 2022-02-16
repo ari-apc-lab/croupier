@@ -1,0 +1,27 @@
+---
+- name: Clone croupier repo
+  git:
+    repo: 'https://github.com/ari-apc-lab/croupier.git'
+    dest: /tmp/croupier/
+
+- name: Create croupier wagon
+  community.docker.docker_container:
+    name: wagon-croupier
+    image: cloudifyplatform/cloudify-centos-7-py3-wagon-builder
+    volumes:
+      - /tmp/croupier:/packaging
+
+- name: Download Cloudify CLI
+  get_url:
+    url: https://repository.cloudifysource.org/cloudify/6.2.0/ga-release/cloudify-cli_6.2.0-ga_amd64.deb
+    dest: /tmp/cfy_cli
+
+- name: Install Cloudify CLI
+  apt:
+    deb: /tmp/cfy_cli/cloudify-cli_6.2.0-ga_amd64.deb
+
+- name: Configure Cloudify CLI
+  command: cfy profiles set -p {{admin_password}} -u admin -t default_tenant --ssl on -m {{www_host}}
+
+- name: upload croupier to cloudify
+  command: cfy plugins upload -y /tmp/croupier/plugin.yaml /tmp/croupier/*.wgn

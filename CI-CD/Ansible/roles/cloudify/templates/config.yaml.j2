@@ -1,0 +1,580 @@
+manager:
+  # The manager's private IP address. This is the address which will be used by
+  # agent hosts to connect to the Manager's fileserver and message broker.
+  private_ip: 'localhost'
+
+  # An IP address by which the Manager is accessible externally, such as via the CLI
+  # or external clients. If not applicable, provide the same value as "private_ip".
+  public_ip: '{{www_host}}'
+
+  # The Manager's hostname, doesn't have to be accessible.
+  # If no hostname is supplied it will be read from /etc/hostname
+  hostname: '{{www_host}}'
+
+  # Provide an IP or hostname to be used in the local CLI profile on the manager.
+  # This might be useful when providing an external certificate.
+  cli_local_profile_host_name: ''
+
+  ######################################################################################
+  #
+  # As long as you have set the config entries above, you can install the manager with:
+  # cfy_manager install
+  # The rest of the configuration is only required if you need to change the defaults.
+  #
+  ######################################################################################
+  security:
+    # When enabled, the external REST communication will be performed over HTTPS
+    ssl_enabled: {{enable_ssl}}
+
+    # Username and password of the Cloudify Manager administrator.
+    admin_username: admin
+    # If admin_password is left blank, a password will be generated for you and provided
+    # to you at the end of the install process.
+    admin_password: '{{admin_password}}'
+
+  # A path to a Cloudify license to be uploaded on the Manager during installation
+  # For clusters this must be supplied, and will only be used, on the first manager
+  cloudify_license_path: ''
+
+provider_context:
+  policy_engine:
+    start_timeout: 30
+
+  # An imported URL is prefix-matched against the key in each entry. If a match is found,
+  # then the URL prefix is replaced with the value of the corresponding entry.
+  # That allows serving YAML files from within the manager, even when the imported URL
+  # points to the external network.
+  import_resolver:
+    parameters:
+      rules:
+      - {http://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {http://www.cloudify.co/spec: file:///opt/manager/resources/spec}
+      - {http://getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {http://cloudify.co/spec: file:///opt/manager/resources/spec}
+      - {https://www.getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {https://www.cloudify.co/spec: file:///opt/manager/resources/spec}
+      - {https://getcloudify.org/spec: file:///opt/manager/resources/spec}
+      - {https://cloudify.co/spec: file:///opt/manager/resources/spec}
+      # if this is set to true, the import resolver will try the original,
+      # non-resolved URL as well, if the resolved one returns a HTTP error
+      fallback: true
+
+# A dict of network names and IP addresses of managers and brokers associated with them.
+# By default, there is only a "default" network, with the manager's
+# private IP and broker IPs associated with it. This network can be overwritten.
+# Structure:
+# networks:
+#   <network_name>: <manager address or ip>
+#   <network2_name>: ...
+networks: {}
+agent:
+  broker_port: 5671
+  min_workers: 2
+  max_workers: 5
+  # AMQP heartbeat timeout. 0 means no heartbeats
+  heartbeat: 30
+  # Default logging level.
+  # This can be overridden on a per-agent basis by using the "log_level" directive
+  # under "agent_config".
+  log_level: DEBUG
+
+rabbitmq:
+  # Sets the username/password to use for clients such as celery to connect to
+  # the rabbitmq broker. It is recommended that you set both the username and
+  # password to something reasonably secure.
+  username: cloudify
+  password: c10udify
+
+  # A list of cluster members, including network-specific addresses.
+  # The 'default' network address must be set for each member.
+  # (addresses can be IPs, and the address of the local node will be used for
+  # connecting to it, so it must be allowed by the rabbitmq certificate)
+  # If installing an all-in-one manager this section can be left blank.
+  # Example:
+  # cluster_members:
+  #   <hostname of first rabbit node>:
+  #     networks:
+  #       default: <address of rabbit node> (not needed if node name is resolvable via DNS)
+  #       <other network name>: <address for this node on 'other network'>
+  #     ...
+  #   <hostname of second rabbit node>:
+  #     networks:
+  #       default: ...
+  #     ...
+  #   ...
+  # All nodes must have a 'default' entry.
+  # This should not be populated on an all-in-one manager.
+  cluster_members: {}
+
+  # Set this to true if the RabbitMQ is an external service.  This will result in the RabbitMQ
+  # service not being internally-monitored by the CLoudify cluster status reporter.
+  is_external: false
+
+  # Path to cert for CA that signed the broker cert.
+  # Must be provided to use external brokers.
+  # Will default to cert_path if installing a broker locally.
+  ca_path: ''
+
+  # Set this to true if the cluster member hostnames should be used to refer to cluster members in the DB.
+  # If this is left false, the default network address for each member will be used.
+  # If these are the same (e.g. due to using a proxy) then the cluster status reporter will fail.
+  use_hostnames_in_db: false
+
+  #####################################################
+  #                                                   #
+  #             RABBITMQ SERVER SETTINGS              #
+  # Settings before this point are relevant for both  #
+  # locally and remotely installed queue_service.     #
+  # Settings after this point are only relevant when  #
+  # installing the queue_service on its own or as     #
+  # part of an all-in-one manager.                    #
+  # They are not used in any other cases, and so can  #
+  # be left unaltered if the queue_service is not     #
+  # being installed locally.                          #
+  #                                                   #
+  #####################################################
+
+  # Path to broker certificate for external broker
+  # For all-in-one manager install, this should be left blank
+  # For external brokers, the broker certificate (in PEM format) should be
+  # in the file referred to by this configuration entry
+  # NOTE: This certificate and key pair must both be provided when installing
+  #       a broker. These are not relevant for a manager-only or postgres-only
+  #       install. For manager-only specification of brokers, see the
+  #       cluster_members setting.
+  cert_path: ''
+  # Associated key
+  key_path: ''
+
+  # The name to give this cluster node. If this is blank, it will be set to localhost.
+  nodename:
+  # Whether to support FQDNs. If this is set to false, only the hostname will be
+  # used even if the FQDN is supplied.
+  # Caution: Setting this to true will require manually specifying target node
+  # and using the --longnames argument for any rabbitmqctl operations.
+  use_long_name: false
+
+  # If this is part of a cluster and not the first node to be configured, set
+  # this to one of the other cluster node names.
+  join_cluster:
+
+  # If this is a cluster then this value must be the same on all rabbitmq nodes.
+  # If left blank, it will be auto-generated.
+  erlang_cookie:
+
+  # Sets the File Descriptor limit for the rabbitmq user.
+  fd_limit: 102400
+
+  # NOTE: The policy settings are only set up by the first broker in a cluster
+  # of brokers, and they're not configured at all by a manager using an external
+  # broker.
+  # If you remove any of these policies, you may encounter undefined
+  # behaviour, so it's probably best not to remove them.
+  policies:
+  - name: logs_queue_message_policy
+    expression: ^cloudify-log$
+    # Highest value priority is applied in expression collisions
+    priority: 100
+    policy:
+      # Sets the number of milliseconds to wait before a message expires
+      # in the events queue. Not used if an external endpoint is used.
+      message-ttl: 1200000
+      # Sets the number of messages the events queue can hold. Note this is NOT
+      # the message byte length! Not used if an external endpoint is used.
+      # Note that for each of the queue length limit properties, new messages
+      # will be queued in RabbitMQ and old messages will be deleted once the
+      # limit is reached! https://www.rabbitmq.com/maxlength.html
+      max-length: 1000000
+      # Used to ensure data integrity by keeping a replica of the queue on all
+      # cluster nodes
+      ha-mode: all
+      ha-sync-mode: automatic
+      ha-sync-batch-size: 50
+  - name: events_queue_message_policy
+    expression: ^cloudify-events$
+    priority: 100
+    policy:
+      message-ttl: 1200000
+      max-length: 1000000
+      ha-mode: all
+      ha-sync-mode: automatic
+      ha-sync-batch-size: 50
+  - name: default_policy
+    expression: ^
+    priority: 1
+    policy:
+      ha-mode: all
+      ha-sync-mode: automatic
+      ha-sync-batch-size: 50
+
+# IMPORTANT: some of the configuration keys in the "postgresql_server" and
+# "postgresql_client" sections are only applicable for certain use cases.
+#
+# If "services_to_install" includes "database_service", you should consider
+# the "postgresql_server" section in its entirety.
+#
+# If "services_to_install" includes "manager_service":
+#
+#   * You should consider the "postgresql_client" section in its entirety.
+#   * If "database_service" is NOT included, then you must populate
+#     the "ca_path" field under "postgresql_server".
+postgresql_server:
+  # Password to set for the PostgreSQL user.
+  postgres_password: ''
+
+  # postgresql.conf overrides
+  config:
+    # Put here any compatible parameters that will override PostgreSQL defaults.
+    # We suggest and set as default values following:
+    #
+    #   * "shared_buffers": 25% of total RAM size,
+    #   * "effective_cache_size":
+    #       - 25% of total RAM size for all-in-one manager installation,
+    #       - 50% of total RAM size for cluster installation
+    work_mem: 16MB
+
+  # PostgreSQL server's or cluster's public certificate, private key, and CA certificate
+  # paths. All will be copied to the appropriate location and have permissions and
+  # ownership set appropriately.
+  cert_path: ''
+  key_path: ''
+  ca_path: ''
+
+  cluster:
+    # List of nodes that will be members of the PostgreSQL cluster.
+    # 3 nodes are recommended for maintaining safe levels of redundancy without
+    # excessive resource usage.
+    # If this is populated during a DB service install, the PostgreSQL cluster.
+    # components will be installed.
+    # The nodes must be provided with IPs, e.g.
+    # nodes:
+    #   <hostname of first postgres node>:
+    #     ip: <ip of first postgres node>
+    #   <hostname of second postgres node>:
+    #     ip: <ip of second postgres node>
+    #   <hostname of third postgres node>:
+    #     ip: <ip of third postgres node>
+    nodes: {}
+
+    # During DB cluster installation, all of the following cluster config
+    # entries must be populated
+    etcd:
+      # etcd shared secret for clustering
+      # Note that single quotes in this string will be replaced with double,
+      # and backslashes with forward slashes
+      cluster_token: ''
+      root_password: ''
+      patroni_password: ''
+
+    patroni:
+      # These are credentials for accessing the configuration REST interface for
+      # patroni. They are not needed for regular operation such as querying
+      # status.
+      rest_user: patroni
+      rest_password: ''
+
+    postgres:
+      replicator_password: ''
+
+  # For external single-node postgres installation, set to true.
+  # For clusters this will be treated as true and the actual setting ignored
+  enable_remote_connections: false
+
+  # SSL must be enabled for external databases - provide proper certificates.
+  # For external DB servers and clusters this will be treated as true and
+  # the actual setting ignored.
+  ssl_enabled: false
+  # If true only SSL connections will be permitted, use with caution
+  # For clusters this will be treated as true and the actual setting ignored
+  ssl_only_connections: false
+
+  # If true, client certificate verification will be required for postgres clients
+  # If this is set, ssl_only_connections must be enabled
+  ssl_client_verification: false
+
+  # A PostgreSQL account used for monitoring
+  db_monitoring:
+    username: cloudify_db_monitoring
+    password: c10udify_db_monitoring
+
+postgresql_client:
+  # Host name (or IP address) of the database. If you are using an external
+  # database, update accordingly; otherwise use the default.
+  host: localhost
+  # The CA certificate to connect to the server with.
+  # If left blank postgresql_server.ca_path will be used
+  ca_path: ''
+
+  # Server user name (server_username), password (server_password),
+  # and DB (server_db_name) to use when connecting to the database for Cloudify
+  # DB initialization and population.
+  # This is only relevant for external postgres installations when you enable
+  # remote connections
+  #
+  # If your database is an Azure DBaaS instance, you must set 'server_username'
+  # so it includes the database name as a suffix. For example, if your database
+  # name is "mycfydb" and your username is "test", then "server_username"
+  # should be "test@mycfydb".
+  #
+  server_db_name: postgres
+  server_username: postgres
+  server_password: ''
+
+  # Cloudify DB name, user name and password to be created.
+  #
+  # The following apply if your database is an Azure DBaaS instance:
+  #
+  #   * "cloudify_username" must include the database name as a suffix. For example,
+  #     if your desired database username is "cloudify" and your database name is
+  #     "test", then "cloudify_username" should be "cloudify@test".
+  #
+  #  * "cloudify_username" must be different from "server_username".
+  cloudify_db_name: cloudify_db
+  cloudify_username: cloudify
+  cloudify_password: cloudify
+
+  # SSL must be enabled for external databases - provide proper certificates
+  # This setting will be ignored (treated as true) if an external DB or
+  # cluster is used
+  ssl_enabled: false
+  # If true, client SSL certificates will need to be supplied for database connections
+  ssl_client_verification: false
+
+
+stage:
+  # If set to true, Cloudify UI will not be installed
+  skip_installation: false
+
+composer:
+  # If set to true, Cloudify Composer will not be installed
+  skip_installation: false
+
+python:
+  # Some plugins installed from sources require compilation - installs a
+  # compiler and the python headers to allow that.
+  install_python_compilers: false
+
+  # If set to true, python sources (e.g. pip) will be removed when
+  # uninstalling the Cloudify Manager. NOTE: only set to true if those
+  # dependencies weren't available before Cloudify Manager installation
+  remove_on_teardown: false
+
+restservice:
+  log:
+    # Logging level for the REST service. Defaults to 'INFO', as 'DEBUG' may
+    # end up logging sensitive information.
+    level: INFO
+
+    # The size, in MB, that the REST service log file may grow to before it's
+    # rotated.
+    file_size: 100
+
+    # Number of historical log files to keep when rotating the REST service logs.
+    files_backup_count: 7
+
+  gunicorn:
+    # The number of gunicorn worker processes for handling requests. If the
+    # default value (0) is set, then min((2 * cpu_count + 1 processes), max_worker_count)
+    # will be used.
+    worker_count: 0
+
+    # Maximum number of gunicorn workers (if calculated automatically)
+    max_worker_count: 12
+
+    # The maximum number of requests a worker will process before restarting.
+    # If this is set to zero then the automatic worker restarts are disabled.
+    max_requests: 1000
+
+  ldap:
+    # This should include the protocol and port,
+    # e.g. ldap://192.0.2.1:389 or ldaps://192.0.2.45:636
+    server: ''
+
+    # The domain, e.g. example.local
+    domain: ''
+
+    # True if Active Directory will be used as the LDAP authenticator
+    is_active_directory: true
+
+    # This must be provided if the server is using ldaps://
+    ca_cert: ''
+
+    # Username and password should only be entered if absolutely required
+    # by the ldap service.
+    username: ''
+    password: ''
+
+    # Any extra LDAP information (separated by the `;` sign. e.g. a=1;b=2)
+    dn_extra: ''
+
+  # Minimum available memory for running list query on Manager host in MB.
+  min_available_memory_mb: 100
+
+  # Disables insecure REST endpoints
+  insecure_endpoints_disabled: true
+
+  # Port to be used by the REST service
+  port: 8100
+
+  # Number of failed logins (bad password) before account lockout
+  failed_logins_before_account_lock: 4
+
+  # Account lockout time in minutes. `-1` means no account lockout,
+  #  even when `failed_logins_before_account_lock` has a value.
+  account_lock_period: -1
+
+  # The default page size for REST queries
+  default_page_size: 1000
+
+  # Additional environment variables to add to the REST Service's service
+  # file.
+  extra_env: {}
+  home_dir: /opt/manager
+  log_dir: /var/log/cloudify/rest
+  venv: /opt/manager/env
+nginx:
+  # external port to use; if null, default is 80 for http and 443 for https
+  port:
+
+  # Number of nginx worker processes to have.
+  # Specify "auto" to use nginx's recommended configuration of one
+  # process per core.
+  worker_processes: auto
+
+  # Number of connections that any nginx worker is allowed to carry simultaneously.
+  worker_connections: 4096
+
+  # Maximum number of open file descriptors that any nginx process
+  # is allowed to have.
+  max_open_fds: 102400
+
+mgmtworker:
+  # Sets the logging level to use for the management workers. This affects the
+  # logging performed by the manager during the execution of management tasks,
+  # such as deployment creation and deployment deletion. NOTE: specifying
+  # "debug" will result in considerable amount of logging activity. Consider
+  # using "info" (or a more restrictive level) for production environments.
+  log_level: INFO
+
+  # Minimum number of worker processes maintained by the management worker.
+  min_workers: 2
+
+  # Maximum number of worker processes started by the management worker.
+  max_workers: 100
+
+  # Additional environment variables to add to the management worker's service
+  # file.
+  extra_env: {}
+
+  workflows:
+    # Sets the number of times a failed task will be retried on recoverable error.
+    task_retries: 0
+    # Sets the interval between retry attempts in seconds.
+    task_retry_interval: 15
+
+sanity:
+  # If set to true, the sanity blueprint install/uninstall will not be
+  # performed during Cloudify Manager installation
+  skip_sanity: false
+
+validations:
+  # If set to true, install/configuration validations will not be performed
+  skip_validations: false
+
+  # These allow to override specific validation values
+  # NOTE: We do not recommend changing these values unless you know exactly
+  # what you're doing.
+  minimum_required_total_physical_memory_in_mb: 1838
+
+  # Minimum required disk space on Manager host in GB.
+  minimum_required_available_disk_space_in_gb: 1
+
+  # Python version expected to be found on the machine
+  expected_python_version: '3.6'
+
+  # The only Linux distros fully supported, on which a Cloudify Manager can
+  # be installed
+  supported_distros: [centos, redhat]
+
+  # The supported versions of the above distros
+  supported_distro_versions: ['7']
+ssl_inputs:
+  external_cert_path: '{{external_cert}}'
+  external_key_path: '{{external_key}}'
+  internal_cert_path: '{{internal_cert}}'
+  internal_key_path: '{{internal_key}}'
+  postgresql_client_cert_path: ''
+  postgresql_client_key_path: ''
+  ca_cert_path: '{{internal_ca}}'
+  ca_key_path: '{{internal_ca_key}}'
+  ca_key_password: ''
+  # External CA cert is used to auto-generate the external cert, if the
+  # external cert is not provided.
+  # The key and the password will not be stored.
+  # External CA cert, if provided, will also be used with the on-manager CLI.
+  external_ca_cert_path: '{{external_ca}}'
+  external_ca_key_path: ''
+  external_ca_key_password: ''
+
+usage_collector:
+  collect_cloudify_uptime:
+    # True if the uptime collector will be installed
+    active: true
+
+    # Sets the interval between running the uptime collector in hours
+    interval_in_hours: 4
+
+  collect_cloudify_usage:
+    # True if the usage collector will be installed
+    active: true
+
+    # Sets the interval between running the usage collector in days
+    interval_in_days: 1
+
+prometheus:
+  # A public certificate, a private key, and a CA certificate file paths for the Nginx
+  # HTTPS proxy for the Prometheus.  All will be copied to the appropriate location and
+  # have permissions and ownership set appropriately.
+  cert_path: ''
+  key_path: ''
+  ca_path: ''
+  port: 9090
+  node_exporter:
+    metrics_port: 9100
+  blackbox_exporter:
+    metrics_port: 9115
+    # ca_cert_path is a path to the CA certificate, which is used currently by the blackbox_exporter
+    # to connect to the HTTPS services that use certificates signed with this CA certificate.
+    ca_cert_path: ''
+  postgres_exporter:
+    metrics_port: 9187
+    # ca_cert_path is a path to the CA certificate, which is used by the postgres_exporter
+    # to connect to the PostgreSQL Server that use certificates signed with this CA certificate.
+    ca_cert_path: ''
+  rabbitmq_prometheus:
+    metrics_port: 15692
+  # Parameters that will be used to access the monitoring service remotely
+  credentials:
+    username: monitoring_user
+    password: m0n1torify
+  # How frequently should Prometheus scrape its targets and evaluate rules.
+  scrape_interval: 15s
+  # How long should status reporter wait for Prometheus response (in seconds).
+  request_timeout: 4
+
+# Set this to supervisord to use supervisord. Only systemd and supervisord are supported.
+service_management: supervisord
+flask_security: {}
+services_to_install:
+  - database_service
+  - queue_service
+  - manager_service
+
+unconfigured_install: false
+clean_db: true
+join: false
+amqp_postgres:
+  log_dir: /var/log/cloudify/amqp-postgres
+execution_scheduler:
+  log_dir: /var/log/cloudify/execution-scheduler
+relax: true

@@ -1,0 +1,97 @@
+- name: Copy config.yaml
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/cloudify/config.yaml
+    mode: '0777'
+  vars:
+    enable_ssl: "False"
+    external_cert: ""
+    external_key: ""
+    external_ca: ""
+    internal_cert: ""
+    internal_key: ""
+    internal_ca: ""
+    internal_ca_key: ""
+
+- name: Deploy cloudify
+  community.docker.docker_container:
+    name: cloudify
+    image: atosariapclab/cloudify_certbot
+    ports:
+      - 80:80
+      - 443:443
+      - 5671:5671
+      - 53333:53333
+      - 9984:9984
+    volumes:
+      - /sys/fs/cgroup:/sys/fs/cgroup:ro
+      - /etc/cloudify/config.yaml:/etc/cloudify/config.yaml:Z
+    capabilities:
+      - SYS_ADMIN
+    security_opts:
+      - seccomp:unconfined
+    tmpfs:
+      - /run/lock
+      - /run
+    restart_policy: unless-stopped
+
+- name: Wait for cloudify to be running"
+  wait_for:
+    timeout: "210"
+
+- name: Run certbot
+  community.docker.docker_container_exec:
+    container: cloudify
+    command: certbot certonly --email test@test.com -d {{www_host}} --agree-tos --noninteractive --nginx
+
+- name: Copy config.yaml
+  ansible.builtin.template:
+    src: config.yaml.j2
+    dest: /etc/cloudify/config.yaml
+    mode: '0666'
+  vars:
+    enable_ssl: "True"
+    external_cert: "/etc/cloudify/ssl/cloudify_external_cert.pem"
+    external_key: "/etc/cloudify/ssl/cloudify_external_key.pem"
+    external_ca: "/etc/cloudify/ssl/cloudify_external_ca_cert.pem"
+    internal_cert: ""
+    internal_key: ""
+    internal_ca: ""
+    internal_ca_key: ""
+
+- name: Copy config file to container
+  command: docker cp /etc/cloudify/config.yaml cloudify:/etc/cloudify/config_ssl.yaml
+
+- name: Link certs from cloudify to letsencrypt to avoid autolink from cloudify to relative paths
+  community.docker.docker_container_exec:
+    container: cloudify
+    command: ln -s -f /etc/letsencrypt/live/{{www_host}}/fullchain.pem /etc/cloudify/ssl/cloudify_external_cert.pem
+
+- name: Link cert key from cloudify to letsencrypt to avoid autolink from cloudify to relative paths
+  community.docker.docker_container_exec:
+    container: cloudify
+    command: ln -s -f /etc/letsencrypt/live/{{www_host}}/privkey.pem /etc/cloudify/ssl/cloudify_external_key.pem
+
+- name: Link ca cert from cloudify to letsencrypt to avoid autolink from cloudify to relative paths
+  community.docker.docker_container_exec:
+    container: cloudify
+    command: ln -s -f /etc/letsencrypt/live/{{www_host}}/chain.pem /etc/cloudify/ssl/cloudify_external_ca_cert.pem
+
+- name: Configure SSL in cloudify
+  community.docker.docker_container_exec:
+    container: cloudify
+    command: cfy_manager configure -c /etc/cloudify/config_ssl.yaml
+
+- name: set cert autorenewal
+  cron:
+    name: "Renew certs"
+    job: docker exec cloudify certbot renew
+    hour: "10"
+    weekday: "0"
+
+- name: set cert autoload
+  cron:
+    name: "Reload certs"
+    job: docker exec cloudify cfy_manager restart
+    hour: "12"
+    weekday: "0"
