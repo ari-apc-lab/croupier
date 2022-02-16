@@ -2,6 +2,7 @@ from croupier_plugin.data_management.data_management import DataTransfer
 from croupier_plugin.ssh import SshClient
 from ckanapi import RemoteCKAN, ServerIncompatibleError, NotAuthorized, ValidationError
 import os
+import uuid
 
 
 class CKANSCPDataTransfer(DataTransfer):
@@ -73,13 +74,15 @@ class CKANSCPDataTransfer(DataTransfer):
         filepath = self.dt_config['from_source']['filepath']
         workdir = self.from_infra['workdir']
 
+        fileuuid = uuid.uuid4();
         command = 'echo "' + self.scp_sshkey + '" > .priv_ckan.key; chmod 0600 .priv_ckan.key'
-        command += '; scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .priv_ckan.key ' + filepath + ' ' + self.scp_username + '@62.3.171.150:~/ckan/' + \
-                   os.path.basename(filepath)
-        #command += '; rm .priv_ckan.key'
+        command += '; scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .priv_ckan.key ' + filepath + \
+                   ' ' + self.scp_username + '@62.3.171.150:~/ckan/' + fileuuid
+        command += '; rm .priv_ckan.key'
         action = 'update' if self._resource_exists() else 'create'
         command += '; curl {0}/api/action/resource_{1}'.format(self.endpoint, action)
-        command += ' --form url=https://ckan.hidalgo-project.eu:8443/{0}/{1}'.format(self.scp_username, os.path.basename(filepath))
+        command += ' --form name={0}'.format(os.path.basename(filepath))
+        command += ' --form url=https://ckan.hidalgo-project.eu:8443/{0}/{1}'.format(self.scp_username, fileuuid)
         command += ' --form package_id={0}'.format(self.dataset_info['package_id'])
 
         for arg in self.ckan_resource:
