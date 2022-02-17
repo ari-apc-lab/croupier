@@ -26,7 +26,7 @@ class CKANSCPDataTransfer(DataTransfer):
 
         self.dataset_info = self.ckan_dataset['dataset_info']
         self.endpoint = self.ckan_dataset['endpoint']
-        self.apikey = self.ckan_dataset['credentials']['user']
+        self.apikey = self.ckan_dataset['credentials']['auth-header']
         self.api = RemoteCKAN(self.endpoint, apikey=self.apikey)
 
         self.scp_username = self.ckan_dataset['credentials']['user']
@@ -74,27 +74,28 @@ class CKANSCPDataTransfer(DataTransfer):
         filepath = self.dt_config['from_source']['filepath']
         workdir = self.from_infra['workdir']
 
-        fileuuid = uuid.uuid4();
+        fileuuid = str(uuid.uuid4())
         command = 'echo "' + self.scp_sshkey + '" > .priv_ckan.key; chmod 0600 .priv_ckan.key'
-        command += '; scp -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .priv_ckan.key ' + filepath + \
+        command += '; scp -q -o UserKnownHostsFile=/dev/null -o StrictHostKeyChecking=no -i .priv_ckan.key ' + filepath + \
                    ' ' + self.scp_username + '@62.3.171.150:~/ckan/' + fileuuid
         command += '; rm .priv_ckan.key'
         action = 'update' if self._resource_exists() else 'create'
-        command += '; curl {0}/api/action/resource_{1}'.format(self.endpoint, action)
-        command += ' --form name={0}'.format(os.path.basename(filepath))
-        command += ' --form url=https://ckan.hidalgo-project.eu:8443/{0}/{1}'.format(self.scp_username, fileuuid)
+        command += '; curl -s {0}/api/action/resource_{1}'.format(self.endpoint, action)
+        command += ' --form url="https://ckan.hidalgo-project.eu:8443/~{0}/{1}"'.format(self.scp_username, fileuuid)
         command += ' --form package_id={0}'.format(self.dataset_info['package_id'])
 
         for arg in self.ckan_resource:
             if self.ckan_resource[arg]:
-                command += ' --form {0}={1}'.format(arg, self.ckan_resource[arg])
+                command += ' --form {0}="{1}"'.format(arg, self.ckan_resource[arg])
 
         if self.apikey:
             command += " -H 'Authorization: {0}'".format(self.apikey)
         print(command)
         ssh_client = SshClient(ssh_credentials)
         exit_code, exit_msg = ssh_client.execute_shell_command(command, workdir, wait_result=True)
-        if exit_code != 0:
+
+        #if exit_code != 0:
+        if '"success": true' not in str(exit_code):
             self.logger.error('There was a problem publishing the results in CKAN ({0}):\n{1}'
                               .format(exit_code, exit_msg))
         else:

@@ -46,6 +46,12 @@ inputs:
         type: string
     ckan_dataset_owner:
         type: string
+    ckan_resource_name:
+        type: string
+    ckan_file_to_upload:
+        type: string
+    ckan_resource_description:
+        type: string
 
 node_templates:
     hpc_interface:
@@ -80,7 +86,7 @@ node_templates:
     data_out:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: file_to_upload.txt
+            filepath: { get_input: ckan_file_to_upload }
         relationships:
             - type: ds_located_at
               target: hpc_interface
@@ -89,8 +95,8 @@ node_templates:
         type: croupier.nodes.CKAN_resource
         properties:
             resource:
-                name: file_to_upload.txt
-                description: "file to upload via scp"
+                name: { get_input: ckan_resource_name }
+                description: { get_input: ckan_resource_description }
         relationships:
             - type: ds_located_at
               target: ckan_dataset
