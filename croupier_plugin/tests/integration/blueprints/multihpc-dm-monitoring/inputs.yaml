@@ -1,5 +1,5 @@
 # VAULT
-vault_token: 's.RhkE8WDKe9r99u9mYUU0azL8'
+vault_token: 's.ZUAvmtzHhwWxY5d25n4AYY6I'
 vault_user: 'yosu'
 
 # WORKFLOW
@@ -7,7 +7,7 @@ vault_user: 'yosu'
 # HPC1
 hpc1_host: mn1.bsc.es
 hpc1_scheduler: SLURM
-hpc1_queue: main
+hpc1_queue: debug
 
 # HPC2
 #hpc2_host: ft2.cesga.es

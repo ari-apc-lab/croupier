@@ -674,10 +674,6 @@ data_types:
                 description: 'Stop the whole execution in case of Node Failure.'
                 type: boolean
                 required: false
-
-
-
-
             qos:
                 description: 'Quality of Service to pass to the queue system'
                 type: string
