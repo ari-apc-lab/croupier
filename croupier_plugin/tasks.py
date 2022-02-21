@@ -592,6 +592,7 @@ def configure_job(
         if not wm:
             raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
         ssh_client = SshClient(credentials)
+        job_options["job_id"] = ctx.instance.id
         wm.deploy_app(job_options, workdir, ssh_client)
 
 
@@ -757,6 +758,7 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
         ctx.logger.info('Submitting the job {0}'.format(ctx.instance.id))
 
         try:
+            job_options["workdir"] = workdir
             jobid = wm.submit_job(client, name, job_options, is_singularity, ctx, context_vars)
         except Exception as ex:
             ctx.logger.error('Job {0} could not be submitted because error {1}'.format(ctx.instance.id, str(ex)))

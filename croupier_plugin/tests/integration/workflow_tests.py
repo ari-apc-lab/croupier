@@ -239,6 +239,17 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ----------------------------- MultiHPC-DM-Monitoring --------------------------
+    # -------------------------------------------------------------------------------
+
+    @workflow_test(
+        os.path.join('blueprints', 'multihpc-dm-monitoring', 'blueprint_multihpc_dm.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='multihpc-dm-monitoring')
+    def test_multihpc_dm_monitoring(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ---------------------------------- GridFTP-DM -----------------------------------
     # -------------------------------------------------------------------------------
 

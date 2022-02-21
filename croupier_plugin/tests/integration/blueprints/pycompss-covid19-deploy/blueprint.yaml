@@ -71,6 +71,13 @@ inputs:
     hpc_scheduler:
         type: string
 
+################## DS Infrastructures #################
+    hpc_dai_host:
+        type: string
+
+    hpc_dai_internet_access:
+        type: boolean
+
 ################# Covid 19 application ################
     covid19_args:
         type: permedcoe.covid19.args
@@ -101,7 +108,7 @@ node_templates:
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: "pycompss-covid19"
+            workdir_prefix: "pycompss-test"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -115,29 +122,82 @@ node_templates:
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe
                 app_name: covid19
-                app_source: permedcoe/git/covid-19-workflow/Workflow/PyCOMPSs/src
+                app_source: permedcoe_apps/covid19/PilotWorkflow-main/covid19_pilot_workflow/PyCOMPSs
                 env:
-                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
-                    - PERMEDCOE_ASSETS: ${PERMEDCOE_ASSETS}
-                    - dataset: $HOME/permedcoe/git/covid-19-workflow/Resources/data
+                    - dataset: '~/permedcoe_apps/covid19/PilotWorkflow-main/resources/data'
                 compss_args:
                     num_nodes: { get_input: num_nodes }
                     exec_time: { get_input: exec_time }
+                    worker_working_dir: '$(pwd)'
                     log_level: 'off'
                     graph: true
                     tracing: 'false'
                     python_interpreter: python3
                     qos: debug
-                app_file: '$(pwd)/covid19_pilot.py'
+                app_file: '{COMPS_APP_PATH}/covid19_pilot.py'
                 app_args: { get_input: covid19_args }
+            deployment:
+                bootstrap: "scripts/deploy.sh"
+                revert: "scripts/revert.sh"
+                hpc_execution: false
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc
+            - type: input
+              target: data_small_target
 
 #################### END WORKFLOW ###################
 
 #################### START DATAFLOW #################
+
+    #HPC1 DataManagement Infrastructure
+    hpc_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: hpc_dai_host }
+            internet_access: { get_input: hpc_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #GitHub DataManagement Infrastructure
+    github_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: https://github.com/
+            supported_protocols:
+                - HTTP
+
+    #INPUTS
+    data_small_target:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe_apps/covid19/PilotWorkflow-main/resources/data/small/
+        relationships:
+            - type: ds_located_at
+              target: hpc_data_access_infra
+
+    data_small_source:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /PerMedCoE/PilotWorkflow/tree/main/resources/data/small
+        relationships:
+            - type: ds_located_at
+              target: github_data_access_infra
+
+    # DATA TRANSFER
+    dt_http:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: data_small_source
+            - type: to_target
+              target: data_small_target
 
 #################### END DATAFLOW ###################
 

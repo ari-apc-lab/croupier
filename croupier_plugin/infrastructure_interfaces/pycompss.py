@@ -24,7 +24,7 @@ license information in the project root.
 pycompss.py
 """
 from cloudify.exceptions import NonRecoverableError
-
+from cloudify import ctx
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import InfrastructureInterface, \
     get_prevailing_state
 from croupier_plugin.infrastructure_interfaces.slurm import start_time_tostr, get_job_metrics, _parse_audit_metrics, \
@@ -52,32 +52,33 @@ def get_job_metrics(job_name, ssh_client, workdir, logger):
 
 
 class Pycompss(InfrastructureInterface):
-    pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3-ML; module load COMPSs/2.10_cli; '
+    pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; '
 
     def initialize(self, credentials, ssh_client):
-        if "host" not in credentials:
-            message = "PyCOMPSs Initialization: host not located in credentials"
-            self.logger.error(message)
-            raise NonRecoverableError(str(message))
-        if "user" not in credentials:
-            message = "PyCOMPSs Initialization: user not located in credentials"
-            self.logger.error(message)
-            raise NonRecoverableError(str(message))
-        host = credentials["host"]
-        user = credentials["user"]
-
-        # Build PyCOMPSs initialization command
-        _command = self.pycompss_command_prefix + 'pycompss init cluster -l {user}@{host}'.format(user=user, host=host)
-
-        # Execute PyCOMPSs initialization
-        msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
-
-        if exit_code != 0:
-            ssh_client.close_connection()
-            msg = "Failed PyCOMPSs initialization on the infrastructure with exit code: {code} and msg: {msg}".format(
-                    code=str(exit_code), msg=msg)
-            self.logger.error(msg)
-            raise NonRecoverableError(msg)
+        pass  #In new PyCOMPSs initialization is not anymore required.
+        # if "host" not in credentials:
+        #     message = "PyCOMPSs Initialization: host not located in credentials"
+        #     self.logger.error(message)
+        #     raise NonRecoverableError(str(message))
+        # if "user" not in credentials:
+        #     message = "PyCOMPSs Initialization: user not located in credentials"
+        #     self.logger.error(message)
+        #     raise NonRecoverableError(str(message))
+        # host = credentials["host"]
+        # user = credentials["user"]
+        #
+        # # Build PyCOMPSs initialization command
+        # _command = self.pycompss_command_prefix + 'pycompss init cluster -l {user}@{host}'.format(user=user, host=host)
+        #
+        # # Execute PyCOMPSs initialization
+        # msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
+        #
+        # if exit_code != 0:
+        #     ssh_client.close_connection()
+        #     msg = "Failed PyCOMPSs initialization on the infrastructure with exit code: {code} and msg: {msg}".format(
+        #             code=str(exit_code), msg=msg)
+        #     self.logger.error(msg)
+        #     raise NonRecoverableError(msg)
 
     def deploy_app(self, job_settings, workdir, ssh_client):
         if 'app_name' not in job_settings:
@@ -95,18 +96,18 @@ class Pycompss(InfrastructureInterface):
 
         # Build PyCOMPSs app deployment command
         _command = self.pycompss_command_prefix + \
-            'pycompss app deploy {app_name} --local_source {local_source} --remote_dir {remote_dir}'.format(
-                app_name=job_settings["app_name"], local_source=app_source, remote_dir=workdir)
+            'pycompss app deploy {app_name} --source_dir {local_source} --destination_dir {remote_dir}'.format(
+                app_name=job_settings["app_name"] + "_" + job_settings["job_id"], local_source=app_source, remote_dir=workdir)
 
         # Execute PyCOMPSs app deployment
         msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
 
         if exit_code != 0:
             ssh_client.close_connection()
-            raise NonRecoverableError(
-                "Failed PyCOMPSs app deployment on the infrastructure with exit code: {code} and msg: {msg}".format(
+            error = "Failed PyCOMPSs app deployment on the infrastructure with exit code: {code} and msg: {msg}".format(
                     code=str(exit_code), msg=msg)
-            )
+            ctx.logger.error(error)
+            raise NonRecoverableError(error)
 
     def _parse_job_settings(self, job_id, job_settings, script=False, timezone=None):
         # Not required
@@ -199,6 +200,9 @@ class Pycompss(InfrastructureInterface):
         # submit the job
         command = submission_command['command']
 
+        self.logger.info("Invoking command: {command} for job {job}".format(
+            command=command, job=context.node.name
+        ))
         output, exit_code = ssh_client.execute_shell_command(command, env=environment, workdir=self.workdir,
                                                              wait_result=True)
         if exit_code != 0:
@@ -239,15 +243,24 @@ class Pycompss(InfrastructureInterface):
             for module in job_settings['modules']:
                 _command += 'module ' + module + '; '
 
-        # Build PyCOMPSs submission command from job_settings
-        _command += ' pycompss job submit'
-
+        # PATCH environment variables declared before pycompss invocation with export
+        # Comment/Delete this code block when they can be passed to pycompss with -e flag
         if 'env' in job_settings:
             for env_entry in job_settings['env']:
                 for key in env_entry:
-                    _command += ' -e ' + key + '=' + str(env_entry[key])
+                    _command += 'export ' + key + '=' + str(env_entry[key]) + '; '
 
-        _command += ' -app ' + job_settings['app_name']
+        # Build PyCOMPSs submission command from job_settings
+        _command += ' pycompss job submit'
+
+        # PATCH environment variables declared before pycompss invocation with export
+        # Uncomment this code block when they can be passed to pycompss with -e flag
+        # if 'env' in job_settings:
+        #     for env_entry in job_settings['env']:
+        #         for key in env_entry:
+        #             _command += ' -e ' + key + '=' + str(env_entry[key])
+
+        # _command += ' -app ' + job_settings['app_name']
 
         if 'compss_args' in job_settings:
             for key in job_settings['compss_args']:
@@ -255,6 +268,10 @@ class Pycompss(InfrastructureInterface):
                 if value in ["True", "False"]:
                     value = value.lower()
                 _command += ' --' + key + '=' + value
+        # PATCH: required because a pycompss bug - remove it when fix
+        _command += ' --pythonpath=/apps/COMPSs/PerMedCoE/lib/python3.7/site-packages/:' \
+                    + job_settings['workdir'] + '/' + job_settings['app_name']
+
         _command += ' --job_name=' + name
 
         _command += ' ' + job_settings['app_file']
