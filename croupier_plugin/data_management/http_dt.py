@@ -304,12 +304,12 @@ class HttpDataTransfer(DataTransfer):
         return dt_command, temp_dir
 
     def create_http_get_command_template_for_proxy(self, from_source_data_url, from_source_infra_endpoint):
-        # Support transfer data from GitHub
-        global pattern, replacement
         temporary_dir = tempfile.mkdtemp()
         temp_dir = temporary_dir
+        source_credentials = self.dt_config['from_source']['located_at']['credentials']
         dt_command_template = 'cd {temp_dir}; '
-        if "github.com" in from_source_infra_endpoint:
+        # Support transfer data from GitHub
+        if "github.com" in from_source_infra_endpoint:  # get command based on svn for github
             if 'tree' in from_source_infra_endpoint:
                 if 'main' in from_source_infra_endpoint:
                     pattern = "tree/main"
@@ -326,17 +326,23 @@ class HttpDataTransfer(DataTransfer):
                     pattern = "tree"
                     replacement = "branches"
             from_source_data_url = re.sub(pattern, replacement, from_source_data_url)
-            dt_command_template += 'svn export {source_endpoint}/{resource}'
+            dt_command_template += 'svn export '
+            if 'user' in source_credentials and 'password' in source_credentials:
+                dt_command_template += '--username {username} --password {password} --non-interactive '.format(
+                    username=source_credentials['user'], password=source_credentials['password']
+                )
+            if 'https://' not in from_source_infra_endpoint:
+                dt_command_template += 'https://'
+            dt_command_template += '{source_endpoint}/{resource}'
             temp_dir += '/' + from_source_data_url.split('/')[-1] + '/'
-        else:
+        else:  # get command based on wget for other sources
             dt_command_template += 'wget {source_endpoint}/{resource}'
-        source_credentials = self.dt_config['from_source']['located_at']['credentials']
-        if 'user' in source_credentials and 'password' in source_credentials and \
-                source_credentials['user'] and source_credentials['password']:
-            dt_command_template += ' --user {0} --password {1}'.format(
-                source_credentials['user'], source_credentials['password'])
-        elif 'auth-header' in source_credentials and source_credentials['auth-header']:
-            auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
-            dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
+            if 'user' in source_credentials and 'password' in source_credentials and \
+                    source_credentials['user'] and source_credentials['password']:
+                dt_command_template += ' --user {0} --password {1}'.format(
+                    source_credentials['user'], source_credentials['password'])
+            elif 'auth-header' in source_credentials and source_credentials['auth-header']:
+                auth_header_label = ' --header \'' + source_credentials['auth-header-label'] + ': '
+                dt_command_template += auth_header_label + source_credentials['api-token'] + '\''
 
         return dt_command_template, from_source_data_url, from_source_infra_endpoint, temporary_dir, temp_dir

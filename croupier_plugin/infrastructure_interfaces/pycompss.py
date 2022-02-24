@@ -270,7 +270,7 @@ class Pycompss(InfrastructureInterface):
                 _command += ' --' + key + '=' + value
         # PATCH: required because a pycompss bug - remove it when fix
         _command += ' --pythonpath=/apps/COMPSs/PerMedCoE/lib/python3.7/site-packages/:' \
-                    + job_settings['workdir'] + '/' + job_settings['app_name']
+                    + job_settings['workdir']
 
         _command += ' --job_name=' + name
 

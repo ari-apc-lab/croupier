@@ -64,6 +64,10 @@ inputs:
     vault_user:
         type: string
 
+########################## GITHUB ######################
+    github_token:
+        type: string
+
 ################# HPC Infrastructures #################
     hpc_host:
         type: string
@@ -108,7 +112,7 @@ node_templates:
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: "pycompss-test"
+            workdir_prefix: "pycompss-covid19-deploy"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -122,24 +126,27 @@ node_templates:
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe
                 app_name: covid19
-                app_source: permedcoe_apps/covid19/PilotWorkflow-main/covid19_pilot_workflow/PyCOMPSs
+                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src
                 env:
-                    - dataset: '~/permedcoe_apps/covid19/PilotWorkflow-main/resources/data'
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - PERMEDCOE_ASSETS: ${PERMEDCOE_ASSETS}
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
                 compss_args:
                     num_nodes: { get_input: num_nodes }
                     exec_time: { get_input: exec_time }
-                    worker_working_dir: '$(pwd)'
                     log_level: 'off'
                     graph: true
                     tracing: 'false'
                     python_interpreter: python3
                     qos: debug
-                app_file: '{COMPS_APP_PATH}/covid19_pilot.py'
+                app_file: '$(pwd)/covid19_pilot.py'
                 app_args: { get_input: covid19_args }
             deployment:
                 bootstrap: "scripts/deploy.sh"
                 revert: "scripts/revert.sh"
                 hpc_execution: false
+                inputs:
+                    --token: {get_input: github_token}
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
@@ -167,15 +174,18 @@ node_templates:
     github_data_access_infra:
         type: croupier.nodes.DataAccessInfrastructure
         properties:
-            endpoint: https://github.com/
+            endpoint: github.com
             supported_protocols:
                 - HTTP
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
 
     #INPUTS
     data_small_target:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe_apps/covid19/PilotWorkflow-main/resources/data/small/
+            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
         relationships:
             - type: ds_located_at
               target: hpc_data_access_infra
@@ -183,7 +193,7 @@ node_templates:
     data_small_source:
         type: croupier.nodes.WebDataSource
         properties:
-            resource: /PerMedCoE/PilotWorkflow/tree/main/resources/data/small
+            resource: /PerMedCoE/covid-19-workflow/tree/main/Resources/data/small
         relationships:
             - type: ds_located_at
               target: github_data_access_infra

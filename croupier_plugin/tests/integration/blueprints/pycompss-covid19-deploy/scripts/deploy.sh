@@ -1,9 +1,12 @@
 #!/bin/bash
+set -e
 
 # read arguments
 
 if [ "$#" -lt 6 ]; then
-    echo "Illegal number of parameters. Usage deploy -u|--user <user> -p|--password <password -k|--private_key <key> - h|--host <host>. Provide either the password or the key" >&2
+    echo "Illegal number of parameters.
+    Usage: deploy -u|--user <user> -p|--password <password -k|--private_key <key> -h|--host <hpc_host> [-t|--token <github_token>].
+    Provide either the password or the private key for target hpc" >&2
     exit 2
 fi
 
@@ -28,6 +31,11 @@ while [[ $# -gt 0 ]]; do
       ;;
     -k|--private-key)
       pkey="$2"
+      shift # past argument
+      shift # past value
+      ;;
+    -t|--token)
+      token="$2"
       shift # past argument
       shift # past value
       ;;
@@ -73,18 +81,22 @@ echo "Deploying Covid19 into temp working directory $WORK_DIR"
 cd "$WORK_DIR" || exit
 
 # Get Covid19 app from Github in temp folder
-wget https://github.com/PerMedCoE/PilotWorkflow/archive/refs/heads/main.zip
+if [ -z "$token" ]; then
+  wget https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
+else
+  wget --header="Authorization: token $token" https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
+fi
 
 #Unzip repo
-unzip main.zip PilotWorkflow-main/resources/data/*
-unzip main.zip PilotWorkflow-main/covid19_pilot_workflow/PyCOMPSs/*
+unzip main.zip covid-19-workflow-main/Resources/data/*
+unzip main.zip covid-19-workflow-main/Workflow/PyCOMPSs/src/*
 
 #Rsync transfer Covid19 app and data to target HPC using user user's credentials and ssh
 if [ -n "$pkey" ]; then
-  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $pkey" PilotWorkflow-main $user@$host:permedcoe_apps/covid19
+  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $pkey" covid-19-workflow-main $user@$host:permedcoe_apps/covid19
 fi
 if [ -n "$password" ]; then
-  rsync -ratlz --rsh="/usr/bin/sshpass -p $password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $user" PilotWorkflow-main  $host:permedcoe_apps/covid19
+  rsync -ratlz --rsh="/usr/bin/sshpass -p $password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $user" covid-19-workflow-main  $host:permedcoe_apps/covid19
 fi
 
 # Remove temp folder
