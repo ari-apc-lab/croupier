@@ -722,7 +722,7 @@ def inject_deploy_inputs(call, inputs):
         if ('\n' in str_input or ' ' in str_input) and str_input[0] != '"':
             call += ' "' + str_input + '"'
         else:
-            call += ' ' + str_input
+            call += ' ' + str_input + ' ' + inputs[str_input]
     return call
 
 
