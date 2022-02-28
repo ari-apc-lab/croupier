@@ -64,10 +64,6 @@ inputs:
     vault_user:
         type: string
 
-########################## GITHUB ######################
-    github_token:
-        type: string
-
 ################# HPC Infrastructures #################
     hpc_host:
         type: string
@@ -145,14 +141,15 @@ node_templates:
                 bootstrap: "scripts/deploy.sh"
                 revert: "scripts/revert.sh"
                 hpc_execution: false
-                inputs:
-                    --token: {get_input: github_token}
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc
             - type: input
               target: data_small_target
+            - type: deployment_source
+              target: github_data_access_infra
+
 
 #################### END WORKFLOW ###################
 
@@ -181,6 +178,18 @@ node_templates:
             - type: retrieve_credentials_from_vault
               target: vault
 
+    #Atos
+    atos_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: arisrv20.atossearch.eu
+            internet_access: true
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
     #INPUTS
     data_small_target:
         type: croupier.nodes.FileDataSource
@@ -198,6 +207,22 @@ node_templates:
             - type: ds_located_at
               target: github_data_access_infra
 
+    covid_results_hpc:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: $(workspace)/results/
+        relationships:
+            - type: ds_located_at
+              target: hpc_data_access_infra
+
+    covid_results_atos:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe/apps/covid19/$(workspace)
+        relationships:
+            - type: ds_located_at
+              target: atos_data_access_infra
+
     # DATA TRANSFER
     dt_http:
         type: croupier.nodes.DataTransfer
@@ -208,6 +233,16 @@ node_templates:
               target: data_small_source
             - type: to_target
               target: data_small_target
+
+    dt_rsync:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: covid_results_hpc
+            - type: to_target
+              target: covid_results_atos
 
 #################### END DATAFLOW ###################
 
