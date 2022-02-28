@@ -5,7 +5,7 @@ set -e
 
 if [ "$#" -lt 6 ]; then
     echo "Illegal number of parameters.
-    Usage: deploy -u|--user <user> -p|--password <password -k|--private_key <key> -h|--host <hpc_host> [-t|--token <github_token>].
+    Usage: deploy -u|--user <hpc_user> -p|--password <hpc_password -k|--private_key <hcp_pkey> -h|--host <hpc_host> [-t|--token <github_token>].
     Provide either the password or the private key for target hpc" >&2
     exit 2
 fi
@@ -15,27 +15,27 @@ POSITIONAL_ARGS=()
 while [[ $# -gt 0 ]]; do
   case $1 in
     -h|--host)
-      host="$2"
+      hpc_host="$2"
       shift # past argument
       shift # past value
       ;;
     -u|--user)
-      user="$2"
+      hpc_user="$2"
       shift # past argument
       shift # past value
       ;;
     -p|--password)
-      password="$2"
+      hpc_password="$2"
       shift # past argument
       shift # past value
       ;;
     -k|--private-key)
-      pkey="$2"
+      hpc_pkey="$2"
       shift # past argument
       shift # past value
       ;;
     -t|--token)
-      token="$2"
+      github_token="$2"
       shift # past argument
       shift # past value
       ;;
@@ -50,12 +50,12 @@ while [[ $# -gt 0 ]]; do
   esac
 done
 
-if [ -z "$user" ]; then
+if [ -z "$hpc_user" ]; then
   echo "Error: User not given"
   exit 1
 fi
 
-if [ -z "$host" ]; then
+if [ -z "$hpc_host" ]; then
   echo "Error: Host not given"
   exit 1
 fi
@@ -81,10 +81,10 @@ echo "Deploying Covid19 into temp working directory $WORK_DIR"
 cd "$WORK_DIR" || exit
 
 # Get Covid19 app from Github in temp folder
-if [ -z "$token" ]; then
+if [ -z "$github_token" ]; then
   wget https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
 else
-  wget --header="Authorization: token $token" https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
+  wget --header="Authorization: token $github_token" https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
 fi
 
 #Unzip repo
@@ -92,11 +92,11 @@ unzip main.zip covid-19-workflow-main/Resources/data/*
 unzip main.zip covid-19-workflow-main/Workflow/PyCOMPSs/src/*
 
 #Rsync transfer Covid19 app and data to target HPC using user user's credentials and ssh
-if [ -n "$pkey" ]; then
-  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $pkey" covid-19-workflow-main $user@$host:permedcoe_apps/covid19
+if [ -n "$hpc_pkey" ]; then
+  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $hpc_pkey" covid-19-workflow-main "$hpc_user"@"$hpc_host":permedcoe_apps/covid19
 fi
-if [ -n "$password" ]; then
-  rsync -ratlz --rsh="/usr/bin/sshpass -p $password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $user" covid-19-workflow-main  $host:permedcoe_apps/covid19
+if [ -n "$hpc_password" ]; then
+  rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" covid-19-workflow-main  "$hpc_host":permedcoe_apps/covid19
 fi
 
 # Remove temp folder

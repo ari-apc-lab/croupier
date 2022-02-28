@@ -32,8 +32,9 @@ while [[ $# -gt 0 ]]; do
       shift # past value
       ;;
     -*|--*)
-      echo "Unknown option $1"
-      exit 1
+      echo "Unknown option $1. Ignoring" #Ignoring other inputs, since same inputs are given for deploy and revert scripts
+      shift # past argument
+      shift # past value
       ;;
     *)
       POSITIONAL_ARGS+=("$1") # save positional arg

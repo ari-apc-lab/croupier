@@ -1287,3 +1287,6 @@ relationships:
                             default: { get_property: [TARGET, user   ] }
                         cubbyhole:
                             default: { get_property: [TARGET, cubbyhole ] }
+
+    deployment_source:
+        derived_from: cloudify.relationships.connected_to

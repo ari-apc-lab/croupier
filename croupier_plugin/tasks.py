@@ -571,8 +571,10 @@ def configure_job(
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
         bootstrap = deployment['bootstrap']
         execution_in_hpc = deployment['hpc_execution']
+        #  Get deployment source if set
+        deployment_source_credentials = getJobDeploymentSourceCredentials()
         if deploy_job(bootstrap, inputs, execution_in_hpc, credentials, interface_type, workdir, name,
-                      ctx.logger, skip_cleanup):
+                      ctx.logger, skip_cleanup, deployment_source_credentials):
             ctx.logger.info('..job bootstraped')
         else:
             ctx.logger.error('Job not bootstraped')
@@ -596,6 +598,23 @@ def configure_job(
         wm.deploy_app(job_options, workdir, ssh_client)
 
 
+def getJobDeploymentSourceCredentials():
+    credentials = None
+    deploymentSource = getJobDeploymentSource()
+    if deploymentSource:
+        if 'credentials' in deploymentSource.runtime_properties:
+            credentials = deploymentSource.runtime_properties["credentials"]
+    return credentials
+
+
+def getJobDeploymentSource():
+    deploymentSource = None
+    for rel in ctx.instance.relationships:
+        if rel.type == "deployment_source":
+            deploymentSource = rel.target.instance
+    return deploymentSource
+
+
 @operation
 def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
     """Revert a job using a script that receives SSH credentials as input"""
@@ -614,7 +633,10 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
             revert = deployment['revert']
             execution_in_hpc = deployment['hpc_execution']
-            if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, workdir, name, ctx.logger, skip_cleanup):
+            #  Get deployment source if set
+            deployment_source_credentials = getJobDeploymentSourceCredentials()
+            if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, workdir, name, ctx.logger,
+                          skip_cleanup, deployment_source_credentials):
                 ctx.logger.info('..job reverted')
             else:
                 ctx.logger.error('Job not reverted')
@@ -630,7 +652,7 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
 
 
 def deploy_job(script, inputs, execution_in_hpc, credentials, interface_type, workdir, name, logger,
-               skip_cleanup):  # pylint: disable=W0613
+               skip_cleanup, deployment_source_credentials):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH credentials as input """
 
     wm = InfrastructureInterface.factory(interface_type, logger, workdir)
@@ -642,12 +664,13 @@ def deploy_job(script, inputs, execution_in_hpc, credentials, interface_type, wo
     if execution_in_hpc:  # execute the deployment script in target hpc
         success = remote_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir)
     else:  # execute the deployment script in local Croupier server
-        success = local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir)
+        success = local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir,
+                               deployment_source_credentials)
 
     return success
 
 
-def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir):
+def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir, deployment_source_credentials):
     #  Inject credentials as input is deployment script.
     #  Execute script in forked process, wait for result
     success = False
@@ -657,7 +680,8 @@ def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, wo
         temp_file.write(deploy_script_content)
         temp_file.flush()
         deploy_script_filepath = temp_file.name
-        #  Inject HPC credentials to script invocation: ./script.sh -u <user> -k <path_to_pkey> -h <host> -p <passwd>
+        # Inject HPC credentials to script invocation: ./script.sh -u <hpc_user> -k <hpc_path_to_pkey> -h <hpc_host>
+        # -p <hpc_passwd> -t <github_token>
         deploy_cmd = 'sh ' + deploy_script_filepath + " -u {user} -h {host}".format(
             user=credentials["user"], host=credentials["host"]
         )
@@ -672,6 +696,11 @@ def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, wo
                 key_file.flush()
                 private_key = key_file.name
             deploy_cmd += " -k " + private_key
+
+        # Inject source token (Github) if available
+        if deployment_source_credentials:
+            if 'password' in deployment_source_credentials and len(deployment_source_credentials["password"]) > 0:
+                deploy_cmd += " -t " + deployment_source_credentials["password"]
 
         #  Inject deployment inputs
         deploy_cmd = inject_deploy_inputs(deploy_cmd, inputs)
