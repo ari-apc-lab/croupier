@@ -31,29 +31,29 @@ imports:
 #    - plugin:croupier #For Cloudify
     - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
-##################### COVID 19 ARGS ###################
+##################### DRUG SYNERGY ARGS ###################
 data_types:
-    permedcoe.covid19.args:
+    permedcoe.drug_synergies.args:
         properties:
-            metadata:
+            list_genes:
                 type: string
                 required: true
-            model_prefix:
+            rnaseq_data:
                 type: string
                 required: true
-            outdir:
+            mutation_data:
                 type: string
                 required: true
-            ko_file:
+            cn_data:
                 type: string
                 required: true
-            reps:
-                type: integer
-                required: true
-            model:
+            genes_drugs:
                 type: string
                 required: true
-            data_folder:
+            state_objective:
+                type: string
+                required: true
+            results_folder:
                 type: string
                 required: true
 
@@ -78,9 +78,15 @@ inputs:
     hpc_dai_internet_access:
         type: boolean
 
-################# Covid 19 application ################
-    covid19_args:
-        type: permedcoe.covid19.args
+    target_dai_host:
+        type: string
+
+    target_dai_internet_access:
+        type: boolean
+
+################# Drug Synergies application ################
+    drug_synergies_args:
+        type: permedcoe.drug_synergies.args
 
 ##################### PYCOMPSs args ###################
     num_nodes:
@@ -108,7 +114,7 @@ node_templates:
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: "pycompss-covid19-deploy"
+            workdir_prefix: "pycompss-drug-synergies-deploy"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -118,37 +124,43 @@ node_templates:
         properties:
             job_options:
                 modules:
+                    - load COMPSs/Trunk
                     - load singularity/3.5.2
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe
-                app_name: covid19
-                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src
+                pre_script:
+                    - unset PYTHONSTARTUP
+                    - unset PYTHONHOME
+                app_name: drug_synergies
+                app_source: permedcoe/mn4_installed_apps/drug-synergies-workflow/Workflow/PyCOMPSs/src
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
                     - PERMEDCOE_ASSETS: ${PERMEDCOE_ASSETS}
-                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - COMPUTING_UNITS: 1
+                    - dataset: $HOME/permedcoe/mn4_installed_apps/drug-synergies-workflow/Resources/data
                 compss_args:
                     num_nodes: { get_input: num_nodes }
                     exec_time: { get_input: exec_time }
+                    worker_working_dir: $(pwd)
                     log_level: 'off'
                     graph: true
                     tracing: 'false'
                     python_interpreter: python3
                     qos: debug
-                app_file: '$(pwd)/covid19_pilot.py'
-                app_args: { get_input: covid19_args }
+                app_file: '$(pwd)/uc2.py'
+                app_args: { get_input: drug_synergies_args }
             deployment:
                 bootstrap: "scripts/deploy.sh"
                 revert: "scripts/revert.sh"
                 hpc_execution: false
-            skip_cleanup: True
+            skip_cleanup: False
         relationships:
             - type: task_managed_by_interface
               target: hpc
             - type: input
-              target: data_small_target
+              target: list_genes
             - type: output
-              target: covid_results_hpc
+              target: drug_synergies_results
             - type: deployment_source
               target: github_data_access_infra
 
@@ -180,12 +192,12 @@ node_templates:
             - type: retrieve_credentials_from_vault
               target: vault
 
-    #Atos
-    atos_data_access_infra:
+    #TARGET DataManagement Infrastructure
+    target_data_access_infra:
         type: croupier.nodes.DataAccessInfrastructure
         properties:
-            endpoint: arisrv20.atosresearch.eu
-            internet_access: true
+            endpoint: { get_input: target_dai_host }
+            internet_access: { get_input: target_dai_internet_access }
             supported_protocols:
                 - RSync
         relationships:
@@ -193,24 +205,24 @@ node_templates:
               target: vault
 
     #INPUTS
-    data_small_target:
+    list_genes_target:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
+            filepath: ~/permedcoe_apps/drug-synergies/drug-synergies-workflow-main/Resources/data/Sub_genes.csv
         relationships:
             - type: ds_located_at
               target: hpc_data_access_infra
 
-    data_small_source:
+    list_genes:
         type: croupier.nodes.WebDataSource
         properties:
-            resource: /PerMedCoE/covid-19-workflow/tree/main/Resources/data/small
+            resource: /PerMedCoE/drug-synergies-workflow/tree/main/Resources/data/Sub_genes.csv
         relationships:
             - type: ds_located_at
               target: github_data_access_infra
 
     #OUTPUTS
-    covid_results_hpc:
+    drug_synergies_results:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ${workspace}/results/meta_analysis/
@@ -218,13 +230,13 @@ node_templates:
             - type: ds_located_at
               target: hpc_data_access_infra
 
-    covid_results_atos:
+    drug_synergies_results_target:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe/apps/covid19/${workspace}
+            filepath: ~/permedcoe/apps/drug_synergies/${workspace}
         relationships:
             - type: ds_located_at
-              target: atos_data_access_infra
+              target: target_data_access_infra
 
     # DATA TRANSFER
     dt_http:
@@ -233,9 +245,9 @@ node_templates:
             transfer_protocol: HTTP
         relationships:
             - type: from_source
-              target: data_small_source
+              target: list_genes
             - type: to_target
-              target: data_small_target
+              target: list_genes_target
 
     dt_rsync:
         type: croupier.nodes.DataTransfer
@@ -243,9 +255,9 @@ node_templates:
             transfer_protocol: RSYNC
         relationships:
             - type: from_source
-              target: covid_results_hpc
+              target: drug_synergies_results
             - type: to_target
-              target: covid_results_atos
+              target: drug_synergies_results_target
 
 #################### END DATAFLOW ###################
 

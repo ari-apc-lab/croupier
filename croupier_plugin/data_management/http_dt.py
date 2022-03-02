@@ -36,8 +36,8 @@ def isFile(path):
 
 
 class HttpDataTransfer(DataTransfer):
-    def __init__(self, data_transfer_config, logger):
-        super().__init__(data_transfer_config, logger)
+    def __init__(self, data_transfer_config, logger, workdir):
+        super().__init__(data_transfer_config, logger, workdir)
 
     def process(self):
         use_proxy = False
@@ -334,7 +334,8 @@ class HttpDataTransfer(DataTransfer):
             if 'https://' not in from_source_infra_endpoint:
                 dt_command_template += 'https://'
             dt_command_template += '{source_endpoint}/{resource}'
-            temp_dir += '/' + from_source_data_url.split('/')[-1] + '/'
+            if not isFile(from_source_data_url):  # point to downloaded folder
+                temp_dir += '/' + from_source_data_url.split('/')[-1] + '/'
         else:  # get command based on wget for other sources
             dt_command_template += 'wget {source_endpoint}/{resource}'
             if 'user' in source_credentials and 'password' in source_credentials and \

@@ -3,8 +3,8 @@ from croupier_plugin.data_mover.datamover_proxy import DataMoverProxy
 
 
 class GridFTPDataTransfer(DataTransfer):
-    def __init__(self, data_transfer_config, logger):
-        super().__init__(data_transfer_config, logger)
+    def __init__(self, data_transfer_config, logger, workdir):
+        super().__init__(data_transfer_config, logger, workdir)
 
     def process(self):
         try:

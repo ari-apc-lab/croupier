@@ -769,7 +769,8 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
 
     if not simulate:
         # Process data flow for inputs in this job
-        dm.processDataTransfer(ctx.instance, ctx.logger, 'input')
+        workdir = ctx.instance.runtime_properties['workdir']
+        dm.processDataTransfer(ctx.instance, ctx.logger, 'input', workdir)
 
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -954,10 +955,10 @@ def publish(publish_list, **kwargs):
         audit = kwargs['audit']
         published = True
         if not simulate:
-            # Process data flow for outputs in this job
-            dm.processDataTransfer(ctx.instance, ctx.logger, 'output')
-
             workdir = ctx.instance.runtime_properties['workdir']
+            # Process data flow for outputs in this job
+            dm.processDataTransfer(ctx.instance, ctx.logger, 'output', workdir)
+
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
             hpc_interface = ctx.instance.relationships[0].target.instance

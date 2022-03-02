@@ -266,6 +266,10 @@ data_types:
                 description: 'Modules to load before submitting the job'
                 type: list
                 required: false
+            pre_script:
+                description: 'List of script commands to be executed before pycompss submission'
+                default: [ ]
+                required: false
             app_name:
                 description: Application name
                 type: string
