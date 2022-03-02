@@ -238,6 +238,31 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ---------------------------------- Drug Synergies -----------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'pycompss-drug-synergies', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='pycompss-drug-synergies')
+    def test_pycompss_drug_synergies(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # ----------------------------- Drug Synergies with Deploy ----------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'pycompss-drug-synergies-deploy', 'blueprint.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'pycompss-drug-synergies-deploy', 'scripts', 'deploy.sh'), 'scripts'),
+            (os.path.join('blueprints', 'pycompss-drug-synergies-deploy', 'scripts', 'revert.sh'), 'scripts')
+        ],
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='pycompss-drug-synergies-deploy')
+    def test_pycompss_drug_synergies_deploy(self, cfy_local):
+        self.run_test(cfy_local)
+
+
+    # -------------------------------------------------------------------------------
     # ---------------------------------- MultiHPC-DM -----------------------------------
     # -------------------------------------------------------------------------------
 

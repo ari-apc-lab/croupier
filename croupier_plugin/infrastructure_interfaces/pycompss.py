@@ -243,6 +243,10 @@ class Pycompss(InfrastructureInterface):
             for module in job_settings['modules']:
                 _command += 'module ' + module + '; '
 
+        if 'pre_script' in job_settings:
+            for script_cmd in job_settings['pre_script']:
+                _command += ' ' + script_cmd + '; '
+
         # PATCH environment variables declared before pycompss invocation with export
         # Comment/Delete this code block when they can be passed to pycompss with -e flag
         if 'env' in job_settings:

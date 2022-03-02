@@ -1,0 +1,153 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+
+##################### DRUG SYNERGY ARGS ###################
+data_types:
+    permedcoe.drug_synergies.args:
+        properties:
+            list_genes:
+                type: string
+                required: true
+            rnaseq_data:
+                type: string
+                required: true
+            mutation_data:
+                type: string
+                required: true
+            cn_data:
+                type: string
+                required: true
+            genes_drugs:
+                type: string
+                required: true
+            state_objective:
+                type: string
+                required: true
+            results_folder:
+                type: string
+                required: true
+
+inputs:
+########################## VAULT ######################
+    vault_token:
+        type: string
+    vault_user:
+        type: string
+
+################# HPC Infrastructures #################
+    hpc_host:
+        type: string
+
+    hpc_scheduler:
+        type: string
+
+################# Drug Synergy application ################
+    drug_synergies_args:
+        type: permedcoe.drug_synergies.args
+
+##################### PYCOMPSs args ###################
+    num_nodes:
+        type: integer
+    exec_time:
+        type: integer
+
+#################### START WORKFLOW ###################
+node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            token: { get_input: vault_token }
+            user: { get_input: vault_user }
+
+    hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc_scheduler }
+            credentials:
+                host: { get_input: hpc_host }
+            job_prefix: croupier
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "pycompss-drug-synergies"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    job:
+        type: croupier.nodes.PyCOMPSsJob
+        properties:
+            job_options:
+                modules:
+                    - load COMPSs/Trunk
+                    - load singularity/3.5.2
+                    - use /apps/modules/modulefiles/tools/COMPSs/libraries
+                    - load permedcoe
+                pre_script:
+                    - unset PYTHONSTARTUP
+                    - unset PYTHONHOME
+                app_name: drug-synergies
+                app_source: permedcoe/mn4_installed_apps/drug-synergies-workflow/Workflow/PyCOMPSs/src
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - PERMEDCOE_ASSETS: ${PERMEDCOE_ASSETS}
+                    - COMPUTING_UNITS: 1
+                    - dataset: $HOME/permedcoe/mn4_installed_apps/drug-synergies-workflow/Resources/data
+                compss_args:
+                    num_nodes: { get_input: num_nodes }
+                    exec_time: { get_input: exec_time }
+                    worker_working_dir: $(pwd)
+                    log_level: 'off'
+                    graph: true
+                    tracing: 'false'
+                    python_interpreter: python3
+                    qos: debug
+                app_file: '$(pwd)/uc2.py'
+                app_args: { get_input: drug_synergies_args }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+
+#################### END WORKFLOW ###################
+
+#################### START DATAFLOW #################
+
+#################### END DATAFLOW ###################
+
+outputs:
+    job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [job, job_name] }

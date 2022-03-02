@@ -32,33 +32,34 @@ def filterOutEmptyValueEntries(dictionary):
             del dictionary[key]
 
 
-def processDataTransfer(job, logger, direction):
+def processDataTransfer(job, logger, direction, workdir):
     # For each data transfer object
     # execute data_transfer
     # TODO parallel processing of data transfer
     dt_instances = getDataTransferInstances(direction, job)
     for dt_config in dt_instances:
-        dt = DataTransfer.factory(dt_config, logger)
+        dt = DataTransfer.factory(dt_config, logger, workdir)
         dt.process()
 
 
 class DataTransfer:
-    def __init__(self, data_transfer_config, logger):
+    def __init__(self, data_transfer_config, logger, workdir):
         self.dt_config = data_transfer_config
         self.logger = logger
+        self.workdir = workdir
         # Based on data transfer type, use the Factory to create an specialized DataTransfer instance
 
     @staticmethod
-    def factory(dt_config, logger):
+    def factory(dt_config, logger, workdir):
         if dt_config['transfer_protocol'].upper() == "RSYNC":
             from croupier_plugin.data_management.rsync_dt import RSyncDataTransfer
-            return RSyncDataTransfer(dt_config, logger)
+            return RSyncDataTransfer(dt_config, logger, workdir)
         elif dt_config['transfer_protocol'].upper() == "HTTP":
             from croupier_plugin.data_management.http_dt import HttpDataTransfer
-            return HttpDataTransfer(dt_config, logger)
+            return HttpDataTransfer(dt_config, logger, workdir)
         elif dt_config['transfer_protocol'].upper() == "GRIDFTP":
             from croupier_plugin.data_management.gridftp_dt import GridFTPDataTransfer
-            return GridFTPDataTransfer(dt_config, logger)
+            return GridFTPDataTransfer(dt_config, logger, workdir)
 
     def process(self):
         raise NotImplementedError(

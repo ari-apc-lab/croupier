@@ -7,8 +7,8 @@ import os
 
 
 class RSyncDataTransfer(DataTransfer):
-    def __init__(self, data_transfer_config, logger):
-        super().__init__(data_transfer_config, logger)
+    def __init__(self, data_transfer_config, logger, workdir):
+        super().__init__(data_transfer_config, logger, workdir)
 
     def process(self):
         use_proxy = False
@@ -141,7 +141,7 @@ class RSyncDataTransfer(DataTransfer):
 
             if exit_code is not None:  # exit code is None is successful
                 raise CommandExecutionError(
-                    "Failed executing rsync data transfer: exit code " + str(exit_code) + " and msg: " + cmd_msg)
+                    "Failed executing rsync data transfer: exit code {} and msg: {}".format(str(exit_code), cmd_msg))
         finally:
             if source_private_key and os.path.exists(source_private_key):
                 # Remove key temporary file
@@ -176,6 +176,8 @@ class RSyncDataTransfer(DataTransfer):
             from_source_data_url = None
             if 'FileDataSource' in from_source_type:
                 from_source_data_url = self.dt_config['from_source']['filepath']
+            if from_source_data_url is not None and '${workspace}' in from_source_data_url:
+                from_source_data_url = from_source_data_url.replace('${workspace}', self.workdir)
             from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
             from_source_infra_credentials = self.dt_config['from_source']['located_at']['credentials']
 
