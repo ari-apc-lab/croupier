@@ -879,7 +879,8 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
-            is_clean = wm.clean_job_aux_files(client, name, is_singularity)
+            job_options["job_id"] = ctx.instance.id
+            is_clean = wm.clean_job_aux_files(client, name, is_singularity, job_options)
 
             client.close_connection()
         else:
