@@ -78,6 +78,12 @@ inputs:
     hpc_dai_internet_access:
         type: boolean
 
+    target_dai_host:
+        type: string
+
+    target_dai_internet_access:
+        type: boolean
+
 ################# Covid 19 application ################
     covid19_args:
         type: permedcoe.covid19.args
@@ -141,14 +147,14 @@ node_templates:
                 bootstrap: "scripts/deploy.sh"
                 revert: "scripts/revert.sh"
                 hpc_execution: false
-            skip_cleanup: True
+            skip_cleanup: False
         relationships:
             - type: task_managed_by_interface
               target: hpc
             - type: input
-              target: data_small_target
+              target: data_small
             - type: output
-              target: covid_results_hpc
+              target: covid_results
             - type: deployment_source
               target: github_data_access_infra
 
@@ -180,12 +186,12 @@ node_templates:
             - type: retrieve_credentials_from_vault
               target: vault
 
-    #Atos
-    atos_data_access_infra:
+    #TARGET DataManagement Infrastructure
+    target_data_access_infra:
         type: croupier.nodes.DataAccessInfrastructure
         properties:
-            endpoint: arisrv20.atosresearch.eu
-            internet_access: true
+            endpoint: { get_input: target_dai_host }
+            internet_access: { get_input: target_dai_internet_access }
             supported_protocols:
                 - RSync
         relationships:
@@ -193,7 +199,7 @@ node_templates:
               target: vault
 
     #INPUTS
-    data_small_target:
+    data_small:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
@@ -210,21 +216,21 @@ node_templates:
               target: github_data_access_infra
 
     #OUTPUTS
-    covid_results_hpc:
+    covid_results:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ${workspace}/results/meta_analysis/
+            filepath: ${workdir}/results/meta_analysis/
         relationships:
             - type: ds_located_at
               target: hpc_data_access_infra
 
-    covid_results_atos:
+    covid_results_target:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe/apps/covid19/${workspace}
+            filepath: ~/permedcoe/apps/covid19/${workdir}
         relationships:
             - type: ds_located_at
-              target: atos_data_access_infra
+              target: target_data_access_infra
 
     # DATA TRANSFER
     dt_http:
@@ -235,7 +241,7 @@ node_templates:
             - type: from_source
               target: data_small_source
             - type: to_target
-              target: data_small_target
+              target: data_small
 
     dt_rsync:
         type: croupier.nodes.DataTransfer
@@ -243,9 +249,9 @@ node_templates:
             transfer_protocol: RSYNC
         relationships:
             - type: from_source
-              target: covid_results_hpc
+              target: covid_results
             - type: to_target
-              target: covid_results_atos
+              target: covid_results_target
 
 #################### END DATAFLOW ###################
 
