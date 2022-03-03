@@ -25,10 +25,8 @@ pycompss.py
 """
 from cloudify.exceptions import NonRecoverableError
 from cloudify import ctx
-from croupier_plugin.infrastructure_interfaces.infrastructure_interface import InfrastructureInterface, \
-    get_prevailing_state
-from croupier_plugin.infrastructure_interfaces.slurm import start_time_tostr, get_job_metrics, _parse_audit_metrics, \
-    _parse_states
+from croupier_plugin.infrastructure_interfaces.infrastructure_interface import InfrastructureInterface
+from croupier_plugin.infrastructure_interfaces.slurm import _parse_audit_metrics, _parse_states
 from croupier_plugin.ssh import SshClient
 from past.builtins import basestring
 
@@ -55,30 +53,7 @@ class Pycompss(InfrastructureInterface):
     pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; '
 
     def initialize(self, credentials, ssh_client):
-        pass  #In new PyCOMPSs initialization is not anymore required.
-        # if "host" not in credentials:
-        #     message = "PyCOMPSs Initialization: host not located in credentials"
-        #     self.logger.error(message)
-        #     raise NonRecoverableError(str(message))
-        # if "user" not in credentials:
-        #     message = "PyCOMPSs Initialization: user not located in credentials"
-        #     self.logger.error(message)
-        #     raise NonRecoverableError(str(message))
-        # host = credentials["host"]
-        # user = credentials["user"]
-        #
-        # # Build PyCOMPSs initialization command
-        # _command = self.pycompss_command_prefix + 'pycompss init cluster -l {user}@{host}'.format(user=user, host=host)
-        #
-        # # Execute PyCOMPSs initialization
-        # msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
-        #
-        # if exit_code != 0:
-        #     ssh_client.close_connection()
-        #     msg = "Failed PyCOMPSs initialization on the infrastructure with exit code: {code} and msg: {msg}".format(
-        #             code=str(exit_code), msg=msg)
-        #     self.logger.error(msg)
-        #     raise NonRecoverableError(msg)
+        pass
 
     def deploy_app(self, job_settings, workdir, ssh_client):
         if 'app_name' not in job_settings:
@@ -97,7 +72,8 @@ class Pycompss(InfrastructureInterface):
         # Build PyCOMPSs app deployment command
         _command = self.pycompss_command_prefix + \
             'pycompss app deploy {app_name} --source_dir {local_source} --destination_dir {remote_dir}'.format(
-                app_name=job_settings["app_name"] + "_" + job_settings["job_id"], local_source=app_source, remote_dir=workdir)
+                app_name=job_settings["app_name"] + "_" + job_settings["job_id"],
+                local_source=app_source, remote_dir=workdir)
 
         # Execute PyCOMPSs app deployment
         msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
@@ -106,6 +82,29 @@ class Pycompss(InfrastructureInterface):
             ssh_client.close_connection()
             error = "Failed PyCOMPSs app deployment on the infrastructure with exit code: {code} and msg: {msg}".format(
                     code=str(exit_code), msg=msg)
+            ctx.logger.error(error)
+            raise NonRecoverableError(error)
+
+    def clean_job_aux_files(self, ssh_client, name, is_singularity, job_settings):
+        return self.undeploy_app(job_settings, ssh_client)
+
+    def undeploy_app(self, job_settings, ssh_client):
+        # pycompss app remove matmul
+        if 'app_name' not in job_settings:
+            message = "PyCOMPSs Initialization: app_name not located in job_options"
+            self.logger.error(message)
+            raise NonRecoverableError(str(message))
+        # Build PyCOMPSs app undeployment command
+        _command = self.pycompss_command_prefix + 'pycompss app remove {app_name}'.format(
+            app_name=job_settings["app_name"] + "_" + job_settings["job_id"])
+
+        # Execute PyCOMPSs app undeployment
+        msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
+
+        if exit_code != 0:
+            ssh_client.close_connection()
+            error = "Failed PyCOMPSs app undeployment on the infrastructure with exit code: {code} and msg: {msg}"\
+                .format(code=str(exit_code), msg=msg)
             ctx.logger.error(error)
             raise NonRecoverableError(error)
 

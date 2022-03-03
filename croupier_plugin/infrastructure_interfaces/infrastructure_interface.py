@@ -263,7 +263,7 @@ class InfrastructureInterface(object):
         """
         return None
 
-    def clean_job_aux_files(self, ssh_client, name, is_singularity):
+    def clean_job_aux_files(self, ssh_client, name, is_singularity, job_settings):
         """
         Cleans no more needed job files in the HPC
 

@@ -225,7 +225,7 @@ node_templates:
     drug_synergies_results:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ${workspace}/results/report/
+            filepath: ${workdir}/results/report/
         relationships:
             - type: ds_located_at
               target: hpc_data_access_infra
@@ -233,7 +233,7 @@ node_templates:
     drug_synergies_results_target:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe/apps/drug_synergies/${workspace}
+            filepath: ~/permedcoe/apps/drug_synergies/${workdir}
         relationships:
             - type: ds_located_at
               target: target_data_access_infra
