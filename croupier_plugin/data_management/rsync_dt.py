@@ -58,6 +58,14 @@ class RSyncDataTransfer(DataTransfer):
                 if from_source_data_url.startswith('~/'):
                     from_source_data_url = from_source_data_url[2:]
 
+            if from_source_data_url is not None and '${workspace}' in from_source_data_url:
+                workdir = self.workdir
+                if workdir.startswith('~') or workdir.startswith('$HOME'):
+                    workdir = self.workdir[self.workdir.find('/') + 1:]
+                if not from_source_data_url.startswith('${workspace}'):
+                    workdir = self.workdir[self.workdir.rfind('/') + 1:]
+                from_source_data_url = from_source_data_url.replace('${workspace}', workdir)
+
             from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
             from_source_infra_credentials = self.dt_config['from_source']['located_at']['credentials']
 
@@ -68,6 +76,15 @@ class RSyncDataTransfer(DataTransfer):
                 to_target_data_url = self.dt_config['to_target']['filepath']
                 if to_target_data_url.startswith('~/'):
                     to_target_data_url = to_target_data_url[2:]
+
+            if to_target_data_url is not None and '${workspace}' in to_target_data_url:
+                workdir = self.workdir
+                if workdir.startswith('~') or workdir.startswith('$HOME'):
+                    workdir = self.workdir[self.workdir.find('/') + 1:]
+                if not to_target_data_url.startswith('${workspace}'):
+                    workdir = self.workdir[self.workdir.rfind('/') + 1:]
+                to_target_data_url = to_target_data_url.replace('${workspace}', workdir)
+
             to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
             to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
@@ -186,6 +203,8 @@ class RSyncDataTransfer(DataTransfer):
             to_target_data_url = None
             if 'FileDataSource' in to_target_type:
                 to_target_data_url = self.dt_config['to_target']['filepath']
+            if to_target_data_url is not None and '${workspace}' in to_target_data_url:
+                to_target_data_url = to_target_data_url.replace('${workspace}', self.workdir)
             to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
             to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 

@@ -225,7 +225,7 @@ node_templates:
     drug_synergies_results:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ${workspace}/results/meta_analysis/
+            filepath: ${workspace}/results/report/
         relationships:
             - type: ds_located_at
               target: hpc_data_access_infra
