@@ -703,8 +703,7 @@ def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, wo
         #  Execute deploy script
         try:
             logger.info('deploying job with script: {}'.format(script))
-            deploy_cmd_list = deploy_cmd.split(' ')
-            process = Popen(deploy_cmd_list, stdout=PIPE, stderr=PIPE)
+            process = Popen(deploy_cmd.split(' '), stdout=PIPE, stderr=PIPE)
             stdout, stderr = process.communicate()
             exit_code = process.returncode
             if exit_code != 0:
