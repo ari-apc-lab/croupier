@@ -38,6 +38,7 @@ import traceback
 from datetime import datetime
 import pytz
 import tempfile
+from subprocess import Popen, PIPE
 
 import requests
 from cloudify import ctx
@@ -47,7 +48,6 @@ from cloudify.exceptions import NonRecoverableError
 from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 from croupier_plugin.external_repositories.external_repository import (ExternalRepository)
-# from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
 import croupier_plugin.vault.vault as vault
 from croupier_plugin.accounting_client.model.user import (User)
 from croupier_plugin.accounting_client.accounting_client import (AccountingClient)
@@ -666,7 +666,6 @@ def deploy_job(script, inputs, execution_in_hpc, credentials, interface_type, wo
     else:  # execute the deployment script in local Croupier server
         success = local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, workdir,
                                deployment_source_credentials)
-
     return success
 
 
@@ -708,12 +707,13 @@ def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, wo
         #  Execute deploy script
         try:
             logger.info('deploying job with script: {}'.format(script))
-            cmd_output = os.popen(deploy_cmd)
-            cmd_msg = cmd_output.read()
-            exit_code = cmd_output.close()
-            if exit_code is not None:
-                logger.warning("job deploying failed with exit code {code} and msg: {msg}"
-                               .format(code=str(exit_code), msg=cmd_msg))
+            deploy_cmd_list = deploy_cmd.split(' ')
+            process = Popen(deploy_cmd_list, stdout=PIPE, stderr=PIPE)
+            stdout, stderr = process.communicate()
+            exit_code = process.returncode
+            if exit_code != 0:
+                logger.error("job {name} deploying failed with exit code {code}, stdout: {stdout}, stderr: {stderr}"
+                             .format(name=name, code=str(exit_code), stdout=str(stdout), stderr=str(stderr)))
             else:
                 success = True
         finally:
