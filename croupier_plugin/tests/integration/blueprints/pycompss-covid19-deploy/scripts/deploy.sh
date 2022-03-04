@@ -2,7 +2,6 @@
 set -e
 
 # read arguments
-
 if [ "$#" -lt 6 ]; then
     echo "Illegal number of parameters.
     Usage: deploy -u|--user <hpc_user> -p|--password <hpc_password -k|--private_key <hcp_pkey> -h|--host <hpc_host> [-t|--token <github_token>].
@@ -66,7 +65,7 @@ function cleanup {
   echo "Deleted temp working directory $WORK_DIR"
 }
 # register the cleanup function to be called on the EXIT signal
-# trap cleanup EXIT
+trap cleanup EXIT
 
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
@@ -81,6 +80,7 @@ echo "Deploying Covid19 into temp working directory $WORK_DIR"
 cd "$WORK_DIR" || exit
 
 # Get Covid19 app from Github in temp folder
+echo "Downloading Covid19 app into temp working directory $WORK_DIR"
 if [ -z "$github_token" ]; then
   wget https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
 else
@@ -88,6 +88,7 @@ else
 fi
 
 #Unzip repo
+echo "Unzipping Covid19 app"
 unzip main.zip covid-19-workflow-main/Resources/data/*
 unzip main.zip covid-19-workflow-main/Workflow/PyCOMPSs/src/*
 
