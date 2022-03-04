@@ -38,7 +38,8 @@ import traceback
 from datetime import datetime
 import pytz
 import tempfile
-from subprocess import Popen, PIPE
+import subprocess
+from subprocess import PIPE
 
 import requests
 from cloudify import ctx
@@ -703,12 +704,11 @@ def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, wo
         #  Execute deploy script
         try:
             logger.info('deploying job with script: {}'.format(script))
-            process = Popen(deploy_cmd.split(' '), stdout=PIPE, stderr=PIPE)
-            stdout, stderr = process.communicate()
-            exit_code = process.returncode
-            if exit_code != 0:
+            process = subprocess.run(deploy_cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            if process.returncode != 0:
                 logger.error("job {name} deploying failed with exit code {code}, stdout: {stdout}, stderr: {stderr}"
-                             .format(name=name, code=str(exit_code), stdout=str(stdout), stderr=str(stderr)))
+                             .format(name=name, code=str(process.returncode),
+                                     stdout=str(process.stdout), stderr=str(process.stderr)))
             else:
                 success = True
         finally:
