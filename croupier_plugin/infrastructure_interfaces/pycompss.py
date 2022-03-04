@@ -106,7 +106,9 @@ class Pycompss(InfrastructureInterface):
             error = "Failed PyCOMPSs app undeployment on the infrastructure with exit code: {code} and msg: {msg}"\
                 .format(code=str(exit_code), msg=msg)
             ctx.logger.error(error)
-            raise NonRecoverableError(error)
+            return False
+
+        return True
 
     def _parse_job_settings(self, job_id, job_settings, script=False, timezone=None):
         # Not required

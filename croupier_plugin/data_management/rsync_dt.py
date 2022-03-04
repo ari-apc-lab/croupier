@@ -4,7 +4,8 @@ from cloudify import ctx
 from cloudify.exceptions import CommandExecutionError
 import tempfile
 import os
-from subprocess import Popen, PIPE
+import subprocess
+from subprocess import PIPE
 
 
 class RSyncDataTransfer(DataTransfer):
@@ -153,13 +154,11 @@ class RSyncDataTransfer(DataTransfer):
                     ))
 
             ctx.logger.info('rsync data transfer: executing command: {}'.format(cmd))
-            process = Popen(cmd.split(' '), stdout=PIPE, stderr=PIPE)
-            stdout, stderr = process.communicate()
-            exit_code = process.returncode
-            if exit_code != 0:
+            process = subprocess.run(cmd, stdout=PIPE, stderr=PIPE, shell=True)
+            if process.returncode != 0:
                 raise CommandExecutionError(
                     "Failed executing rsync data transfer: exit code {code}, stdout: {stdout}, stderr: {stderr}"
-                    .format(code=str(exit_code), stdout=str(stdout), stderr=str(stderr)))
+                    .format(code=str(process.returncode), stdout=str(process.stdout), stderr=str(process.stderr)))
         finally:
             if source_private_key and os.path.exists(source_private_key):
                 # Remove key temporary file

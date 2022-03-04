@@ -1,11 +1,13 @@
 import re
-
+import subprocess
+from subprocess import PIPE
 from croupier_plugin.data_management.data_management import DataTransfer
 from croupier_plugin.ssh import SshClient
 from cloudify import ctx
 from cloudify.exceptions import CommandExecutionError
 import tempfile
 import os
+
 import shutil
 
 target_private_key = None
@@ -197,13 +199,11 @@ class HttpDataTransfer(DataTransfer):
 
             # Execute data transfer command
             ctx.logger.info('http(wget) data transfer: executing command: {}'.format(dt_command))
-            cmd_output = os.popen(dt_command)
-            cmd_msg = cmd_output.read()
-            exit_code = cmd_output.close()
-
-            if exit_code is not None:  # exit code is None is successful
+            process = subprocess.run(dt_command, stdout=PIPE, stderr=PIPE, shell=True)
+            if process.returncode != 0:
                 raise CommandExecutionError(
-                    "Failed executing rsync data transfer: exit code " + str(exit_code) + " and msg: " + cmd_msg)
+                    "Failed executing http(wget) data transfer: exit code {code}, stdout: {stdout}, stderr: {stderr}"
+                    .format(code=str(process.returncode), stdout=str(process.stdout), stderr=str(process.stderr)))
 
             # Transfer source data into target using rsync
             # Target DS
@@ -269,14 +269,11 @@ class HttpDataTransfer(DataTransfer):
                         ))
 
                 ctx.logger.info('http(rsync) data transfer: executing command: {}'.format(dt_command))
-                cmd_output = os.popen(dt_command)
-                cmd_msg = cmd_output.read()
-                exit_code = cmd_output.close()
-
-                if exit_code is not None:  # exit code is None is successful
+                process = subprocess.run(dt_command, stdout=PIPE, stderr=PIPE, shell=True)
+                if process.returncode != 0:
                     raise CommandExecutionError(
-                        "Failed executing rsync data transfer: exit code " + str(exit_code) + " and msg: " + cmd_msg)
-
+                        "Failed executing http(rsync) data transfer: exit code {code}, stdout: {stdout}, stderr: {stderr}"
+                        .format(code=str(process.returncode), stdout=str(process.stdout), stderr=str(process.stderr)))
             else:
                 ctx.logger.warn('HTTP DT: Not transferring data from empty temporary folder')
 
