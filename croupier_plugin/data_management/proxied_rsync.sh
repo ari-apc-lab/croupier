@@ -5,6 +5,22 @@
 
 set -e
 
+trap 'catch $? $LINENO' ERR
+catch() {
+  echo "proxied_rsync: error $1 occurred on line $2"
+  cleanup
+}
+
+cleanup() {
+  echo "proxied_rsync: cleanup"
+
+  # unmount
+  fusermount -u /tmp/sshfstmp
+
+  # remove tmp directory
+  rm -rf /tmp/sshfstmp 2>/dev/null
+}
+
 if [ $# -ne 8 ]; then
         echo 1>&2 "Usage: proxied_rsync [--source_password <source_password> | --source_private_key <path/to/key>] --source [user@]host:[dir]/[file] [--target_password <source_password> | --target_private_key <path/to/key>] --target [user@]host:[dir]"
         exit 127
@@ -57,7 +73,7 @@ while [[ $# -gt 0 ]]; do
       shift # past value
       ;;
     *) # unknown option
-      echo "Unknow argument $1, exiting ..."
+      echo "Unknown argument $1, exiting ..."
       exit 127
       ;;
   esac
@@ -90,12 +106,34 @@ fi
 
 echo "source_mount_point: " "$source_mount_point"
 
+# Parsing target server, directory and file
+re="([^:]+:)"
+if [[ $target =~ $re ]]; then
+	target_endpoint=${BASH_REMATCH[1]}
+	target_endpoint=${target_endpoint::-1}
+	echo 'target_endpoint:' "$target_endpoint"
+fi
+
+re="[^:]+:(.*[/])"
+if [[ $target =~ $re ]]; then
+	target_dir=${BASH_REMATCH[1]}
+	target_dir=${target_dir::-1}
+	echo 'target_dir:' "$target_dir"
+fi
+
+re="([^/^:]+$)"
+if [[ $target =~ $re ]]; then
+	target_file=${BASH_REMATCH[1]}
+	echo 'target_file:' "$target_file"
+fi
+
 # remove stale tmp directory
-rm -rf /tmp/sshfstmp 2>/dev/null
+rm -rf /tmp/sshfstmp
 
 # create temporary directory
 mkdir /tmp/sshfstmp
 chmod go-wrx /tmp/sshfstmp
+
 # mount sshfs
 if [ -z ${source_private_key+x} ]; then
 	#Using source_password for sshfs authentication
@@ -111,13 +149,12 @@ else
 fi
 
 # rsync
-aTarget=(${target//:/ })
 if [ -z ${target_private_key+x} ]; then
 	#Using target_password for rsync authentication
 	#Create target folder if does not exist
 	FLAGS="--safe-links -tarxlzhP"
-	echo "Invoking: sshpass -p $target_password ssh ${aTarget[0]} mkdir -p ${aTarget[1]}"
-	sshpass -p "$target_password" ssh "${aTarget[0]}" mkdir -p "${aTarget[1]}"
+	echo "Invoking: sshpass -p $target_password ssh $target_endpoint mkdir -p $target_dir"
+	sshpass -p "$target_password" ssh "$target_endpoint" mkdir -p "$target_dir"
 	if [ -z ${source_file+x} ]; then
 		echo "Invoking: rsync --rsh="/usr/bin/sshpass -p "$target_password"" $FLAGS /tmp/sshfstmp/* $target"
 		sshpass -p "$target_password" rsync "$FLAGS" /tmp/sshfstmp/* "$target"
@@ -129,8 +166,8 @@ elif [ -z ${target_password+x} ]; then
 	#Using target_private_key for rsync authentication
 	#Create target folder if does not exist
 	FLAGS="-e 'ssh -o StrictHostKeyChecking=no -i $target_private_key' --safe-links -tarxlzhP"
-	echo "Invoking: ssh -i $target_private_key ${aTarget[0]} mkdir -p ${aTarget[1]}"
-	ssh -i "$target_private_key" "${aTarget[0]}" mkdir -p "${aTarget[1]}"
+	echo "Invoking: ssh -i $target_private_key $target_endpoint mkdir -p $target_dir"
+	ssh -i "$target_private_key" "$target_endpoint" mkdir -p "$target_dir"
 	if [ -z ${source_file+x} ]; then
 		echo Invoking: rsync "$FLAGS" /tmp/sshfstmp/* "$target"
 		eval rsync "$FLAGS" /tmp/sshfstmp/* "$target"
@@ -143,8 +180,4 @@ else
       	exit 127
 fi
 
-# unmount
-fusermount -u /tmp/sshfstmp
-
-# remove tmp directory
-rm -rf /tmp/sshfstmp 2>/dev/null
+cleanup

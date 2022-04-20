@@ -6,6 +6,7 @@ import tempfile
 import os
 import subprocess
 from subprocess import PIPE
+from croupier_plugin.data_management.data_management import saveKeyInTemporaryFile
 
 
 class RSyncDataTransfer(DataTransfer):
@@ -104,20 +105,14 @@ class RSyncDataTransfer(DataTransfer):
             elif "private_key" in to_target_infra_credentials:
                 target_key = to_target_infra_credentials['private_key']
                 # Save key in temporary file
-                with tempfile.NamedTemporaryFile(delete=False) as key_file:
-                    key_file.write(bytes(target_key, 'utf-8'))
-                    key_file.flush()
-                    target_private_key = key_file.name
+                target_private_key = saveKeyInTemporaryFile(target_key)
 
             if "password" in from_source_infra_credentials:
                 source_password = from_source_infra_credentials['password']
             elif "private_key" in from_source_infra_credentials:
                 source_key = from_source_infra_credentials['private_key']
                 # Save key in temporary file
-                with tempfile.NamedTemporaryFile(delete=False) as key_file:
-                    key_file.write(bytes(source_key, 'utf-8'))
-                    key_file.flush()
-                    source_private_key = key_file.name
+                source_private_key = saveKeyInTemporaryFile(source_key)
 
             if source_private_key and target_private_key:
                 cmd = script_path + \
