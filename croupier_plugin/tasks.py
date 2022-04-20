@@ -104,7 +104,6 @@ def download_vault_credentials(token, user, cubbyhole, **kwargs):
             else:
                 ctx.logger.info("Using provided ssh credentials.")
 
-
         if 'keycloak_credentials' in ctx.source.node.properties:
             keycloak_credentials = vault.download_credentials('keycloak', token, user, address, cubbyhole)
             if keycloak_credentials:
@@ -166,8 +165,8 @@ def configure_data_transfer(**kwargs):
         "filepath": from_source_node.properties['filepath']
         if "filepath" in from_source_node.properties else None,
         "resource": from_source_instance.runtime_properties['resource']
-            if 'resource' in from_source_instance.runtime_properties else (from_source_node.properties['resource']
-            if 'resource' in from_source_node.properties else None),
+        if 'resource' in from_source_instance.runtime_properties else (from_source_node.properties['resource']
+                                                                       if 'resource' in from_source_node.properties else None),
         "located_at": from_source_instance.runtime_properties['located_at']
         if "located_at" in from_source_instance.runtime_properties else None}
     ctx.instance.runtime_properties['from_source'] = from_source
@@ -178,8 +177,8 @@ def configure_data_transfer(**kwargs):
         "filepath": to_target_node.properties['filepath']
         if "filepath" in to_target_node.properties else None,
         "resource": to_target_instance.runtime_properties['resource']
-            if 'resource' in to_target_instance.runtime_properties else (to_target_node.properties['resource']
-            if "resource" in to_target_node.properties else None),
+        if 'resource' in to_target_instance.runtime_properties else (to_target_node.properties['resource']
+                                                                     if "resource" in to_target_node.properties else None),
         "located_at": to_target_instance.runtime_properties['located_at']
         if "located_at" in to_target_instance.runtime_properties else None}
     ctx.instance.runtime_properties['to_target'] = to_target
@@ -513,7 +512,8 @@ def preconfigure_task(
         if 'credentials' not in ctx.target.instance.runtime_properties:
             ctx.source.instance.runtime_properties['credentials'] = credentials
         else:
-            ctx.source.instance.runtime_properties['credentials'] = ctx.target.instance.runtime_properties['credentials']
+            ctx.source.instance.runtime_properties['credentials'] = ctx.target.instance.runtime_properties[
+                'credentials']
         if not ctx.target.node.properties['recurring_workflow']:
             ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
         ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
@@ -1003,7 +1003,6 @@ def publish(publish_list, **kwargs):
 
 @operation
 def ecmwf_vertical_interpolation(query, keycloak_credentials, credentials, cloudify_address, server_port, **kwargs):
-
     if 'recurring_workflow' in ctx.instance.runtime_properties and ctx.instance.runtime_properties['recurring_workflow'] \
             and "recurring" not in kwargs:
         ctx.logger.info('Recurring workflow, ecmwf data will be generated during croupier_configure')
@@ -1082,6 +1081,7 @@ def ecmwf_vertical_interpolation(query, keycloak_credentials, credentials, cloud
         bottle.run(host='0.0.0.0', port=server_port)
     except ValueError:
         pass
+
 
 def get_hours(cput):
     return int(cput[:cput.index(':')])

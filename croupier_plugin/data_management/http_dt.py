@@ -7,6 +7,7 @@ from cloudify import ctx
 from cloudify.exceptions import CommandExecutionError
 import tempfile
 import os
+from croupier_plugin.data_management.data_management import saveKeyInTemporaryFile
 
 import shutil
 
@@ -244,11 +245,7 @@ class HttpDataTransfer(DataTransfer):
                 elif "private_key" in to_target_infra_credentials:
                     target_key = to_target_infra_credentials['private_key']
                     # Save key in temporary file
-                    with tempfile.NamedTemporaryFile(delete=False) as key_file:
-                        key_file.write(bytes(target_key, 'utf-8'))
-                        key_file.flush()
-                        global target_private_key
-                        target_private_key = key_file.name
+                    target_private_key = saveKeyInTemporaryFile(target_key)
 
                 if target_private_key:
                     dt_command = 'rsync -ratlz {rsync_options} -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i {key_file}" ' \

@@ -1,3 +1,5 @@
+import tempfile
+
 def isDataManagementNode(node):
     return ('croupier.nodes.DataAccessInfrastructure' in node.type_hierarchy or
             'croupier.nodes.DataTransfer' in node.type_hierarchy or
@@ -40,6 +42,17 @@ def processDataTransfer(job, logger, direction, workdir):
     for dt_config in dt_instances:
         dt = DataTransfer.factory(dt_config, logger, workdir)
         dt.process()
+
+
+# helper functions
+def saveKeyInTemporaryFile(key):
+    with tempfile.NamedTemporaryFile(delete=False) as key_file:
+        bytea = bytearray(bytes(key, 'utf-8'))
+        if bytea[-1] != 10:  # Add final newline character
+            bytea.append(10)
+        key_file.write(bytes(bytea))
+        key_file.flush()
+        return key_file.name
 
 
 class DataTransfer:
