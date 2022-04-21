@@ -71,6 +71,9 @@ inputs:
     hpc_scheduler:
         type: string
 
+    monitor_scheduler:
+        type: string
+
 ################## DS Infrastructures #################
     hpc_dai_host:
         type: string
@@ -96,6 +99,9 @@ inputs:
 
 #################### START WORKFLOW ###################
 node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
     vault:
         type: croupier.nodes.Vault
         properties:
@@ -112,12 +118,15 @@ node_templates:
             job_prefix: croupier
             base_dir: $HOME
             monitoring_options:
-                monitor_period: 15
+                monitor_period: 60
+                monitor_interface: { get_input: monitor_scheduler }
             skip_cleanup: true
             workdir_prefix: "pycompss-covid19-deploy"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
+            - type: interface_monitored_by
+              target: hpc_exporter
 
     job:
         type: croupier.nodes.PyCOMPSsJob

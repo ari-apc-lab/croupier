@@ -62,6 +62,10 @@ data_types:
 
     croupier.datatypes.monitoring_options:
         properties:
+            monitor_interface:
+                description: Interface scheduler used by monitoring. If not set, the default infrastructure scheduler is used
+                type: string
+                required: false
             monitor_period:
                 description: How often to scrape the WM for metrics
                 type: integer
@@ -950,7 +954,7 @@ node_types:
                         credentials:
                             default: { get_property: [SELF, credentials] }
                         monitoring_options:
-                            default: { fet_property: [SELF, monitoring_options]}
+                            default: { get_property: [SELF, monitoring_options]}
                         simulate:
                             default: { get_property: [SELF, simulate] }
                 stop:

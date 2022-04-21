@@ -57,10 +57,12 @@ from croupier_plugin.accounting_client.model.resource_consumption import (Resour
 from croupier_plugin.accounting_client.model.reporter import (Reporter, ReporterType)
 from croupier_plugin.accounting_client.model.resource import (ResourceType)
 import croupier_plugin.data_management.data_management as dm
+from croupier_plugin.data_management.data_management import saveKeyInTemporaryFile
 
 standard_library.install_aliases()
 
 accounting_client = AccountingClient()
+monitoring_supported_interfaces = ["slurm", "pbs", "pycompss"]
 
 
 @operation()
@@ -430,15 +432,18 @@ def start_monitoring_hpc(
         hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
         only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
 
-        if (infrastructure_interface != "slurm") and (infrastructure_interface != "pbs"):
+        if infrastructure_interface not in monitoring_supported_interfaces:
             ctx.logger.warning("HPC Exporter doesn't support '{0}' interface. Collector will not be created."
                                .format(infrastructure_interface))
             ctx.instance.runtime_properties["hpc_exporter_address"] = None
             return
 
+        monitor_interface = infrastructure_interface
+        if 'monitor_interface' in monitoring_options:
+            monitor_interface = monitoring_options['monitor_interface'].lower()
         payload = {
             "host": credentials["host"],
-            "scheduler": infrastructure_interface,
+            "scheduler": monitor_interface,
             "scrape_interval": monitor_period,
             "deployment_label": deployment_label,
             "monitoring_id": monitoring_id,
@@ -691,10 +696,11 @@ def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, wo
         private_key = None
         if "private_key" in credentials and len(credentials["private_key"]) > 0:
             # Save key in temporary file
-            with tempfile.NamedTemporaryFile(delete=False) as key_file:
-                key_file.write(bytes(credentials["private_key"], 'utf-8'))
-                key_file.flush()
-                private_key = key_file.name
+            private_key = saveKeyInTemporaryFile(credentials["private_key"])
+            # with tempfile.NamedTemporaryFile(delete=False) as key_file:
+            #     key_file.write(bytes(credentials["private_key"], 'utf-8'))
+            #     key_file.flush()
+            #     private_key = key_file.name
             deploy_cmd += " -k " + private_key
 
         # Inject source token (Github) if available
@@ -1111,7 +1117,9 @@ def monitor_job(jobid, hpc_exporter_entrypoint, deployment_id, host):
         "host": host,
         "job_id": jobid
     }
-    requests.post(url, json=payload)
+    response = requests.post(url, json=payload)
+    if not response.ok:
+        ctx.logger.error("Failed to job {0} in monitor: {1}: {2}".format(jobid, response.status_code, response.content))
 
 
 def register_orchestrator_instance_accounting():
