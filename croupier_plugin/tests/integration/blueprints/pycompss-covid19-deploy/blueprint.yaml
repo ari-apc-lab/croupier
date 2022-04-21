@@ -28,8 +28,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-#    - plugin:croupier #For Cloudify
-    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+    - plugin:croupier #For Cloudify
+#    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
 ##################### COVID 19 ARGS ###################
 data_types:
@@ -121,7 +121,7 @@ node_templates:
                 monitor_period: 60
                 monitor_interface: { get_input: monitor_scheduler }
             skip_cleanup: true
-            workdir_prefix: "pycompss-covid19-deploy"
+            workdir_prefix: "covid19-deploy"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
