@@ -101,7 +101,7 @@ node_templates:
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: "pycompss-covid19"
+            workdir_prefix: "covid19"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
