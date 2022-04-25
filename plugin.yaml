@@ -71,10 +71,6 @@ data_types:
                 type: integer
                 required: false
                 default: 15
-            deployment_label:
-                description: Deployment label to apply to the metrics to identify the deployment.
-                type: string
-                required: false
             hpc_label:
                 description: HPC label to apply to the metrics to identify the HPC WM
                 type: string
@@ -1118,7 +1114,11 @@ node_types:
     croupier.nodes.HPCExporter:
         derived_from: cloudify.nodes.Root
         properties:
-            address:
+            hpc_exporter_address:
+                type: string
+                required: false
+                default: ''
+            grafana_registry_address:
                 type: string
                 required: false
                 default: ''
@@ -1127,8 +1127,10 @@ node_types:
                 create:
                     implementation: croupier.croupier_plugin.tasks.create_monitor
                     inputs:
-                        address:
-                            default: { get_property: [SELF,address] }
+                        hpc_exporter_address:
+                            default: { get_property: [SELF,hpc_exporter_address] }
+                        grafana_registry_address:
+                            default: { get_property: [ SELF,grafana_registry_address ] }
 
 relationships:
     interface_contained_in:

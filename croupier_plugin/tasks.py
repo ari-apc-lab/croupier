@@ -369,38 +369,62 @@ def cleanup_execution(
         ctx.logger.warning('clean up simulated.')
 
 
+def getMonitoringConfiguration():
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
+    config.read(config_file)
+    try:
+        hpc_exporter_address = config.get('Monitoring', 'hpc_exporter_address')
+        if hpc_exporter_address is None:
+            ctx.logger.error(
+                'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
+            return None
+        grafana_registry_address = config.get('Monitoring', 'grafana_registry_address')
+        if grafana_registry_address is None:
+            ctx.logger.error(
+                'Could not find Grafana-Registry address in the croupier config file. No HPC Exporter will be activated')
+            return None
+    except configparser.NoSectionError:
+        ctx.logger.error(
+            'Could not find Monitoring section in the croupier config file. No HPC Exporter will be activated')
+        return None
+
+    return hpc_exporter_address, grafana_registry_address
+
+
 @operation
-def create_monitor(address, **kwargs):
-    if not address:
+def create_monitor(hpc_exporter_address, grafana_registry_address, **kwargs):
+    default_hpc_exporter_address, default_grafana_registry_address = getMonitoringConfiguration()
+    if not hpc_exporter_address:
         ctx.logger.info(
             "No HPC Exporter address provided. Using address set in croupier installation's config file")
-        config = configparser.RawConfigParser()
-        config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
-        config.read(config_file)
-        try:
-            address = config.get('Monitoring', 'hpc_exporter_address')
-            if address is None:
-                ctx.logger.error(
-                    'Could not find HPC Exporter address in the croupier config file. No HPC Exporter will be activated')
-                return
-        except configparser.NoSectionError:
-            ctx.logger.error(
-                'Could not find Monitoring section in the croupier config file. No HPC Exporter will be activated')
-            return
+        hpc_exporter_address = default_hpc_exporter_address
+
+    if not grafana_registry_address:
+        ctx.logger.info(
+            "No Grafana Registry address provided. Using address set in croupier installation's config file")
+        grafana_registry_address = default_grafana_registry_address
 
     monitoring_id = ctx.deployment.id
     ctx.logger.info("Monitoring_id generated: " + monitoring_id)
     ctx.instance.runtime_properties["monitoring_id"] = monitoring_id
 
-    ctx.instance.runtime_properties["hpc_exporter_address"] = address if address.startswith("http") \
-        else "http://" + address
+    ctx.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address if hpc_exporter_address.startswith(
+        "http") \
+        else "http://" + hpc_exporter_address
+
+    ctx.instance.runtime_properties["grafana_registry_address"] = \
+        grafana_registry_address if grafana_registry_address.startswith("http") \
+        else "http://" + grafana_registry_address
 
 
 @operation
 def preconfigure_interface_monitor(**kwargs):
     ctx.source.instance.runtime_properties["monitoring_id"] = ctx.target.instance.runtime_properties["monitoring_id"]
-    hpc_exporter_address = ctx.target.instance.runtime_properties["hpc_exporter_address"]
-    ctx.source.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address
+    ctx.source.instance.runtime_properties["hpc_exporter_address"] = \
+        ctx.target.instance.runtime_properties["hpc_exporter_address"]
+    ctx.source.instance.runtime_properties["grafana_registry_address"] = \
+        ctx.target.instance.runtime_properties["grafana_registry_address"]
 
 
 @operation
@@ -423,8 +447,7 @@ def start_monitoring_hpc(
         infrastructure_interface = "pbs" if infrastructure_interface == "torque" else infrastructure_interface
         monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
 
-        deployment_label = monitoring_options["deployment_label"] if "deployment_label" in monitoring_options \
-            else ctx.deployment.id
+        deployment_label = ctx.deployment.id
         hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
         only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
 
@@ -437,35 +460,66 @@ def start_monitoring_hpc(
         monitor_interface = infrastructure_interface
         if 'monitor_interface' in monitoring_options:
             monitor_interface = monitoring_options['monitor_interface'].lower()
-        payload = {
-            "host": credentials["host"],
-            "scheduler": monitor_interface,
-            "scrape_interval": monitor_period,
-            "deployment_label": deployment_label,
-            "monitoring_id": monitoring_id,
-            "hpc_label": hpc_label,
-            "only_jobs": only_jobs,
-            "ssh_user": credentials["user"]
-        }
 
-        if "password" in credentials and credentials["password"]:
-            payload["ssh_password"] = credentials["password"]
-        else:
-            payload["ssh_pkey"] = credentials["private_key"]
+        # Register monitoring collector
+        create_monitoring_collector(hpc_exporter_address, monitoring_id, deployment_label, monitor_interface,
+                                    monitor_period, hpc_label, only_jobs, credentials)
 
-        url = hpc_exporter_address + '/collector'
-        ctx.logger.info("Creating collector in " + str(url))
-        response = requests.request("POST", url, json=payload)
+        # Register monitoring Grafana dashboard
+        # TODO Implement dashboard registry by user and not by deployment (needs to be done in Croupier frontend)
+        grafana_registry_address = ctx.instance.runtime_properties["grafana_registry_address"]
+        create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label)
 
-        if not response.ok:
-            ctx.logger.error("Failed to start node monitor: {0}: {1}".format(response.status_code, response.content))
-            return
-        ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
     elif simulate:
         ctx.logger.warning('monitor simulated')
     else:
         ctx.logger.warning("No HPC Exporter selected for node {0}. Won't create a collector in any HPC Exporter for it."
                            .format(ctx.node.name))
+
+
+def create_monitoring_collector(hpc_exporter_address, monitoring_id, deployment_label, monitor_interface,
+                                monitor_period, hpc_label, only_jobs, credentials):
+    payload = {
+        "host": credentials["host"],
+        "scheduler": monitor_interface,
+        "scrape_interval": monitor_period,
+        "deployment_label": deployment_label,
+        "monitoring_id": monitoring_id,
+        "hpc_label": hpc_label,
+        "only_jobs": only_jobs,
+        "ssh_user": credentials["user"]
+    }
+
+    if "password" in credentials and credentials["password"]:
+        payload["ssh_password"] = credentials["password"]
+    else:
+        payload["ssh_pkey"] = credentials["private_key"]
+
+    url = hpc_exporter_address + '/collector'
+    ctx.logger.info("Creating collector in " + str(url))
+    response = requests.request("POST", url, json=payload)
+
+    if not response.ok:
+        ctx.logger.error("Failed to start node monitor: {0}: {1}".format(response.status_code, response.content))
+        return
+    ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
+
+
+def create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label):
+    payload = {
+        "deployment_label": deployment_label,
+        "monitoring_id": monitoring_id,
+    }
+    url = grafana_registry_address + '/dashboards'
+    ctx.logger.info("Creating dashboard in " + str(url))
+    response = requests.request("POST", url, json=payload)
+
+    if not response.ok:
+        ctx.logger.error(
+            "Failed to create monitoring dashboard for monitoring_id: {0}, with response code {1} and message {2}"
+            .format(monitoring_id, response.status_code, response.content))
+        return
+    ctx.logger.info("Monitoring dashboard created for monitoring_id: {0}".format(monitoring_id))
 
 
 @operation
