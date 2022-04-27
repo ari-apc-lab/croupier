@@ -1,5 +1,5 @@
 # VAULT
-vault_token: 'hvs.CAESIFxKkUpNsg7aVBWVwX-MyL3S6sWkTYVFWTQbMXmEktkSGh4KHGh2cy44RERIYThOYTZGN3U0WmpaZ3V5ekVyOTY'
+jwt: ''
 vault_user: 'yosu'
 
 # WORKFLOW

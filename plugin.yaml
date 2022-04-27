@@ -1088,7 +1088,7 @@ node_types:
     croupier.nodes.Vault:
         derived_from: cloudify.nodes.Root
         properties:
-            token:
+            jwt:
                 type: string
                 required: true
             user:
@@ -1209,8 +1209,8 @@ relationships:
                 preconfigure:
                     implementation: croupier.croupier_plugin.tasks.download_vault_credentials
                     inputs:
-                        token:
-                            default: { get_property: [TARGET, token  ] }
+                        jwt:
+                            default: { get_property: [TARGET, jwt  ] }
                         user:
                             default: { get_property: [TARGET, user   ] }
                         cubbyhole:

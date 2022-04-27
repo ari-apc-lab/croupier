@@ -69,30 +69,20 @@ monitoring_supported_interfaces = ["slurm", "pbs", "pycompss"]
 def create_vault(address, **kwargs):
     if not address:
         ctx.logger.info("No address provided, getting vault address from croupier's config file")
-        address = getVaultAddressFromConfiguration()
+        address = vault.getVaultAddressFromConfiguration()
     ctx.instance.runtime_properties['address'] = address if address.startswith('http') else 'http://' + address
 
 
-def getVaultAddressFromConfiguration():
-    config = configparser.RawConfigParser()
-    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
-    config.read(config_file)
-    try:
-        address = config.get('Vault', 'vault_address')
-        if address is None:
-            raise NonRecoverableError('Could not find Vault address in the croupier config file.')
-        return address
-    except configparser.NoSectionError:
-        raise NonRecoverableError('Could not find the Vault section in the croupier config file.')
-
-
 @operation()
-def download_vault_credentials(token, user, cubbyhole, **kwargs):
+def download_vault_credentials(jwt, user, cubbyhole, **kwargs):
     address = ctx.target.instance.runtime_properties['address']
 
     try:
         if not cubbyhole and not user:
             raise NonRecoverableError("If cubbyhole is false, a user must be provided to download Vault credentials")
+
+        # Get token from vault
+        token = vault.get_token(user, address, jwt)
 
         if 'credentials' in ctx.source.node.properties:
             host = ctx.source.node.properties['endpoint'] if 'endpoint' in ctx.source.node.properties else \
