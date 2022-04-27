@@ -56,14 +56,14 @@ def saveKeyInTemporaryFile(key):
 
 
 class DataTransfer:
-    def __init__(self, data_transfer_config, logger, workdir):
+    def __init__(self, data_transfer_config, logger, workdir=None):
         self.dt_config = data_transfer_config
         self.logger = logger
         self.workdir = workdir
         # Based on data transfer type, use the Factory to create an specialized DataTransfer instance
 
     @staticmethod
-    def factory(dt_config, logger, workdir):
+    def factory(dt_config, logger, workdir=None):
         if dt_config['transfer_protocol'].upper() == "RSYNC":
             from croupier_plugin.data_management.rsync_dt import RSyncDataTransfer
             return RSyncDataTransfer(dt_config, logger, workdir)

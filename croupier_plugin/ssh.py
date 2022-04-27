@@ -141,7 +141,7 @@ class SshClient(object):
         self._port = int(credentials['port']) if 'port' in credentials else 22
         self._passwd = credentials['password'] if 'password' in credentials else None
         self._tunnel = None
-        if 'tunnel' in credentials and credentials['tunnel']:
+        if 'ssh_tunnel' in credentials and credentials['ssh_tunnel']:
             self._tunnel = SshForward(credentials)
             self._host = "localhost"
             self._port = self._tunnel.port()
@@ -171,7 +171,7 @@ class SshClient(object):
         #   https://stackoverflow.com/questions/32139904/ssh-via-paramiko-load-bashrc
         # @NOTE: think of SSHClient.invoke_shell()
         #        instead of SSHClient.exec_command()
-        self._login_shell = credentials['login_shell'] if 'login_shell' in credentials else False
+        self._login_shell = credentials['ssh_login_shell'] if 'ssh_login_shell' in credentials else False
 
         self.open_connection()
 
@@ -193,7 +193,8 @@ class SshClient(object):
                     username=self._user,
                     pkey=self._private_key,
                     password=self._passwd,
-                    look_for_keys=False
+                    look_for_keys=False,
+                    allow_agent=False,
                 )
             except (SSHException, socket.error) as err:
                 if retries > 0 and str(err) == "Error reading SSH protocol banner":

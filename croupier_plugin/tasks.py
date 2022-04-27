@@ -752,11 +752,7 @@ def remote_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, w
 
 def inject_deploy_inputs(call, inputs):
     for dinput in inputs:
-        str_input = str(dinput)
-        if ('\n' in str_input or ' ' in str_input) and str_input[0] != '"':
-            call += ' "' + str_input + '"'
-        else:
-            call += ' ' + str_input + ' ' + inputs[str_input]
+        call += ' ' + str(dinput)
     return call
 
 

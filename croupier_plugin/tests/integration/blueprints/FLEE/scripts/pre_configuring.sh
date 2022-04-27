@@ -1,4 +1,11 @@
 #!/bin/bash -l
+set -e
+
+trap 'catch $? $LINENO' ERR
+catch() {
+  echo "pre_configuring: error $1 occurred on line $2"
+  cleanup
+}
 
 LOGFILE="pre_configuring_log.txt"
 

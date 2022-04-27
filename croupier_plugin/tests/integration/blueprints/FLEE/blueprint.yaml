@@ -43,9 +43,7 @@ inputs:
         type: string
     hpc_base_dir:
         type: string
-    ckan_user:
-        type: string
-    ckan_password:
+    ckan_api_key:
         type: string
     job_prefix:
         type: string
@@ -195,8 +193,7 @@ node_templates:
             endpoint: https://ckan.hidalgo-project.eu/
             credentials:
                 host: ckan.hidalgo-project.eu
-                user: { get_input: ckan_user }
-                password: { get_input: ckan_password }
+                auth-header: { get_input: ckan_api_key }
             supported_protocols:
                 - CKANAPI
                 - HTTP
@@ -210,8 +207,7 @@ node_templates:
             endpoint: https://ckan.hidalgo-project.eu/
             credentials:
                 host: ckan.hidalgo-project.eu
-                user: { get_input: ckan_user }
-                password: { get_input: ckan_password }
+                auth-header: { get_input: ckan_api_key }
             supported_protocols:
                 - CKANAPI
                 - HTTP
