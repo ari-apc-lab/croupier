@@ -33,7 +33,7 @@ imports:
 
 inputs:
 ####################### VAULT ###################
-    vault_token:
+    jwt:
         type: string
     vault_user:
         type: string
@@ -78,7 +78,7 @@ node_templates:
     vault:
         type: croupier.nodes.Vault
         properties:
-            token: { get_input: vault_token }
+            jwt: { get_input: jwt }
             user: { get_input: vault_user }
 
     hpc1:

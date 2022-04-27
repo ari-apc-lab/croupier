@@ -500,9 +500,14 @@ def create_monitoring_dashboard(grafana_registry_address, monitoring_id, deploym
         "deployment_label": deployment_label,
         "monitoring_id": monitoring_id,
     }
+    jwt = ctx.instance.runtime_properties['jwt']
     url = grafana_registry_address + '/dashboards'
+    headers = {
+        "Content-Type": "application/json",
+        "Authorization": "Bearer " + jwt
+    }
     ctx.logger.info("Creating dashboard in " + str(url))
-    response = requests.request("POST", url, json=payload)
+    response = requests.request("POST", url, headers=headers, json=payload)
 
     if not response.ok:
         ctx.logger.error(
