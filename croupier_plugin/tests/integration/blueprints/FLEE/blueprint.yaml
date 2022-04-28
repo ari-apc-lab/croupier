@@ -17,9 +17,12 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Jesús Ramos Rivas
+# @author: Jesus Ramos Rivas
 #          Atos Research & Innovation, Atos Spain S.A.
 #          e-mail: jesus.2.ramos@atos.net
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
 #
 # blueprint.yaml
 
@@ -29,8 +32,8 @@ imports:
     # to speed things up, it is possible to download this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # HPC plugin
-#    - plugin:croupier
-    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+    - plugin:croupier
+#    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
 inputs:
     hpc_interface_config:
