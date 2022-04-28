@@ -225,7 +225,7 @@ data_types:
                 required: false
             memory:
                 description: 'Maximum amount of physical memory used by the job TORQUE (-l mem=XX), SLURM (--mem=XX)'
-                type: integer
+                type: string
                 required: false
             mail_user:
                 description: 'Declares the list of users to whom mail is sent by the execution server when it sends mail about the job. TORQUE (-M XX), SLURM (--mail-user=XX)'

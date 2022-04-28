@@ -76,7 +76,8 @@ class GraphInstance(object):
                            self._status == 'CANCELLED' or
                            self._status == 'FAILED' or
                            self._status == 'REVOKED' or
-                           self._status == 'TIMEOUT')
+                           self._status == 'TIMEOUT' or
+                           self._status == 'OUT_OF_MEMORY')
 
     def update_properties(self):
         self.runtime_properties = self.instance._node_instance.runtime_properties

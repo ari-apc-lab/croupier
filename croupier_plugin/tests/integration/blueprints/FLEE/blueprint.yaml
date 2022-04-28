@@ -120,7 +120,7 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                memory: 6
+                memory: '6G'
                 commands: ["bash run_job.sh"]
                 nodes: { get_input: nnodes }
                 tasks_per_node: { get_input: ncorespernode }
