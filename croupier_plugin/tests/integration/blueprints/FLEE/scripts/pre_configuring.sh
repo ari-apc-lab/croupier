@@ -4,7 +4,6 @@ set -e
 trap 'catch $? $LINENO' ERR
 catch() {
   echo "pre_configuring: error $1 occurred on line $2"
-  cleanup
 }
 
 LOGFILE="pre_configuring_log.txt"
@@ -57,7 +56,7 @@ EOF_CFGFILE
 
 source $CFGFILE
 
-cat << EOF_RUNFILE > $run_job.sh
+cat << EOF_RUNFILE > run_job.sh
 #!/bin/bash -l
 
 #----------------------------------------
@@ -144,3 +143,5 @@ env > env.log
 
 zip -r $result_file_name *.err *.out *.script *.yaml $CONFIG_NAME
 EOF_RUNFILE
+
+chmod +x run_job.sh

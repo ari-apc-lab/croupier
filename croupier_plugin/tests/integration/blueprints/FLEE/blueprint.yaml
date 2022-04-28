@@ -121,7 +121,7 @@ node_templates:
         properties:
             job_options:
                 memory: 6
-                commands: ["bash scripts/run_job.sh"]
+                commands: ["bash run_job.sh"]
                 nodes: { get_input: nnodes }
                 tasks_per_node: { get_input: ncorespernode }
                 partition: { get_input: partition_name }
