@@ -59,8 +59,6 @@ source $CFGFILE
 cat << EOF_RUNFILE > run_job.sh
 #!/bin/bash -l
 
-module load python/3.7.10_gcc930
-
 #----------------------------------------
 #        load ENV variables
 #----------------------------------------
@@ -138,8 +136,8 @@ cd ..
 #----------------------------------------
 #     Zip output results
 #----------------------------------------
-
-result_file_name=\$CONFIG_NAME'-results-'\$(whoami)'-'\$ID'-'\$(date +'[%H:%M:%S][%m-%d-%Y]')
+mkdir -p outputs
+result_file_name=outputs/mali_results.tgz
 
 cat << EOF_CFGFILE >> \$CFGFILE
 RESULT_FILE_NAME=\$result_file_name
@@ -151,7 +149,9 @@ env > env.log
 /usr/bin/env > env2.log
 
 #zip -r \$result_file_name *.err *.out *.script *.yaml \$CONFIG_NAME
-tar --force-local -cvf "\$result_file_name".tgz *.err *.out *.script *.yaml \$CONFIG_NAME
+tar --force-local -cvf \$result_file_name *.err *.out *.script \$CONFIG_NAME
+
+exit 0
 EOF_RUNFILE
 
 chmod +x run_job.sh

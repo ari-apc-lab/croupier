@@ -32,8 +32,8 @@ imports:
     # to speed things up, it is possible to download this file,
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # HPC plugin
-    - plugin:croupier
-#    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+#    - plugin:croupier
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
 inputs:
     hpc_interface_config:
@@ -56,10 +56,12 @@ inputs:
         type: string
     ckan_dataset_in:
         type: string
+    ckan_dataset_out:
+        type: string
     ckan_resource_input:
         type: string
     ckan_resource_output:
-        type: croupier.datatypes.ckan_resource
+        type: string
     flee_github_repo:
         type: string
     branch:
@@ -86,11 +88,13 @@ inputs:
         type: string
     mscale_weather_coupling:
         type: string
-    output_dir:
+    output_file:
         type: string
     ensemble_number:
         type: string
     nnodes:
+        type: string
+    memory:
         type: string
     ncorespernode:
         type: string
@@ -123,8 +127,11 @@ node_templates:
         type: croupier.nodes.Job
         properties:
             job_options:
-                memory: '6G'
-                commands: ["bash run_job.sh"]
+                memory: { get_input: memory }
+                commands:
+                - "module load python/3.7.10_gcc930"
+                - "module load openmpi/4.1.0_gcc930"
+                - "bash run_job.sh"
                 nodes: { get_input: nnodes }
                 tasks_per_node: { get_input: ncorespernode }
                 partition: { get_input: partition_name }
@@ -168,7 +175,7 @@ node_templates:
     outputs:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: { get_input: output_dir }
+            filepath: { get_input: output_file }
         relationships:
             - type: ds_located_at
               target: hpc_interface
@@ -185,7 +192,8 @@ node_templates:
     ckan_resource_output:
         type: croupier.nodes.CKAN_resource
         properties:
-            resource: {get_input: ckan_resource_output }
+            resource:
+                name: {get_input: ckan_resource_output }
         relationships:
             - type: ds_located_at
               target: ckan_dataset_in
@@ -216,7 +224,7 @@ node_templates:
                 - HTTP
             internet_access: true
             dataset_info:
-                package_id: flee-outputs
+                package_id: { get_input: ckan_dataset_out }
 
     dt_in:
         type: croupier.nodes.DataTransfer

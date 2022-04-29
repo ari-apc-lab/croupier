@@ -460,7 +460,8 @@ class InfrastructureInterface(object):
         script += '\n# DYNAMIC VARIABLES\n\n'
 
         # Force use WORKDIR
-        script += 'cd $CURRENT_WORKDIR\n\n'
+        # TODO Not working in Hidalgo Eagle, check in PermedCoE MN4
+        # script += 'cd $CURRENT_WORKDIR\n\n'
 
         # NOTE an uploaded script could also be interesting to execute
         if 'pre' in job_settings:

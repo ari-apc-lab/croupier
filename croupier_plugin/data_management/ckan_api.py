@@ -69,7 +69,7 @@ class CKANAPIDataTransfer(DataTransfer):
         workdir = self.from_infra['workdir']
 
         action = 'update' if self._resource_exists() else 'create'
-        command = 'curl {0}/api/action/resource_{1}'.format(self.endpoint, action)
+        command = 'curl -X POST {0}api/action/resource_{1}'.format(self.endpoint, action)
         command += ' --form upload=@{0}'.format(filepath)
         command += ' --form package_id={0}'.format(self.dataset_info['package_id'])
 
