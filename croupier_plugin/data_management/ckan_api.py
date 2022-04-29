@@ -1,7 +1,16 @@
+import json
+
 from croupier_plugin.data_management.data_management import DataTransfer
 from croupier_plugin.ssh import SshClient
 from ckanapi import RemoteCKAN, ServerIncompatibleError, NotAuthorized, ValidationError
 
+
+def findLastIndex(str, x):
+    index = -1
+    for i in range(0, len(str)):
+        if str[i] == x:
+            index = i
+    return index
 
 class CKANAPIDataTransfer(DataTransfer):
     def __init__(self, data_transfer_config, logger):
@@ -81,8 +90,9 @@ class CKANAPIDataTransfer(DataTransfer):
             command += " -H 'Authorization: {0}'".format(self.apikey)
 
         ssh_client = SshClient(ssh_credentials)
-        exit_code, exit_msg = ssh_client.execute_shell_command(command, workdir, wait_result=True)
-        if exit_code != 0:
+        exit_msg, exit_code = ssh_client.execute_shell_command(command, workdir, wait_result=True)
+        json_object = json.loads(exit_msg[0:findLastIndex(exit_msg, '}')+1])
+        if not json_object["success"] != 0:
             self.logger.error('There was a problem publishing the results in CKAN ({0}):\n{1}'
                               .format(exit_code, exit_msg))
         else:
