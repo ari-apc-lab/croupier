@@ -58,6 +58,10 @@ inputs:
         type: string
     ckan_dataset_out:
         type: string
+    ckan_dataset_out_organization:
+        type: string
+    ckan_dataset_out_private:
+        type: boolean
     ckan_resource_input:
         type: string
     ckan_resource_output:
@@ -224,7 +228,9 @@ node_templates:
                 - HTTP
             internet_access: true
             dataset_info:
-                package_id: { get_input: ckan_dataset_out }
+                name: { get_input: ckan_dataset_out }
+                owner_org: { get_input: ckan_dataset_out_organization }
+                private: { get_input: ckan_dataset_out_private }
 
     dt_in:
         type: croupier.nodes.DataTransfer
