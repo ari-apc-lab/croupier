@@ -106,8 +106,8 @@ class CKANAPIDataTransfer(DataTransfer):
         r = self.api.call_action('resource_search', {'query': 'name:'+self.ckan_resource['name']})
         if r['count'] == 0:
             return None
-        results = r['results']
-        for result in results:
+        results = r['results'][:]  # cloned
+        for result in r['results']:
             if result['package_id'] != self.dataset_info['package_id']:
                 results.remove(result)
 
