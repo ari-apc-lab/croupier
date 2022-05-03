@@ -92,7 +92,7 @@ class CKANAPIDataTransfer(DataTransfer):
         ssh_client = SshClient(ssh_credentials)
         exit_msg, exit_code = ssh_client.execute_shell_command(command, workdir, wait_result=True)
         json_object = json.loads(exit_msg[0:findLastIndex(exit_msg, '}')+1])
-        if not json_object["success"] != 0:
+        if not json_object["success"]:
             self.logger.error('There was a problem publishing the results in CKAN ({0}):\n{1}'
                               .format(exit_code, exit_msg))
         else:
