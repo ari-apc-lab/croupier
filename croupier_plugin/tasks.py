@@ -130,7 +130,11 @@ def configure_data_source(**kwargs):
         "credentials": ctx.target.instance.runtime_properties['credentials']
         if "credentials" in ctx.target.instance.runtime_properties else ctx.target.node.properties['credentials'],
         "workdir": ctx.target.instance.runtime_properties['workdir']
-        if 'workdir' in ctx.target.instance.runtime_properties else None}
+        if 'workdir' in ctx.target.instance.runtime_properties else None,
+        "dataset_info": ctx.target.node.properties['dataset_info']
+        if 'dataset_info' in ctx.target.node.properties else None,
+        "type_hierarchy": ctx.target.node.type_hierarchy
+    }
     ctx.source.instance.runtime_properties['located_at'] = located_at
     ctx.logger.info("Data source infrastructure {0} configured as location for data source {1}"
                     .format(ctx.target.node.name, ctx.source.node.name))
@@ -797,11 +801,7 @@ def remote_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, w
 
 def inject_deploy_inputs(call, inputs):
     for dinput in inputs:
-        str_input = str(dinput)
-        if ('\n' in str_input or ' ' in str_input) and str_input[0] != '"':
-            call += ' "' + str_input + '"'
-        else:
-            call += ' ' + str_input + ' ' + inputs[str_input]
+        call += ' ' + str(dinput)
     return call
 
 

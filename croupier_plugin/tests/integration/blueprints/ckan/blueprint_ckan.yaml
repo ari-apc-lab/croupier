@@ -28,21 +28,21 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     # to speed things up, it is possible downloading this file,
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/hidalgo/resources/types/cfy_types.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
     # relative import of plugin.yaml that resides in the blueprint directory
-    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/plugin.yaml
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/ckan/plugin.yaml
 
 inputs:
     vault_user:
         type: string
     vault_token:
         type: string
-    hpc:
+    hpc_host:
         type: string
     infrastructure_interface:
         type: string
-    ecmwf_query:
-        type: croupier.datatypes.ecmwf_query
+    partition:
+        type: string
 
 node_templates:
     hpc:
@@ -51,13 +51,13 @@ node_templates:
             config:
                 infrastructure_interface: { get_input: infrastructure_interface }
             credentials:
-                host: { get_input: hpc }
-            job_prefix: ecmwf
+                host: { get_input: hpc_host }
+            job_prefix: ckan
             base_dir: "$HOME"
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: "ecmwf"
+            workdir_prefix: "ckan"
             internet_access: true
         relationships:
             - type: retrieve_credentials_from_vault
@@ -69,84 +69,102 @@ node_templates:
             user: { get_input: vault_user }
             token: { get_input: vault_token}
 
-    job1:
+    job:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                    - touch test
+                    - touch weather_data_zippity.zip
                 max_time: "00:01:00"
-            skip_cleanup: True
-        relationships:
-            - type: task_managed_by_interface
-              target: hpc
-
-    job2:
-        type: croupier.nodes.Job
-        properties:
-            job_options:
-                commands:
-                    - cat weather_data.zip
-                max_time: "00:01:00"
+                partition: { get_input: partition }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc
             - type: input
               target: weather_data_in
-            - type: job_depends_on
-              target: job1
+            - type: output
+              target: weather_data_out
 
-    weather_data:
-        type: croupier.nodes.ECMWFVerticalInterpolation
+    weather_data_ckan_in:
+        type: croupier.nodes.CKAN_resource
         properties:
-            credentials:
-                host: 192.168.3.9
-            keycloak_credentials:
-                user: { get_input: vault_user }
-            query: { get_input: ecmwf_query }
+            resource:
+                name: 19718233-e95d-42a4-a8c3-b6727d308d9f.zip
         relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
             - type: ds_located_at
-              target: ckan
+              target: ckan_ecmwf
+
+    weather_data_ckan_out:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: weather_data_zap.zip
+        relationships:
+            - type: ds_located_at
+              target: ckan_atos
 
     weather_data_in:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/weather_data.zip
+            filepath: weather_data.zip
         relationships:
             - type: ds_located_at
               target: hpc
 
-    ckan:
-        type: croupier.nodes.DataAccessInfrastructure
+    weather_data_out:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: weather_data_zippity.zip
+        relationships:
+            - type: ds_located_at
+              target: hpc
+
+    ckan_atos:
+        type: croupier.nodes.CKAN_dataset
         properties:
             endpoint: https://ckan.hidalgo-project.eu/
             supported_protocols:
+                - CKANAPI
                 - HTTP
             internet_access: true
+            dataset_info:
+                name: test_croupier
+                owner_org: atos
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
 
-    dt_http:
+    ckan_ecmwf:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                name: ecmwf-vertical-interpolator
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    dt_in:
         type: croupier.nodes.DataTransfer
         properties:
-            transfer_protocol: HTTP
+            transfer_protocol: CKANAPI
         relationships:
             - type: from_source
-              target: weather_data
+              target: weather_data_ckan_in
             - type: to_target
               target: weather_data_in
 
-outputs:
-    job1_name:
-        description: job1 job name
-        value: { get_attribute: [job1, job_name] }
-    job2_name:
-        description: job2 job name
-        value: { get_attribute: [ job2, job_name ] }
-    weather_data:
-        description: ckan url to weather data
-        value: { get_attribute: [ weather_data, data_urls ] }
+    dt_out:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: weather_data_out
+            - type: to_target
+              target: weather_data_ckan_out

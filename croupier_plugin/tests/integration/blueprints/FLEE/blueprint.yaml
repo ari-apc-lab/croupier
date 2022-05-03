@@ -1,0 +1,253 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Ramos Rivas
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.2.ramos@atos.net
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint.yaml
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    # to speed things up, it is possible to download this file,
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    # HPC plugin
+#    - plugin:croupier
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+
+inputs:
+    hpc_interface_config:
+        type: croupier.datatypes.wm_config
+    hpc_host:
+        type: string
+    hpc_user:
+        type: string
+    hpc_password:
+        type: string
+    hpc_base_dir:
+        type: string
+    ckan_api_key:
+        type: string
+    job_prefix:
+        type: string
+    internet_access:
+        type: boolean
+    workdir_prefix:
+        type: string
+    ckan_dataset_in:
+        type: string
+    ckan_dataset_out:
+        type: string
+    ckan_dataset_out_organization:
+        type: string
+    ckan_dataset_out_private:
+        type: boolean
+    ckan_resource_input:
+        type: string
+    ckan_resource_output:
+        type: string
+    flee_github_repo:
+        type: string
+    branch:
+        type: string
+    config_name:
+        type: string
+    simulation_period:
+        type: string
+    parallel_mode:
+        type: string
+    inputconfigtags:
+        type: string
+    mscale:
+        type: string
+    mscale_num_instances:
+        type: string
+    mscale_cores_per_instance:
+        type: string
+    mscale_input_data_dir:
+        type: string
+    mscale_log_exchange_data:
+        type: string
+    mscale_coupling_type:
+        type: string
+    mscale_weather_coupling:
+        type: string
+    output_file:
+        type: string
+    ensemble_number:
+        type: string
+    nnodes:
+        type: string
+    memory:
+        type: string
+    ncorespernode:
+        type: string
+    partition_name:
+        type: string
+    jobwalltime:
+        type: string
+
+
+node_templates:
+
+    hpc_interface:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config: { get_input: hpc_interface_config }
+            credentials:
+                host: { get_input: hpc_host }
+                user: { get_input: hpc_user }
+                password: { get_input: hpc_password }
+            job_prefix: { get_input: job_prefix }
+            base_dir: { get_input: hpc_base_dir }
+            # seconds
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: uapweathercfy
+            internet_access: { get_input: internet_access }
+
+    run_job:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                memory: { get_input: memory }
+                commands:
+                - "module load python/3.7.10_gcc930"
+                - "module load openmpi/4.1.0_gcc930"
+                - "bash run_job.sh"
+                nodes: { get_input: nnodes }
+                tasks_per_node: { get_input: ncorespernode }
+                partition: { get_input: partition_name }
+                max_time: { get_input: jobwalltime }
+            deployment:
+                bootstrap: 'scripts/pre_configuring.sh'
+                inputs:
+                    - { get_input: flee_github_repo }
+                    - { get_input: branch }
+                    - { get_input: config_name }
+                    - { get_input: simulation_period }
+                    - { get_input: parallel_mode }
+                    - { get_input: [ hpc_interface_config, infrastructure_interface ] }
+                    - { get_input: nnodes }
+                    - { get_input: ncorespernode }
+                    - { get_input: inputconfigtags}
+                    - { get_input: mscale}
+                    - { get_input: mscale_num_instances}
+                    - { get_input: mscale_cores_per_instance}
+                    - { get_input: mscale_input_data_dir}
+                    - { get_input: mscale_log_exchange_data}
+                    - { get_input: mscale_coupling_type}
+                    - { get_input: mscale_weather_coupling}
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc_interface
+            - type: input
+              target: inputs
+            - type: output
+              target: outputs
+
+    inputs:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: inputs/
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    outputs:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: { get_input: output_file }
+        relationships:
+            - type: ds_located_at
+              target: hpc_interface
+
+    ckan_resource_input:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: { get_input: ckan_resource_input }
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_in
+
+    ckan_resource_output:
+        type: croupier.nodes.CKAN_resource
+        properties:
+            resource:
+                name: {get_input: ckan_resource_output }
+        relationships:
+            - type: ds_located_at
+              target: ckan_dataset_out
+
+    ckan_dataset_in:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            credentials:
+                host: ckan.hidalgo-project.eu
+                auth-header: { get_input: ckan_api_key }
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                name: { get_input: ckan_dataset_in }
+
+    ckan_dataset_out:
+        type: croupier.nodes.CKAN_dataset
+        properties:
+            endpoint: https://ckan.hidalgo-project.eu/
+            credentials:
+                host: ckan.hidalgo-project.eu
+                auth-header: { get_input: ckan_api_key }
+            supported_protocols:
+                - CKANAPI
+                - HTTP
+            internet_access: true
+            dataset_info:
+                name: { get_input: ckan_dataset_out }
+                owner_org: { get_input: ckan_dataset_out_organization }
+                private: { get_input: ckan_dataset_out_private }
+
+    dt_in:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: ckan_resource_input
+            - type: to_target
+              target: inputs
+
+    dt_out:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: CKANAPI
+        relationships:
+            - type: from_source
+              target: outputs
+            - type: to_target
+              target: ckan_resource_output

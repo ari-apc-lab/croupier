@@ -214,6 +214,19 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ----------------------------- Hidalgo FLEE -----------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'FLEE', 'blueprint.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'FLEE', 'scripts', 'pre_configuring.sh'), 'scripts'),
+        ],
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='FLEE')
+    def test_flee(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ---------------------------------- Covid19 -----------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(
@@ -391,7 +404,7 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local, recurring=True)
 
     # -------------------------------------------------------------------------------
-    # --------------------------------- THREDDS- ------------------------------------
+    # --------------------------------- THREDDS -------------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(
         os.path.join('blueprints', 'thredds', 'blueprint.yaml'),
@@ -399,6 +412,16 @@ class TestPlugin(unittest.TestCase):
         inputs='load_inputs')
     def test_thredds(self, cfy_local):
         self.run_test(cfy_local, recurring=True)
+
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- CKAN ---------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'ckan', 'blueprint_ckan.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs')
+    def test_ckan(self, cfy_local):
+        self.run_test(cfy_local)
 
 
 if __name__ == '__main__':
