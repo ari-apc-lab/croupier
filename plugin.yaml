@@ -1190,6 +1190,8 @@ node_types:
                 create:
                     implementation: croupier.croupier_plugin.tasks.create_vault
                     inputs:
+                        jwt:
+                            default: { get_property: [ SELF,jwt ] }
                         address:
                             default: { get_property: [ SELF,address ] }
 

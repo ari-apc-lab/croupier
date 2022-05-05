@@ -66,7 +66,11 @@ monitoring_supported_interfaces = ["slurm", "pbs", "pycompss"]
 
 
 @operation()
-def create_vault(address, **kwargs):
+def create_vault(jwt, address, **kwargs):
+    if not jwt:
+        ctx.logger.error("No jwt provided, Vault not properly configured")
+        raise NonRecoverableError("No jwt provided, Vault not properly configured")
+    ctx.instance.runtime_properties['jwt'] = jwt
     if not address:
         ctx.logger.info("No address provided, getting vault address from croupier's config file")
         address = vault.getVaultAddressFromConfiguration()
@@ -80,6 +84,8 @@ def download_vault_credentials(jwt, user, cubbyhole, **kwargs):
     try:
         if not cubbyhole and not user:
             raise NonRecoverableError("If cubbyhole is false, a user must be provided to download Vault credentials")
+
+        ctx.source.instance.runtime_properties['jwt'] = jwt  # Saving JWT token in infrastructure for further usage
 
         # Get token from vault
         token = vault.get_token(user, address, jwt)
@@ -414,7 +420,8 @@ def create_monitor(hpc_exporter_address, grafana_registry_address, **kwargs):
 
 @operation
 def preconfigure_interface_monitor(**kwargs):
-    ctx.source.instance.runtime_properties["monitoring_id"] = ctx.target.instance.runtime_properties["monitoring_id"]
+    ctx.source.instance.runtime_properties["monitoring_id"] = \
+        ctx.target.instance.runtime_properties["monitoring_id"]
     ctx.source.instance.runtime_properties["hpc_exporter_address"] = \
         ctx.target.instance.runtime_properties["hpc_exporter_address"]
     ctx.source.instance.runtime_properties["grafana_registry_address"] = \
@@ -462,7 +469,7 @@ def start_monitoring_hpc(
         # Register monitoring Grafana dashboard
         # TODO Implement dashboard registry by user and not by deployment (needs to be done in Croupier frontend)
         grafana_registry_address = ctx.instance.runtime_properties["grafana_registry_address"]
-        create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label)
+        create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label, infrastructure_interface)
 
     elif simulate:
         ctx.logger.warning('monitor simulated')
@@ -499,13 +506,13 @@ def create_monitoring_collector(hpc_exporter_address, monitoring_id, deployment_
     ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
 
 
-def create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label):
+def create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label, infrastructure_interface):
     payload = {
         "deployment_label": deployment_label,
         "monitoring_id": monitoring_id,
     }
     jwt = ctx.instance.runtime_properties['jwt']
-    url = grafana_registry_address + '/dashboards'
+    url = grafana_registry_address + '/dashboards/' + infrastructure_interface
     headers = {
         "Content-Type": "application/json",
         "Authorization": "Bearer " + jwt
@@ -527,7 +534,10 @@ def stop_monitoring_hpc(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Removes the HPC Exporter's collector """
-
+    #  TODO Current approach removes the collector, as the collector is associated to the deployment
+    #  TODO but on the future approach, collector should be created one per user and infrastructure (if not existing)
+    #  TODO and never removed. It should be remove the job from collector automatically the by collector once it detects
+    #  TODO the job has finished and metrics have been collected.
     if "hpc_exporter_address" in ctx.instance.runtime_properties and \
             ctx.instance.runtime_properties["hpc_exporter_address"]:
         hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
