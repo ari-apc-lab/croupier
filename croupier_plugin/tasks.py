@@ -463,6 +463,7 @@ def start_monitoring_hpc(
             monitor_interface = monitoring_options['monitor_interface'].lower()
 
         # Register monitoring collector
+        # TODO Register collector for infrastructure and user if not yet registered.
         create_monitoring_collector(hpc_exporter_address, monitoring_id, deployment_label, monitor_interface,
                                     monitor_period, hpc_label, only_jobs, credentials)
 
@@ -536,8 +537,9 @@ def stop_monitoring_hpc(
     """ Removes the HPC Exporter's collector """
     #  TODO Current approach removes the collector, as the collector is associated to the deployment
     #  TODO but on the future approach, collector should be created one per user and infrastructure (if not existing)
-    #  TODO and never removed. It should be remove the job from collector automatically the by collector once it detects
-    #  TODO the job has finished and metrics have been collected.
+    #  TODO and never removed by Croupier but by the user from the frontend.
+    #  In current implementation terminated jobs are removed automatically by the collector from its list
+    #  once it detects the job has finished and metrics have been collected.
     if "hpc_exporter_address" in ctx.instance.runtime_properties and \
             ctx.instance.runtime_properties["hpc_exporter_address"]:
         hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
