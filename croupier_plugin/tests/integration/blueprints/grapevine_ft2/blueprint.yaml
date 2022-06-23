@@ -1,0 +1,187 @@
+########
+# Copyright (c) 2019 Atos GREECE SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jeus Ramos Rivas
+#          Atos Research & Innovation, Atos GREECE S.A.
+#          e-mail: jesus.2.ramos@atos.net
+#
+# blueprint_four.yaml
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://www.getcloudify.org/spec/cloudify/6.2.0/types.yaml
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment it out for Cloudify
+
+inputs:
+    jwt:
+      type: string
+    vault_user:
+        type: string
+    base_dir:
+        type: string
+
+
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            jwt: { get_input: jwt }
+            user: { get_input: vault_user }
+
+    cesga_hpc:
+        type: croupier.nodes.InfrastructureInterface
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+            - type: retrieve_credentials_from_vault
+              target: vault
+        properties:
+            recurring_workflow: False
+            config:
+                infrastructure_interface: SLURM
+            credentials:
+                host: ft2.cesga.es
+            job_prefix: 'grapevine'
+            base_dir: { get_input: base_dir }
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            #simulate: True # COMMENT to test against a real HPC
+            workdir_prefix: "Test_Simulation"
+
+    geogrid_00_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_geogrid_TEST.in) 00 GREECE 2022-05-09"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                queue: batch
+
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: cesga_hpc
+
+    ungrib_00_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_ungrib_TEST.in) 00 GREECE 2022-05-09"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:30:00'
+                partition: thinnodes
+                queue: batch
+
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: geogrid_00_greece
+
+    ungribSST_00_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_ungrib_SST_TEST.in) 00 GREECE 2022-05-09"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:10:00'
+                partition: thinnodes
+                queue: batch
+
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: ungrib_00_greece
+
+
+    metgrid_00_greece:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_metgrid_TEST.in) 00 GREECE 2022-05-09"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 24
+                tasks_per_node: 24
+                max_time: '01:15:00'
+                partition: thinnodes
+                queue: batch
+
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: cesga_hpc
+            - type: job_depends_on
+              target: ungribSST_00_greece
+
+
+#deployment_settings:
+#    default_schedules:
+#        configure:
+#            workflow: croupier_configure
+#            since: '2021-10-01 11:20'
+#            recurrence: '1d'
+#            timezone: 'UTC'
+#        main:
+#            workflow: run_jobs
+#            since: '2021-10-01 11:30'
+#            recurrence: '1d'
+#            timezone: 'UTC'
+
+
+outputs:
+    first_job_name:
+        description: first job name
+        value: { get_attribute: [geogrid_00_greece, job_name] }
+    secind_job_name:
+        description: first job name
+        value: { get_attribute: [ungrib_00_greece, job_name] }
+    third_job_name:
+        description: first job name
+        value: { get_attribute: [ungribSST_00_greece, job_name] }
+    fourth_job_name:
+        description: first job name
+        value: { get_attribute: [metgrid_00_greece, job_name] }

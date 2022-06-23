@@ -29,16 +29,13 @@ license information in the project root.
 
 workflow_tests.py
 """
-
 from __future__ import print_function
-
 import logging
 import os
 import unittest
 import errno
 import yaml
 from cloudify.test_utils import workflow_test
-
 
 class TestPlugin(unittest.TestCase):
     """ Test workflows class """
@@ -298,6 +295,17 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # ----------------------------- Grapevine FT2 --------------------------
+    # -------------------------------------------------------------------------------
+
+    @workflow_test(
+        os.path.join('blueprints', 'grapevine_ft2', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='grapevine_ft2')
+    def test_grapevine_ft2(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ---------------------------------- GridFTP-DM -----------------------------------
     # -------------------------------------------------------------------------------
 
@@ -309,13 +317,13 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
-    # ----------------------------- MultiHPC Exporter -------------------------------
+    # ----------------------------- MultiHPC Monitoring -------------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(
-        os.path.join('blueprints', 'multihpc', 'blueprint_multihpc_exporter.yaml'),
+        os.path.join('blueprints', 'multihpc-monitoring', 'blueprint.yaml'),
         copy_plugin_yaml=True,
-        inputs='load_inputs')
-    def test_multihpc_exporter(self, cfy_local):
+        inputs='load_inputs', input_func_args='multihpc-monitoring')
+    def test_multihpc_monitoring(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------

@@ -1,0 +1,152 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint_multihpc_dm.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment it out for Cloudify
+
+inputs:
+####################### VAULT ###################
+    jwt:
+        type: string
+    vault_user:
+        type: string
+
+############## HPC Infrastructures ##############
+    hpc1_host:
+        type: string
+
+    hpc1_scheduler:
+        type: string
+
+    hpc1_queue:
+        type: string
+
+    hpc2_host:
+        type: string
+
+    hpc2_scheduler:
+        type: string
+
+    hpc2_queue:
+        type: string
+
+node_templates:
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            jwt: { get_input: jwt }
+            user: { get_input: vault_user }
+
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    hpc1:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc1_scheduler }
+            credentials:
+                host: { get_input: hpc1_host }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "multihpc-monitoring"
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    hpc2:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc2_scheduler }
+            credentials:
+                host: { get_input: hpc2_host }
+            job_prefix: atos
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+            skip_cleanup: true
+            workdir_prefix: "multihpc-monitoring"
+        relationships:
+            - type: interface_monitored_by
+              target: hpc_exporter
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    job1:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                - "touch test_$1.output"
+                arguments:
+                - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                partition: { get_input: hpc1_queue }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc1
+
+    job2:
+        type: croupier.nodes.Job
+        properties:
+            job_options:
+                commands:
+                    - "touch test_$1.output"
+                arguments:
+                    - script
+                nodes: 1
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '00:01:00'
+                queue: batch
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc2
+            - type: job_depends_on
+              target: job1
+
+outputs:
+    job1_name:
+        description: single job name in the HPC
+        value: { get_attribute: [job1, job_name] }
+    job2_name:
+        description: single job name in the HPC
+        value: { get_attribute: [ job2, job_name ] }

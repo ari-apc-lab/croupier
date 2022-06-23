@@ -243,7 +243,7 @@ class InfrastructureInterface(object):
                                                                  wait_result=True)
             if exit_code != 0:
                 self.logger.error("Scale env vars mapping '" + scale_env_mapping_call + "' failed with code " +
-                                  str(exit_code) + ":\n" + output)
+                                  str(exit_code) + " and output:\n" + output)
                 return False
 
         # submit the job
@@ -252,7 +252,7 @@ class InfrastructureInterface(object):
         output, exit_code = ssh_client.execute_shell_command(call, env=environment, workdir=self.workdir,
                                                              wait_result=True)
         if exit_code != 0:
-            self.logger.error("Job submission '" + call + "' exited with code " + str(exit_code) + ":\n" + output)
+            self.logger.error("Job submission '" + call + "' exited with code " + str(exit_code) + " and output :\n" + output)
             return False
 
         return self._get_jobid(output)
@@ -605,7 +605,7 @@ class InfrastructureInterface(object):
 
         create_call = "echo \"" + script_data + "\" >> " + name + \
                       "; chmod +x " + name
-        _, exit_code = ssh_client.execute_shell_command(
+        output, exit_code = ssh_client.execute_shell_command(
             create_call,
             workdir=self.workdir,
             wait_result=True)
@@ -613,7 +613,7 @@ class InfrastructureInterface(object):
         if exit_code != 0:
             self.logger.error(
                 "failed to create script: call '" + create_call +
-                "', exit code " + str(exit_code))
+                "', exit code: " + str(exit_code) + ", output: " + output)
             return False
 
         return True
@@ -675,7 +675,7 @@ class InfrastructureInterface(object):
         create_call = u'echo \"{script_data}\" >> {name}; chmod {permissions} {name}'\
             .format(script_data=script_data, name=name, permissions=permissions)
 
-        _, exit_code = ssh_client.execute_shell_command(
+        output, exit_code = ssh_client.execute_shell_command(
             create_call,
             workdir=self.workdir,
             wait_result=True)
@@ -683,7 +683,7 @@ class InfrastructureInterface(object):
         if exit_code != 0:
             self.logger.error(
                 "failed to send script: call '" + create_call +
-                "', exit code " + str(exit_code))
+                "', exit code " + str(exit_code) + " , output: " + output)
             return False
 
         return True
