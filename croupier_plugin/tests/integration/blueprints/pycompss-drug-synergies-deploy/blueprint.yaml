@@ -59,9 +59,9 @@ data_types:
 
 inputs:
 ########################## VAULT ######################
-    vault_token:
+    iam_jwt:
         type: string
-    vault_user:
+    iam_user:
         type: string
 
 ################# HPC Infrastructures #################
@@ -69,6 +69,9 @@ inputs:
         type: string
 
     hpc_scheduler:
+        type: string
+
+    monitor_scheduler:
         type: string
 
 ################## DS Infrastructures #################
@@ -96,11 +99,14 @@ inputs:
 
 #################### START WORKFLOW ###################
 node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
     vault:
         type: croupier.nodes.Vault
         properties:
-            token: { get_input: vault_token }
-            user: { get_input: vault_user }
+            jwt: { get_input: iam_jwt }
+            user: { get_input: iam_user }
 
     hpc:
         type: croupier.nodes.InfrastructureInterface
@@ -112,30 +118,28 @@ node_templates:
             job_prefix: croupier
             base_dir: $HOME
             monitoring_options:
-                monitor_period: 15
+                monitor_period: 60
+                monitor_interface: { get_input: monitor_scheduler }
             skip_cleanup: true
             workdir_prefix: "pycompss-drug-synergies-deploy"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
+            - type: interface_monitored_by
+              target: hpc_exporter
 
     job:
         type: croupier.nodes.PyCOMPSsJob
         properties:
             job_options:
                 modules:
-                    - load COMPSs/Trunk
                     - load singularity/3.5.2
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe
-                pre_script:
-                    - unset PYTHONSTARTUP
-                    - unset PYTHONHOME
                 app_name: drug_synergies
                 app_source: permedcoe/mn4_installed_apps/drug-synergies-workflow/Workflow/PyCOMPSs/src
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
-                    - PERMEDCOE_ASSETS: ${PERMEDCOE_ASSETS}
                     - COMPUTING_UNITS: 1
                     - dataset: $HOME/permedcoe/mn4_installed_apps/drug-synergies-workflow/Resources/data
                 compss_args:
@@ -153,7 +157,7 @@ node_templates:
                 bootstrap: "scripts/deploy.sh"
                 revert: "scripts/revert.sh"
                 hpc_execution: false
-            skip_cleanup: False
+            skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc

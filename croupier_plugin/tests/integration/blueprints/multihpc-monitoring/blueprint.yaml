@@ -33,9 +33,9 @@ imports:
 
 inputs:
 ####################### VAULT ###################
-    jwt:
+    iam_jwt:
         type: string
-    vault_user:
+    iam_user:
         type: string
 
 ############## HPC Infrastructures ##############
@@ -61,8 +61,8 @@ node_templates:
     vault:
         type: croupier.nodes.Vault
         properties:
-            jwt: { get_input: jwt }
-            user: { get_input: vault_user }
+            jwt: { get_input: iam_jwt }
+            user: { get_input: iam_user }
 
     hpc_exporter:
         type: croupier.nodes.HPCExporter

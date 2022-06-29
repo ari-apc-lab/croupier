@@ -50,7 +50,7 @@ def get_job_metrics(job_name, ssh_client, workdir, logger):
 
 
 class Pycompss(InfrastructureInterface):
-    pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/2.10; '
+    pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/3.0; '
 
     def initialize(self, credentials, ssh_client):
         pass

@@ -28,8 +28,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin:croupier #For Cloudify
-#    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
 ##################### COVID 19 ARGS ###################
 data_types:
@@ -56,12 +56,15 @@ data_types:
             data_folder:
                 type: string
                 required: true
+            simulation_time:
+                type: integer
+                required: true
 
 inputs:
 ########################## VAULT ######################
-    vault_token:
+    iam_jwt:
         type: string
-    vault_user:
+    iam_user:
         type: string
 
 ################# HPC Infrastructures #################
@@ -105,8 +108,8 @@ node_templates:
     vault:
         type: croupier.nodes.Vault
         properties:
-            token: { get_input: vault_token }
-            user: { get_input: vault_user }
+            jwt: { get_input: iam_jwt }
+            user: { get_input: iam_user }
 
     hpc:
         type: croupier.nodes.InfrastructureInterface
@@ -140,7 +143,6 @@ node_templates:
                 app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
-                    - PERMEDCOE_ASSETS: ${PERMEDCOE_ASSETS}
                     - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
                 compss_args:
                     num_nodes: { get_input: num_nodes }
@@ -156,7 +158,7 @@ node_templates:
                 bootstrap: "scripts/deploy.sh"
                 revert: "scripts/revert.sh"
                 hpc_execution: false
-            skip_cleanup: False
+            skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc

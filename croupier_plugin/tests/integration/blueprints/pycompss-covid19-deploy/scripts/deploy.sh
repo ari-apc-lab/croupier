@@ -1,6 +1,13 @@
 #!/bin/bash
 set -e
 
+# keep track of the last executed command
+trap 'last_command=$current_command; current_command=$BASH_COMMAND' DEBUG
+# echo an error message before exiting
+trap 'echo "\"${last_command}\" command failed with exit code $?."' EXIT
+# register the cleanup function to be called on the EXIT signal
+trap cleanup EXIT
+
 # read arguments
 if [ "$#" -lt 6 ]; then
     echo "Illegal number of parameters.
@@ -54,6 +61,11 @@ if [ -z "$hpc_user" ]; then
   exit 1
 fi
 
+if [ -z "$hpc_pkey"] || [-z "$hpc_password" ]; then
+  echo "Error: Either private key or password not given"
+  exit 1
+fi
+
 if [ -z "$hpc_host" ]; then
   echo "Error: Host not given"
   exit 1
@@ -64,9 +76,6 @@ function cleanup {
   rm -rf "$WORK_DIR"
   echo "Deleted temp working directory $WORK_DIR"
 }
-# register the cleanup function to be called on the EXIT signal
-trap cleanup EXIT
-
 
 DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORK_DIR=$(mktemp -d -p "$DIR")
@@ -92,11 +101,21 @@ echo "Unzipping Covid19 app"
 unzip main.zip covid-19-workflow-main/Resources/data/*
 unzip main.zip covid-19-workflow-main/Workflow/PyCOMPSs/src/*
 
+#Get Covid19 data files
+wget https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE145926\&format=file -O GSE145926_RAW.tar
+mkdir $WORK_DIR/GSE145926_covid19
+tar xvf GSE145926_RAW.tar --directory $WORK_DIR/GSE145926_covid19
+rm $WORK_DIR/GSE145926_covid19/*.csv.gz
+mv $WORK_DIR/GSE145926_covid19 covid-19-workflow-main/Resources/data
+
 #Rsync transfer Covid19 app and data to target HPC using user user's credentials and ssh
 if [ -n "$hpc_pkey" ]; then
+  echo "synchronizing Covid19 app to target HPC..."
   rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $hpc_pkey" covid-19-workflow-main "$hpc_user"@"$hpc_host":permedcoe_apps/covid19
 fi
+
 if [ -n "$hpc_password" ]; then
+  echo "synchronizing Covid19 app to target HPC..."
   rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" covid-19-workflow-main  "$hpc_host":permedcoe_apps/covid19
 fi
 
