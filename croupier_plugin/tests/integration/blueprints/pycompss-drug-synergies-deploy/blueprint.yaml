@@ -136,12 +136,15 @@ node_templates:
                     - load singularity/3.5.2
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe
+                pre_script:
+                    - unset PYTHONSTARTUP
+                    - unset PYTHONHOME
                 app_name: drug_synergies
-                app_source: permedcoe/mn4_installed_apps/drug-synergies-workflow/Workflow/PyCOMPSs/src
+                app_source: permedcoe_apps/drug-synergies/drug-synergies-workflow-main/Workflow/PyCOMPSs/src
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
                     - COMPUTING_UNITS: 1
-                    - dataset: $HOME/permedcoe/mn4_installed_apps/drug-synergies-workflow/Resources/data
+                    - dataset: $HOME/permedcoe_apps/drug-synergies/drug-synergies-workflow-main/Resources/data
                 compss_args:
                     num_nodes: { get_input: num_nodes }
                     exec_time: { get_input: exec_time }

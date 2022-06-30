@@ -271,9 +271,32 @@ class TestPlugin(unittest.TestCase):
     def test_pycompss_drug_synergies_deploy(self, cfy_local):
         self.run_test(cfy_local)
 
+    # -------------------------------------------------------------------------------
+    # ---------------------------- Single Drug Prediction ---------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'pycompss-single-drug-prediction', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='pycompss-single-drug-prediction')
+    def test_pycompss_single_drug_prediction(self, cfy_local):
+        self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
-    # ---------------------------------- MultiHPC-DM -----------------------------------
+    # ----------------------- Single Drug Prediction with Deploy --------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'pycompss-single-drug-prediction-deploy', 'blueprint.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'pycompss-single-drug-prediction-deploy', 'scripts', 'deploy.sh'), 'scripts'),
+            (os.path.join('blueprints', 'pycompss-single-drug-prediction-deploy', 'scripts', 'revert.sh'), 'scripts')
+        ],
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='pycompss-single-drug-prediction-deploy')
+    def test_pycompss_single_drug_prediction_deploy(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- MultiHPC-DM --------------------------------
     # -------------------------------------------------------------------------------
 
     @workflow_test(

@@ -72,34 +72,33 @@ DIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
 WORK_DIR=$(mktemp -d -p "$DIR")
 # check if tmp dir was created
 if [[ ! "$WORK_DIR" || ! -d "$WORK_DIR" ]]; then
-  echo "Could not create temp dir where to download Drug Synergies app"
+  echo "Could not create temp dir where to download Single Drug Prediction app"
   exit 1
 fi
 
-echo "Deploying Drug Synergies into temp working directory $WORK_DIR"
+echo "Deploying Single Drug Prediction into temp working directory $WORK_DIR"
 cd "$WORK_DIR" || exit
 
-# Get Drug Synergies app from Github in temp folder
-echo "Downloading Drug Synergies app into temp working directory $WORK_DIR"
+# Get Single Drug Prediction app from Github in temp folder
+echo "Downloading Single Drug Prediction app into temp working directory $WORK_DIR"
 if [ -z "$github_token" ]; then
-  wget https://github.com/PerMedCoE/drug-synergies-workflow/archive/refs/heads/main.zip
+  wget https://github.com/PerMedCoE/single-drug-prediction-workflow/archive/refs/heads/main.zip
 else
-  wget --header="Authorization: token $github_token" https://github.com/PerMedCoE/drug-synergies-workflow/archive/refs/heads/main.zip
+  wget --header="Authorization: token $github_token" https://github.com/PerMedCoE/single-drug-prediction-workflow/archive/refs/heads/main.zip
 fi
 
 #Unzip repo
-echo "Unzipping Drug Synergies app"
-unzip main.zip drug-synergies-workflow-main/Resources/data/*
-unzip main.zip drug-synergies-workflow-main/Workflow/PyCOMPSs/src/*
-tar xvzf drug-synergies-workflow-main/Resources/data/data_celllines.tar.gz --directory drug-synergies-workflow-main/Resources/data
+echo "Unzipping Single Drug Prediction app"
+unzip main.zip single-drug-prediction-workflow-main/Resources/data/*
+unzip main.zip single-drug-prediction-workflow-main/Workflow/PyCOMPSs/src/*
 
-#Rsync transfer Drug Synergies app and data to target HPC using user user's credentials and ssh
-echo "Transferring Drug Synergies app to $hpc_host:permedcoe_apps/drug-synergies"
+#Rsync transfer Single Drug Prediction app and data to target HPC using user user's credentials and ssh
+echo "Transferring Single Drug Prediction app to $hpc_host:permedcoe_apps/single-drug-prediction"
 if [ -n "$hpc_pkey" ]; then
-  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $hpc_pkey" drug-synergies-workflow-main "$hpc_user"@"$hpc_host":permedcoe_apps/drug-synergies
+  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $hpc_pkey" single-drug-prediction-workflow-main "$hpc_user"@"$hpc_host":permedcoe_apps/single-drug-prediction
 fi
 if [ -n "$hpc_password" ]; then
-  rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" drug-synergies-workflow-main  "$hpc_host":permedcoe_apps/drug-synergies
+  rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" single-drug-prediction-workflow-main  "$hpc_host":permedcoe_apps/single-drug-prediction
 fi
 
 # Remove temp folder

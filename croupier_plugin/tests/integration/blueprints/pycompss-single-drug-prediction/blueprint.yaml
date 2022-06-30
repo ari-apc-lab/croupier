@@ -33,27 +33,36 @@ imports:
 
 ##################### DRUG SYNERGY ARGS ###################
 data_types:
-    permedcoe.drug_synergies.args:
+    permedcoe.single_drug_prediction.args:
         properties:
-            list_genes:
+            cell_list:
                 type: string
                 required: true
-            rnaseq_data:
+            gene_expression:
                 type: string
                 required: true
-            mutation_data:
+            gex:
                 type: string
                 required: true
-            cn_data:
+            gex_n:
                 type: string
                 required: true
-            genes_drugs:
+            progeny:
                 type: string
                 required: true
-            state_objective:
+            network:
+                type: string
+                required: true
+            genelist:
+                type: string
+                required: true
+            jax_input:
                 type: string
                 required: true
             results_folder:
+                type: string
+                required: true
+            results_csvs_folder:
                 type: string
                 required: true
 
@@ -72,8 +81,8 @@ inputs:
         type: string
 
 ################# Drug Synergy application ################
-    drug_synergies_args:
-        type: permedcoe.drug_synergies.args
+    single_drug_prediction_args:
+        type: permedcoe.single_drug_prediction.args
 
 ##################### PYCOMPSs args ###################
     num_nodes:
@@ -101,7 +110,7 @@ node_templates:
             monitoring_options:
                 monitor_period: 15
             skip_cleanup: true
-            workdir_prefix: "pycompss-drug-synergies"
+            workdir_prefix: "pycompss-single-drug-prediction"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -118,12 +127,12 @@ node_templates:
                 pre_script:
                     - unset PYTHONSTARTUP
                     - unset PYTHONHOME
-                app_name: drug-synergies
-                app_source: permedcoe/mn4_installed_apps/drug-synergies-workflow/Workflow/PyCOMPSs/src
+                app_name: single-drug-prediction
+                app_source: permedcoe/mn4_installed_apps/single-drug-prediction-workflow/Workflow/PyCOMPSs/src
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
                     - COMPUTING_UNITS: 1
-                    - dataset: $HOME/permedcoe/mn4_installed_apps/drug-synergies-workflow/Resources/data
+                    - dataset: $HOME/permedcoe/mn4_installed_apps/single-drug-prediction-workflow/Resources/data
                 compss_args:
                     num_nodes: { get_input: num_nodes }
                     exec_time: { get_input: exec_time }
@@ -133,8 +142,8 @@ node_templates:
                     tracing: 'false'
                     python_interpreter: python3
                     qos: debug
-                app_file: '$(pwd)/uc2.py'
-                app_args: { get_input: drug_synergies_args }
+                app_file: '$(pwd)/sdp.py'
+                app_args: { get_input: single_drug_prediction_args }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface

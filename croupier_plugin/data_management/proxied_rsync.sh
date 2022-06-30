@@ -153,8 +153,8 @@ if [ -z ${target_private_key+x} ]; then
 	#Using target_password for rsync authentication
 	#Create target folder if does not exist
 	FLAGS="--safe-links -tarxlzhP"
-	echo "Invoking: sshpass -p $target_password ssh $target_endpoint mkdir -p $target_dir"
-	sshpass -p "$target_password" ssh "$target_endpoint" mkdir -p "$target_dir"
+	echo "Invoking: sshpass -p $target_password ssh -o StrictHostKeyChecking=no $target_endpoint mkdir -p $target_dir"
+	sshpass -p "$target_password" ssh -o StrictHostKeyChecking=no "$target_endpoint" mkdir -p "$target_dir"
 	if [ -z ${source_file+x} ]; then
 		echo "Invoking: rsync --rsh="/usr/bin/sshpass -p "$target_password"" $FLAGS /tmp/sshfstmp/* $target"
 		sshpass -p "$target_password" rsync "$FLAGS" /tmp/sshfstmp/* "$target"
@@ -166,8 +166,8 @@ elif [ -z ${target_password+x} ]; then
 	#Using target_private_key for rsync authentication
 	#Create target folder if does not exist
 	FLAGS="-e 'ssh -o StrictHostKeyChecking=no -i $target_private_key' --safe-links -tarxlzhP"
-	echo "Invoking: ssh -i $target_private_key $target_endpoint mkdir -p $target_dir"
-	ssh -i "$target_private_key" "$target_endpoint" mkdir -p "$target_dir"
+	echo "Invoking: ssh -o StrictHostKeyChecking=no -i $target_private_key $target_endpoint mkdir -p $target_dir"
+	ssh -o StrictHostKeyChecking=no -i "$target_private_key" "$target_endpoint" mkdir -p "$target_dir"
 	if [ -z ${source_file+x} ]; then
 		echo Invoking: rsync "$FLAGS" /tmp/sshfstmp/* "$target"
 		eval rsync "$FLAGS" /tmp/sshfstmp/* "$target"

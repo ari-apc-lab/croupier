@@ -31,33 +31,39 @@ imports:
 #    - plugin:croupier #For Cloudify
     - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
-##################### COVID 19 ARGS ###################
+##################### DRUG SYNERGY ARGS ###################
 data_types:
-    permedcoe.covid19.args:
+    permedcoe.single_drug_prediction.args:
         properties:
-            metadata:
+            cell_list:
                 type: string
                 required: true
-            model_prefix:
+            gene_expression:
                 type: string
                 required: true
-            outdir:
+            gex:
                 type: string
                 required: true
-            ko_file:
+            gex_n:
                 type: string
                 required: true
-            reps:
-                type: integer
-                required: true
-            model:
+            progeny:
                 type: string
                 required: true
-            data_folder:
+            network:
                 type: string
                 required: true
-            simulation_time:
-                type: integer
+            genelist:
+                type: string
+                required: true
+            jax_input:
+                type: string
+                required: true
+            results_folder:
+                type: string
+                required: true
+            results_csvs_folder:
+                type: string
                 required: true
 
 inputs:
@@ -77,22 +83,9 @@ inputs:
     monitor_scheduler:
         type: string
 
-################## DS Infrastructures #################
-    hpc_dai_host:
-        type: string
-
-    hpc_dai_internet_access:
-        type: boolean
-
-    target_dai_host:
-        type: string
-
-    target_dai_internet_access:
-        type: boolean
-
-################# Covid 19 application ################
-    covid19_args:
-        type: permedcoe.covid19.args
+################# Drug Synergy application ################
+    single_drug_prediction_args:
+        type: permedcoe.single_drug_prediction.args
 
 ##################### PYCOMPSs args ###################
     num_nodes:
@@ -121,10 +114,10 @@ node_templates:
             job_prefix: croupier
             base_dir: $HOME
             monitoring_options:
-                monitor_period: 60
+                monitor_period: 15
                 monitor_interface: { get_input: monitor_scheduler }
             skip_cleanup: true
-            workdir_prefix: "covid19-deploy"
+            workdir_prefix: "pycompss-single-drug-prediction-deploy"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -136,25 +129,30 @@ node_templates:
         properties:
             job_options:
                 modules:
+                    - load COMPSs/Trunk
                     - load singularity/3.5.2
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe
-                app_name: covid19
-                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src
+                pre_script:
+                    - unset PYTHONSTARTUP
+                    - unset PYTHONHOME
+                app_name: single-drug-prediction
+                app_source: permedcoe_apps/single-drug-prediction/single-drug-prediction-workflow-main/Workflow/PyCOMPSs/src
                 env:
-                    - COMPSS_PYTHON_VERSION: 3
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
-                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - COMPUTING_UNITS: 1
+                    - dataset: $HOME/permedcoe_apps/single-drug-prediction/single-drug-prediction-workflow-main/Resources/data
                 compss_args:
                     num_nodes: { get_input: num_nodes }
                     exec_time: { get_input: exec_time }
+                    worker_working_dir: $(pwd)
                     log_level: 'off'
                     graph: true
                     tracing: 'false'
                     python_interpreter: python3
                     qos: debug
-                app_file: '$(pwd)/covid19_pilot.py'
-                app_args: { get_input: covid19_args }
+                app_file: '$(pwd)/sdp.py'
+                app_args: { get_input: single_drug_prediction_args }
             deployment:
                 bootstrap: "scripts/deploy.sh"
                 revert: "scripts/revert.sh"
@@ -163,30 +161,12 @@ node_templates:
         relationships:
             - type: task_managed_by_interface
               target: hpc
-            - type: input
-              target: data_small
-            - type: output
-              target: covid_results
             - type: deployment_source
               target: github_data_access_infra
-
 
 #################### END WORKFLOW ###################
 
 #################### START DATAFLOW #################
-
-    #HPC1 DataManagement Infrastructure
-    hpc_data_access_infra:
-        type: croupier.nodes.DataAccessInfrastructure
-        properties:
-            endpoint: { get_input: hpc_dai_host }
-            internet_access: { get_input: hpc_dai_internet_access }
-            supported_protocols:
-                - RSync
-        relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
-
     #GitHub DataManagement Infrastructure
     github_data_access_infra:
         type: croupier.nodes.DataAccessInfrastructure
@@ -197,74 +177,6 @@ node_templates:
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
-
-    #TARGET DataManagement Infrastructure
-    target_data_access_infra:
-        type: croupier.nodes.DataAccessInfrastructure
-        properties:
-            endpoint: { get_input: target_dai_host }
-            internet_access: { get_input: target_dai_internet_access }
-            supported_protocols:
-                - RSync
-        relationships:
-            - type: retrieve_credentials_from_vault
-              target: vault
-
-    #INPUTS
-    data_small:
-        type: croupier.nodes.FileDataSource
-        properties:
-            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
-        relationships:
-            - type: ds_located_at
-              target: hpc_data_access_infra
-
-    data_small_source:
-        type: croupier.nodes.WebDataSource
-        properties:
-            resource: /PerMedCoE/covid-19-workflow/tree/main/Resources/data/small
-        relationships:
-            - type: ds_located_at
-              target: github_data_access_infra
-
-    #OUTPUTS
-    covid_results:
-        type: croupier.nodes.FileDataSource
-        properties:
-            filepath: ${workdir}/results/meta_analysis/
-        relationships:
-            - type: ds_located_at
-              target: hpc_data_access_infra
-
-    covid_results_target:
-        type: croupier.nodes.FileDataSource
-        properties:
-            filepath: ~/permedcoe/apps/covid19/${workdir}
-        relationships:
-            - type: ds_located_at
-              target: target_data_access_infra
-
-    # DATA TRANSFER
-    dt_http:
-        type: croupier.nodes.DataTransfer
-        properties:
-            transfer_protocol: HTTP
-        relationships:
-            - type: from_source
-              target: data_small_source
-            - type: to_target
-              target: data_small
-
-    dt_rsync:
-        type: croupier.nodes.DataTransfer
-        properties:
-            transfer_protocol: RSYNC
-        relationships:
-            - type: from_source
-              target: covid_results
-            - type: to_target
-              target: covid_results_target
-
 #################### END DATAFLOW ###################
 
 outputs:
