@@ -1,5 +1,6 @@
 import tempfile
 
+
 def isDataManagementNode(node):
     return ('croupier.nodes.DataAccessInfrastructure' in node.type_hierarchy or
             'croupier.nodes.DataTransfer' in node.type_hierarchy or
@@ -15,15 +16,16 @@ def getDataTransferInstances(direction, job):
     for rel in job.relationships:
         if rel.type == direction:
             if 'dt_instances' in rel.target.instance.runtime_properties:
-                dt_instances = rel.target.instance.runtime_properties['dt_instances']
-                for instance in dt_instances:
+                _dt_instances = rel.target.instance.runtime_properties['dt_instances']
+                for instance in _dt_instances:
                     from_credentials = instance.get("from_source", {}).get("located_at", {}).get("credentials")
                     if from_credentials:
                         filterOutEmptyValueEntries(from_credentials)
                     to_credentials = instance.get("to_target", {}).get("located_at", {}).get("credentials")
                     if to_credentials:
                         filterOutEmptyValueEntries(to_credentials)
-                break
+                dt_instances.extend(_dt_instances)
+                continue
     return dt_instances
 
 

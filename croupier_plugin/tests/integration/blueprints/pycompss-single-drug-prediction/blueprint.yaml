@@ -41,15 +41,6 @@ data_types:
             gene_expression:
                 type: string
                 required: true
-            gex:
-                type: string
-                required: true
-            gex_n:
-                type: string
-                required: true
-            progeny:
-                type: string
-                required: true
             network:
                 type: string
                 required: true
@@ -120,7 +111,6 @@ node_templates:
         properties:
             job_options:
                 modules:
-                    - load COMPSs/Trunk
                     - load singularity/3.5.2
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe

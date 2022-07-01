@@ -470,7 +470,7 @@ def start_monitoring_hpc(
         # Register monitoring Grafana dashboard
         # TODO Implement dashboard registry by user and not by deployment (needs to be done in Croupier frontend)
         grafana_registry_address = ctx.instance.runtime_properties["grafana_registry_address"]
-        create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label, infrastructure_interface)
+        create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label, monitor_interface)
 
     elif simulate:
         ctx.logger.warning('monitor simulated')

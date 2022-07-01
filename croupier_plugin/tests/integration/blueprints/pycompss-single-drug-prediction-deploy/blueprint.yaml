@@ -41,15 +41,6 @@ data_types:
             gene_expression:
                 type: string
                 required: true
-            gex:
-                type: string
-                required: true
-            gex_n:
-                type: string
-                required: true
-            progeny:
-                type: string
-                required: true
             network:
                 type: string
                 required: true
@@ -82,6 +73,19 @@ inputs:
 
     monitor_scheduler:
         type: string
+
+################## DS Infrastructures #################
+    hpc_dai_host:
+        type: string
+
+    hpc_dai_internet_access:
+        type: boolean
+
+    target_dai_host:
+        type: string
+
+    target_dai_internet_access:
+        type: boolean
 
 ################# Drug Synergy application ################
     single_drug_prediction_args:
@@ -129,7 +133,6 @@ node_templates:
         properties:
             job_options:
                 modules:
-                    - load COMPSs/Trunk
                     - load singularity/3.5.2
                     - use /apps/modules/modulefiles/tools/COMPSs/libraries
                     - load permedcoe
@@ -163,10 +166,29 @@ node_templates:
               target: hpc
             - type: deployment_source
               target: github_data_access_infra
+            - type: input
+              target: cell_list
+            - type: output
+              target: single_drug_prediction_results
+            - type: output
+              target: single_drug_prediction_results_csvs
+
 
 #################### END WORKFLOW ###################
 
 #################### START DATAFLOW #################
+    #HPC1 DataManagement Infrastructure
+    hpc_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: hpc_dai_host }
+            internet_access: { get_input: hpc_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
     #GitHub DataManagement Infrastructure
     github_data_access_infra:
         type: croupier.nodes.DataAccessInfrastructure
@@ -177,6 +199,100 @@ node_templates:
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
+
+    #TARGET DataManagement Infrastructure
+    target_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: target_dai_host }
+            internet_access: { get_input: target_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #INPUTS
+    cell_list_target:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe_apps/single-drug-prediction/single-drug-prediction-workflow-main/Resources/data/cell_list_example.txt
+        relationships:
+            - type: ds_located_at
+              target: hpc_data_access_infra
+
+    cell_list:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /PerMedCoE/single-drug-prediction-workflow/tree/main/Resources/data/cell_list_example.txt
+        relationships:
+            - type: ds_located_at
+              target: github_data_access_infra
+
+    #OUTPUTS
+    single_drug_prediction_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/
+        relationships:
+            - type: ds_located_at
+              target: hpc_data_access_infra
+
+    single_drug_prediction_results_target:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe/apps/single_drug_prediction/${workdir}_results
+        relationships:
+            - type: ds_located_at
+              target: target_data_access_infra
+
+    single_drug_prediction_results_csvs:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results_csvs/
+        relationships:
+            - type: ds_located_at
+              target: hpc_data_access_infra
+
+    single_drug_prediction_results_csvs_target:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe/apps/single_drug_prediction/${workdir}_results_csvs
+        relationships:
+            - type: ds_located_at
+              target: target_data_access_infra
+
+    # DATA TRANSFER
+    dt_http:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: cell_list
+            - type: to_target
+              target: cell_list_target
+
+    dt_rsync_results:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: single_drug_prediction_results
+            - type: to_target
+              target: single_drug_prediction_results_target
+
+    dt_rsync_results_csvs:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: single_drug_prediction_results_csvs
+            - type: to_target
+              target: single_drug_prediction_results_csvs_target
+
 #################### END DATAFLOW ###################
 
 outputs:
