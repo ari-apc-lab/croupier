@@ -86,7 +86,7 @@ if [ -z "$github_token" ]; then
 else
   wget --header="Authorization: token $github_token" https://github.com/PerMedCoE/single-drug-prediction-workflow/archive/refs/heads/main.zip
 fi
-wget https://www.cancerrxgene.org/gdsc1000/GDSC1000_WebResources/Data/preprocessed/Cell_line_RMA_proc_basalExp.txt.zip
+wget --no-check-certificate https://www.cancerrxgene.org/gdsc1000/GDSC1000_WebResources/Data/preprocessed/Cell_line_RMA_proc_basalExp.txt.zip
 
 #Unzip repo
 echo "Unzipping Single Drug Prediction app"
