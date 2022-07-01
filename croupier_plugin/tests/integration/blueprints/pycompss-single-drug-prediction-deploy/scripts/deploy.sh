@@ -86,11 +86,13 @@ if [ -z "$github_token" ]; then
 else
   wget --header="Authorization: token $github_token" https://github.com/PerMedCoE/single-drug-prediction-workflow/archive/refs/heads/main.zip
 fi
+wget https://www.cancerrxgene.org/gdsc1000/GDSC1000_WebResources/Data/preprocessed/Cell_line_RMA_proc_basalExp.txt.zip
 
 #Unzip repo
 echo "Unzipping Single Drug Prediction app"
 unzip main.zip single-drug-prediction-workflow-main/Resources/data/*
 unzip main.zip single-drug-prediction-workflow-main/Workflow/PyCOMPSs/src/*
+unzip Cell_line_RMA_proc_basalExp.txt.zip -d single-drug-prediction-workflow-main/Resources/data
 
 #Rsync transfer Single Drug Prediction app and data to target HPC using user user's credentials and ssh
 echo "Transferring Single Drug Prediction app to $hpc_host:permedcoe_apps/single-drug-prediction"
