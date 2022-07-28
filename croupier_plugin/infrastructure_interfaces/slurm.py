@@ -191,6 +191,14 @@ class Slurm(InfrastructureInterface):
             _settings += _prefix + ' --mem=' + \
                          str(job_settings['memory']) + _suffix
 
+        if _check_job_settings_key('cpu_memory'):
+            _settings += _prefix + ' --mem-per-cpu=' + \
+                         str(job_settings['cpu_memory']) + _suffix
+
+        if _check_job_settings_key('gpu_memory'):
+            _settings += _prefix + ' --mem-per-gpu=' + \
+                         str(job_settings['gpu_memory']) + _suffix
+
         if _check_job_settings_key('reservation'):
             reservation_id = job_settings['reservation']
             _settings += _prefix + ' --reservation=' + str(reservation_id) + _suffix

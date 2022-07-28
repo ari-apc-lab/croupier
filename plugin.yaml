@@ -223,6 +223,14 @@ data_types:
                 description: 'Maximum amount of physical memory used by the job TORQUE (-l mem=XX), SLURM (--mem=XX)'
                 type: string
                 required: false
+            cpu_memory:
+                description: 'Minimum  memory  required  per  allocated CPU. Default units are megabytes. Different  units  can  be  specified  using the suffix [K|M|G|T], SLURM (--mem-per-cpu=XX)'
+                type: string
+                required: false
+            gpu_memory:
+                description: 'Minimum  memory  required  per  allocated GPU. Default units are megabytes. Different  units  can  be  specified  using the suffix [K|M|G|T], SLURM (--mem-per-cpu=XX)'
+                type: string
+                required: false
             mail_user:
                 description: 'Declares the list of users to whom mail is sent by the execution server when it sends mail about the job. TORQUE (-M XX), SLURM (--mail-user=XX)'
                 type: string

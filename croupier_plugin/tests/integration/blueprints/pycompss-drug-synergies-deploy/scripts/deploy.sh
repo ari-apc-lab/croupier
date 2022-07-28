@@ -96,9 +96,11 @@ tar xvzf drug-synergies-workflow-main/Resources/data/data_celllines.tar.gz --dir
 #Rsync transfer Drug Synergies app and data to target HPC using user user's credentials and ssh
 echo "Transferring Drug Synergies app to $hpc_host:permedcoe_apps/drug-synergies"
 if [ -n "$hpc_pkey" ]; then
+  ssh -o StrictHostKeyChecking=no -i "$hpc_pkey" "$hpc_user"@"$hpc_host" mkdir -p permedcoe_apps/drug-synergies
   rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $hpc_pkey" drug-synergies-workflow-main "$hpc_user"@"$hpc_host":permedcoe_apps/drug-synergies
 fi
 if [ -n "$hpc_password" ]; then
+  sshpass -p $hpc_password ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no "$hpc_user"@"$hpc_host" mkdir -p permedcoe_apps/drug-synergies
   rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" drug-synergies-workflow-main  "$hpc_host":permedcoe_apps/drug-synergies
 fi
 

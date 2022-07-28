@@ -318,14 +318,14 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
-    # ----------------------------- Grapevine FT2 --------------------------
+    # ----------------------------- Grapevine FT3 cycle_00_part1--------------------------
     # -------------------------------------------------------------------------------
 
     @workflow_test(
-        os.path.join('blueprints', 'grapevine_ft2', 'blueprint.yaml'),
+        os.path.join('blueprints', 'grapevine_ft3_cycle_00_part1', 'blueprint.yaml'),
         copy_plugin_yaml=True,
-        inputs='load_inputs', input_func_args='grapevine_ft2')
-    def test_grapevine_ft2(self, cfy_local):
+        inputs='load_inputs', input_func_args='grapevine_ft3_cycle_00_part1')
+    def test_grapevine_ft3_cycle_00_part1(self, cfy_local):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------

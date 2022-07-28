@@ -17,11 +17,9 @@
 # See README file for full disclaimer information and LICENSE file for full
 # license information in the project root.
 #
-# @author: Jeus Ramos Rivas
+# @author: Jesus Ramos Rivas
 #          Atos Research & Innovation, Atos GREECE S.A.
 #          e-mail: jesus.2.ramos@atos.net
-#
-# blueprint_four.yaml
 
 tosca_definitions_version: cloudify_dsl_1_3
 
@@ -61,102 +59,90 @@ node_templates:
             config:
                 infrastructure_interface: SLURM
             credentials:
-                host: ft2.cesga.es
-            job_prefix: 'grapevine'
+                host: ft3.cesga.es
+            job_prefix: 'grapevine_cyle_00_part1'
             base_dir: { get_input: base_dir }
             monitoring_options:
-                monitor_period: 15
+                monitor_period: 60
             skip_cleanup: true
             #simulate: True # COMMENT to test against a real HPC
-            workdir_prefix: "Test_Simulation"
+            workdir_prefix: "cycle00_part1"
 
-    geogrid_00_greece:
+    gfs1_00:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_geogrid_TEST.in) 00 GREECE 2022-05-09"
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS_FT3_TEST/TEST_GFS/download_GFS_operational_1.in) 00"
                 arguments:
                 - script
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:10:00'
-                partition: thinnodes
-                queue: batch
-
+                max_time: '01:00:00'
+                cpu_memory: 1G
+                # reservation: { get_input: reservation_id }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: cesga_hpc
 
-    ungrib_00_greece:
+    gfs2_00:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_ungrib_TEST.in) 00 GREECE 2022-05-09"
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS_FT3_TEST/TEST_GFS/download_GFS_operational_2.in) 00"
                 arguments:
                 - script
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:30:00'
-                partition: thinnodes
-                queue: batch
-
+                max_time: '01:00:00'
+                cpu_memory: 1G
+                # reservation: { get_input: reservation_id }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: cesga_hpc
-            - type: job_depends_on
-              target: geogrid_00_greece
 
-    ungribSST_00_greece:
+    gfs3_00:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_ungrib_SST_TEST.in) 00 GREECE 2022-05-09"
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS_FT3_TEST/TEST_GFS/download_GFS_operational_3.in) 00"
                 arguments:
                 - script
                 nodes: 1
                 tasks: 1
                 tasks_per_node: 1
-                max_time: '00:10:00'
-                partition: thinnodes
-                queue: batch
-
+                max_time: '01:00:00'
+                cpu_memory: 1G
+                # reservation: { get_input: reservation_id }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: cesga_hpc
-            - type: job_depends_on
-              target: ungrib_00_greece
 
-
-    metgrid_00_greece:
+    gfs4_00:
         type: croupier.nodes.Job
         properties:
             job_options:
                 commands:
-                - "bash <(sed -n '11,$p' $STORE/a3_Repeat_cases_workflow/NEW_SCRIPTS_2022/TEST_WPS/run_metgrid_TEST.in) 00 GREECE 2022-05-09"
+                - "bash <(sed -n '10,$p' $STORE/a3_climate_model_workflow/NEW_SCRIPTS_FT3_TEST/TEST_GFS/download_GFS_operational_4.in) 00"
                 arguments:
                 - script
                 nodes: 1
-                tasks: 24
-                tasks_per_node: 24
-                max_time: '01:15:00'
-                partition: thinnodes
-                queue: batch
-
+                tasks: 1
+                tasks_per_node: 1
+                max_time: '01:00:00'
+                cpu_memory: 1G
+                # reservation: { get_input: reservation_id }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: cesga_hpc
-            - type: job_depends_on
-              target: ungribSST_00_greece
-
 
 #deployment_settings:
 #    default_schedules:
@@ -175,13 +161,13 @@ node_templates:
 outputs:
     first_job_name:
         description: first job name
-        value: { get_attribute: [geogrid_00_greece, job_name] }
+        value: { get_attribute: [gfs1_00, job_name] }
     secind_job_name:
         description: first job name
-        value: { get_attribute: [ungrib_00_greece, job_name] }
+        value: { get_attribute: [gfs2_00, job_name] }
     third_job_name:
         description: first job name
-        value: { get_attribute: [ungribSST_00_greece, job_name] }
+        value: { get_attribute: [gfs3_00, job_name] }
     fourth_job_name:
         description: first job name
-        value: { get_attribute: [metgrid_00_greece, job_name] }
+        value: { get_attribute: [gfs4_00, job_name] }
