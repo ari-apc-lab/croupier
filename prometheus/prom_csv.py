@@ -61,6 +61,8 @@ else:
 # period
 if not period:
     period = '[1h]'
+else:
+    period = '[' + period + ']'
 
 # labels
 if labels:
