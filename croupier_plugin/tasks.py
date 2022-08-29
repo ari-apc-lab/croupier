@@ -288,8 +288,9 @@ def configure_execution(
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
         interface_type = config['infrastructure_interface']
+        interface_modules = config['modules'] if "modules" in config else []
         ctx.logger.info(' - manager: {interface_type}'.format(interface_type=interface_type))
-        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir_prefix)
+        wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, workdir_prefix)
         if not wm:
             raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
 
@@ -310,9 +311,6 @@ def configure_execution(
             client.close_connection()
             raise NonRecoverableError("Failed executing on the infrastructure: exit code " + str(exit_code))
         ctx.instance.runtime_properties['login'] = exit_code == 0
-
-        # Initialize Scheduler (required by some but not all schedulers: e.g. PyCOMPSs)
-        wm.initialize(credentials, client)
 
         prefix = workdir_prefix if workdir_prefix else ctx.blueprint.name
         workdir = wm.create_new_workdir(client, base_dir, prefix)
@@ -349,7 +347,8 @@ def cleanup_execution(
     if not simulate:
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = config['infrastructure_interface']
-        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
+        interface_modules = config['modules'] if "modules" in config else []
+        wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, workdir)
         if not wm:
             raise NonRecoverableError(
                 "Infrastructure Interface '" +
@@ -588,6 +587,7 @@ def preconfigure_task(
             ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
         ctx.source.instance.runtime_properties['monitoring_options'] = monitoring_options
         ctx.source.instance.runtime_properties['infrastructure_interface'] = config['infrastructure_interface']
+        ctx.source.instance.runtime_properties['wm_modules'] = config['modules'] if 'modules' in config else []
         ctx.source.instance.runtime_properties['reservation_deletion_path'] = config['reservation_deletion_path']
         ctx.source.instance.runtime_properties['timezone'] = config['country_tz']
         ctx.source.instance.runtime_properties['simulate'] = simulate
@@ -636,12 +636,14 @@ def configure_job(
         workdir = ctx.instance.runtime_properties['workdir']
         name = "bootstrap_" + ctx.instance.id + ".sh"
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+        interface_modules = ctx.instance.runtime_properties['wm_modules'] \
+            if "wm_modules" in ctx.instance.runtime_properties else []
         bootstrap = deployment['bootstrap']
         execution_in_hpc = deployment['hpc_execution']
         #  Get deployment source if set
         deployment_source_credentials = getJobDeploymentSourceCredentials()
-        if deploy_job(bootstrap, inputs, execution_in_hpc, credentials, interface_type, workdir, name,
-                      ctx.logger, skip_cleanup, deployment_source_credentials):
+        if deploy_job(bootstrap, inputs, execution_in_hpc, credentials, interface_type, interface_modules,
+                      workdir, name, ctx.logger, skip_cleanup, deployment_source_credentials):
             ctx.logger.info('..job bootstraped')
         else:
             ctx.logger.error('Job not bootstraped')
@@ -654,10 +656,12 @@ def configure_job(
 
     #  Deploy job if WM scheduler is PyCOMPSs
     interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+    interface_modules = ctx.instance.runtime_properties['wm_modules'] \
+        if "wm_modules" in ctx.instance.runtime_properties else []
     if interface_type == "PYCOMPSS":
         credentials = ctx.instance.runtime_properties['credentials']
         workdir = ctx.instance.runtime_properties['workdir']
-        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
+        wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, workdir)
         if not wm:
             raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
         ssh_client = SshClient(credentials)
@@ -698,11 +702,13 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
             workdir = ctx.instance.runtime_properties['workdir']
             name = "revert_" + ctx.instance.id + ".sh"
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+            interface_modules = ctx.instance.runtime_properties['wm_modules'] \
+                if "wm_modules" in ctx.instance.runtime_properties else []
             revert = deployment['revert']
             execution_in_hpc = deployment['hpc_execution']
             #  Get deployment source if set
             deployment_source_credentials = getJobDeploymentSourceCredentials()
-            if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, workdir, name, ctx.logger,
+            if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, interface_modules, workdir, name, ctx.logger,
                           skip_cleanup, deployment_source_credentials):
                 ctx.logger.info('..job reverted')
             else:
@@ -718,11 +724,11 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
         ctx.logger.warning('Job {0} was not reverted as it was not configured'.format(ctx.instance.id))
 
 
-def deploy_job(script, inputs, execution_in_hpc, credentials, interface_type, workdir, name, logger,
+def deploy_job(script, inputs, execution_in_hpc, credentials, interface_type, wm_modules, workdir, name, logger,
                skip_cleanup, deployment_source_credentials):  # pylint: disable=W0613
     """ Exec a deployment job script that receives SSH credentials as input """
 
-    wm = InfrastructureInterface.factory(interface_type, logger, workdir)
+    wm = InfrastructureInterface.factory(interface_type, wm_modules, logger, workdir)
     if not wm:
         raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
 
@@ -837,9 +843,12 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
         interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+        interface_modules = ctx.instance.runtime_properties['wm_modules'] \
+            if "wm_modules" in ctx.instance.runtime_properties else []
+
         client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-        wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
+        wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, workdir)
         if not wm:
             client.close_connection()
             raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
@@ -889,9 +898,11 @@ def delete_reservation(**kwargs):
         return
     reservation_id = ctx.instance.runtime_properties['reservation']
     interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+    interface_modules = ctx.instance.runtime_properties['wm_modules'] \
+        if "wm_modules" in ctx.instance.runtime_properties else []
     client = SshClient(ctx.instance.runtime_properties['credentials'])
     deletion_path = ctx.instance.runtime_properties['reservation_deletion_path']
-    wm = InfrastructureInterface.factory(interface_type, ctx.logger, '')
+    wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, '')
     if not wm:
         client.close_connection()
         raise NonRecoverableError(
@@ -939,9 +950,11 @@ def cleanup_job(job_options, skip, **kwargs):  # pylint: disable=W0613
                 type_hierarchy
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+            interface_modules = ctx.instance.runtime_properties['wm_modules'] \
+                if "wm_modules" in ctx.instance.runtime_properties else []
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
+            wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
@@ -979,9 +992,12 @@ def stop_job(job_options, **kwargs):  # pylint: disable=W0613
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
             interface_type = ctx.instance.runtime_properties['infrastructure_interface']
+            interface_modules = ctx.instance.runtime_properties['wm_modules'] \
+                if "wm_modules" in ctx.instance.runtime_properties else []
+
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
-            wm = InfrastructureInterface.factory(interface_type, ctx.logger, workdir)
+            wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, workdir)
             if not wm:
                 client.close_connection()
                 raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
