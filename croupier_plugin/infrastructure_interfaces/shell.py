@@ -31,7 +31,7 @@ from croupier_plugin.infrastructure_interfaces import infrastructure_interface
 
 class Shell(infrastructure_interface.InfrastructureInterface):
 
-    def initialize(self, credentials, ssh_client):
+    def initialize(self, modules):
         pass  # Not required
 
     def _get_jobid(self, output):

@@ -143,23 +143,27 @@ class InfrastructureInterface(object):
         # self.audit_inserted = False
 
     @staticmethod
-    def factory(infrastructure_interface, logger, workdir, monitor_start_time=None, timezone='UTC'):
+    def factory(infrastructure_interface, wm_modules, logger, workdir, monitor_start_time=None, timezone='UTC'):
+        wm = None
         if infrastructure_interface == "SLURM":
             from croupier_plugin.infrastructure_interfaces.slurm import Slurm
-            return Slurm(infrastructure_interface, logger, workdir, monitor_start_time, timezone)
-        if infrastructure_interface == "TORQUE":
+            wm = Slurm(infrastructure_interface, logger, workdir, monitor_start_time, timezone)
+        elif infrastructure_interface == "TORQUE":
             from croupier_plugin.infrastructure_interfaces.torque import Torque
-            return Torque(infrastructure_interface, logger, workdir)
-        if infrastructure_interface == "PBSPRO":
+            wm = Torque(infrastructure_interface, logger, workdir)
+        elif infrastructure_interface == "PBSPRO":
             from croupier_plugin.infrastructure_interfaces.pbspro import Pbspro
-            return Pbspro(infrastructure_interface, logger, workdir)
-        if infrastructure_interface == "SHELL":
+            wm = Pbspro(infrastructure_interface, logger, workdir)
+        elif infrastructure_interface == "SHELL":
             from croupier_plugin.infrastructure_interfaces.shell import Shell
-            return Shell(infrastructure_interface, logger, workdir)
-        if infrastructure_interface == "PYCOMPSS":
+            wm = Shell(infrastructure_interface, logger, workdir)
+        elif infrastructure_interface == "PYCOMPSS":
             from croupier_plugin.infrastructure_interfaces.pycompss import Pycompss
-            return Pycompss(infrastructure_interface, logger, workdir)
-        return None
+            wm = Pycompss(infrastructure_interface, logger, workdir)
+
+        # Initialize Scheduler (required by some but not all schedulers: e.g. PyCOMPSs)
+        wm.initialize(wm_modules)
+        return wm
 
     def submit_job(self,
                    ssh_client,
@@ -710,11 +714,12 @@ class InfrastructureInterface(object):
         raise NotImplementedError(
             "'_add_audit' not implemented.")
 
-    def initialize(self, credentials, ssh_client):
+    def initialize(self, credentials, modules, ssh_client):
         """
         Initialize scheduler for user (given credentials) in infrastructure if required (e.g. PyCOMPSs)
         @type credentials: dictionary
         @param credentials: user's credentials for infrastructure
+        @param modules: modules required to be load before using the infrastructure scheduler
         @type ssh_client: SshClient
         @param ssh_client: ssh client
         """

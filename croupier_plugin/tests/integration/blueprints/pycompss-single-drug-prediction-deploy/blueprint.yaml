@@ -71,6 +71,9 @@ inputs:
     hpc_scheduler:
         type: string
 
+    hpc_scheduler_modules:
+        type: list
+
     monitor_scheduler:
         type: string
 
@@ -88,6 +91,9 @@ inputs:
         type: boolean
 
 ################# Drug Synergy application ################
+    job_pre_script:
+        type: list
+
     single_drug_prediction_args:
         type: permedcoe.single_drug_prediction.args
 
@@ -113,6 +119,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc_scheduler }
+                modules: { get_input: hpc_scheduler_modules}
             credentials:
                 host: { get_input: hpc_host }
             job_prefix: croupier
@@ -132,13 +139,7 @@ node_templates:
         type: croupier.nodes.PyCOMPSsJob
         properties:
             job_options:
-                modules:
-                    - load singularity/3.5.2
-                    - use /apps/modules/modulefiles/tools/COMPSs/libraries
-                    - load permedcoe
-                pre_script:
-                    - unset PYTHONSTARTUP
-                    - unset PYTHONHOME
+                pre_script: { get_input: job_pre_script}
                 app_name: single-drug-prediction
                 app_source: permedcoe_apps/single-drug-prediction/single-drug-prediction-workflow-main/Workflow/PyCOMPSs/src
                 env:

@@ -216,7 +216,8 @@ class SshClient(object):
                               cmd,
                               workdir=None,
                               env=None,
-                              wait_result=False):
+                              wait_result=False,
+                              get_pty=False):
         """ Execute the command remotely
         - if workdir is set: in the specific workdir
         - if defined, env is a list of string keypairs to set env variables.
@@ -233,13 +234,14 @@ class SshClient(object):
             call += "cd " + workdir + " && "
 
         call += cmd
-        return self.send_command(call, wait_result=wait_result)
+        return self.send_command(call, wait_result=wait_result, get_pty=get_pty)
 
     def send_command(self,
                      command,
                      exec_timeout=3000,
                      read_chunk_timeout=500,
-                     wait_result=False):
+                     wait_result=False,
+                     get_pty=False):
         """Sends a command and returns stdout, stderr and exitcode"""
 
         # Check if connection is made previously
@@ -253,7 +255,7 @@ class SshClient(object):
             retries = 3
             while True:
                 try:
-                    stdin, stdout, stderr = self._client.exec_command(cmd, timeout=exec_timeout)
+                    stdin, stdout, stderr = self._client.exec_command(cmd, timeout=exec_timeout, get_pty=get_pty)
                 except (SSHException, socket.error) as se:
                     if retries > 0:
                         retries -= 1

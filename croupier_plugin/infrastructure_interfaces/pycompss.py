@@ -52,8 +52,10 @@ def get_job_metrics(job_name, ssh_client, workdir, logger):
 class Pycompss(InfrastructureInterface):
     pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/3.0; '
 
-    def initialize(self, credentials, ssh_client):
-        pass
+    def initialize(self, modules):
+        # TODO override pycompss_command_prefix if modules provided in blueprint
+        if len(modules) > 1:
+            self.pycompss_command_prefix = ';'.join(modules) + ';'
 
     def deploy_app(self, job_settings, workdir, ssh_client):
         if 'app_name' not in job_settings:
@@ -76,7 +78,7 @@ class Pycompss(InfrastructureInterface):
                 local_source=app_source, remote_dir=workdir)
 
         # Execute PyCOMPSs app deployment
-        msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True)
+        msg, exit_code = ssh_client.execute_shell_command(_command, wait_result=True, get_pty=True)
 
         if exit_code != 0:
             ssh_client.close_connection()
@@ -205,7 +207,7 @@ class Pycompss(InfrastructureInterface):
             command=command, job=context.node.name
         ))
         output, exit_code = ssh_client.execute_shell_command(command, env=environment, workdir=self.workdir,
-                                                             wait_result=True)
+                                                             wait_result=True, get_pty=True)
         if exit_code != 0:
             self.logger.error("Job submission '" + command + "' exited with code " + str(exit_code) + ":\n" + output)
             return False
@@ -246,7 +248,8 @@ class Pycompss(InfrastructureInterface):
 
         if 'pre_script' in job_settings:
             for script_cmd in job_settings['pre_script']:
-                _command += ' ' + script_cmd + '; '
+                if script_cmd:
+                    _command += ' ' + script_cmd + '; '
 
         # PATCH environment variables declared before pycompss invocation with export
         # Comment/Delete this code block when they can be passed to pycompss with -e flag

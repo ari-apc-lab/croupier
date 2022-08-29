@@ -66,7 +66,9 @@ class JobRequester(object):
                     workdir = settings['workdir']
                     timezone = settings['timezone']
                     interface_type = settings['type']
-                    wm = InfrastructureInterface.factory(interface_type, logger, workdir, monitor_start_time, timezone)
+                    interface_modules = settings['modules'] if "modules" in settings else []
+                    wm = InfrastructureInterface.factory(interface_type, interface_modules,
+                                                         logger, workdir, monitor_start_time, timezone)
                     if wm:
                         states, audits = wm.get_states(settings['config'], settings['names'])
                     else:

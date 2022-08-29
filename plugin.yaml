@@ -48,6 +48,10 @@ data_types:
                 description: Scheduler type.
                 type: string
                 required: true
+            modules:
+                description: 'Modules to load before using the scheduler'
+                type: list
+                required: false
             country_tz:
                 description: Timezone
                 type: string

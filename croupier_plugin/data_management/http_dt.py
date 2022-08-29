@@ -11,8 +11,6 @@ from croupier_plugin.data_management.data_management import saveKeyInTemporaryFi
 
 import shutil
 
-target_private_key = None
-
 
 def thereIsOnlyOneFileInDirectory(path):
     return len([name for name in os.listdir(path) if os.path.isfile(os.path.join(path, name))]) == 1
@@ -52,6 +50,7 @@ class HttpDataTransfer(DataTransfer):
             self.process_http_transfer()
 
     def process_http_transfer(self):
+        ssh_client = None
         try:
             ctx.logger.info('Processing http data transfer from source {} to target {}'.format(
                 self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
@@ -102,7 +101,8 @@ class HttpDataTransfer(DataTransfer):
             raise
         finally:
             if 'ssh_client' in locals():
-                ssh_client.close_connection()
+                if ssh_client:
+                    ssh_client.close_connection()
 
     def create_http_get_command_template(self, from_source_data_url, from_source_infra_endpoint):
         # Support transfer data from GitHub
@@ -184,6 +184,8 @@ class HttpDataTransfer(DataTransfer):
 
     def process_http_transfer_with_proxy(self):
         temporary_dir = None
+        target_password = None
+        target_private_key = None
         try:
             ctx.logger.info('Processing http data transfer proxied by Croupier from source {} to target {}'.format(
                 self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
@@ -220,7 +222,6 @@ class HttpDataTransfer(DataTransfer):
                 to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']
 
                 target_username = to_target_infra_credentials['user']
-                target_password = None
 
                 source_is_file = thereIsOnlyOneFileInDirectory(temporary_dir)
                 target_is_file = isFile(to_target_data_url)
@@ -303,6 +304,8 @@ class HttpDataTransfer(DataTransfer):
         source_credentials = self.dt_config['from_source']['located_at']['credentials']
         dt_command_template = 'cd {temp_dir}; '
         # Support transfer data from GitHub
+        pattern = None
+        replacement = None
         if "github.com" in from_source_infra_endpoint:  # get command based on svn for github
             if 'tree' in from_source_infra_endpoint:
                 if 'main' in from_source_infra_endpoint:

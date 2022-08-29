@@ -44,7 +44,7 @@ import datetime, time
 class Pbspro(InfrastructureInterface):
     """ Holds the PBS functions. Acts similarly to the class `Slurm`."""
 
-    def initialize(self, credentials, ssh_client):
+    def initialize(self, modules):
         pass  # Not required
 
     def _get_jobid(self, output):
