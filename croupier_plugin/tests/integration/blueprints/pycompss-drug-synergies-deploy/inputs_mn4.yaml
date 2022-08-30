@@ -33,7 +33,7 @@ drug_synergies_args:
 pycompss_args:
   project_name: ''
   num_nodes: 2
-  exec_time: 20
+  exec_time: 30
   worker_working_dir: $(pwd)
   log_level: 'off'
   graph: true
