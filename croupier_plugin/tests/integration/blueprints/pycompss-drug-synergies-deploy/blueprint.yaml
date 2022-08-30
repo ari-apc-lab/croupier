@@ -71,6 +71,9 @@ inputs:
     hpc_scheduler:
         type: string
 
+    hpc_scheduler_modules:
+        type: list
+
     monitor_scheduler:
         type: string
 
@@ -88,14 +91,15 @@ inputs:
         type: boolean
 
 ################# Drug Synergies application ################
+    job_pre_script:
+        type: list
+
     drug_synergies_args:
         type: permedcoe.drug_synergies.args
 
 ##################### PYCOMPSs args ###################
-    num_nodes:
-        type: integer
-    exec_time:
-        type: integer
+    pycompss_args:
+        type: croupier.datatypes.pycompss_options
 
 #################### START WORKFLOW ###################
 node_templates:
@@ -113,6 +117,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc_scheduler }
+                modules: { get_input: hpc_scheduler_modules}
             credentials:
                 host: { get_input: hpc_host }
             job_prefix: croupier
@@ -132,28 +137,14 @@ node_templates:
         type: croupier.nodes.PyCOMPSsJob
         properties:
             job_options:
-                modules:
-                    - load singularity/3.5.2
-                    - use /apps/modules/modulefiles/tools/COMPSs/libraries
-                    - load permedcoe
-                pre_script:
-                    - unset PYTHONSTARTUP
-                    - unset PYTHONHOME
+                pre_script: { get_input: job_pre_script}
                 app_name: drug_synergies
                 app_source: permedcoe_apps/drug-synergies/drug-synergies-workflow-main/Workflow/PyCOMPSs/src
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
                     - COMPUTING_UNITS: 1
                     - dataset: $HOME/permedcoe_apps/drug-synergies/drug-synergies-workflow-main/Resources/data
-                compss_args:
-                    num_nodes: { get_input: num_nodes }
-                    exec_time: { get_input: exec_time }
-                    worker_working_dir: $(pwd)
-                    log_level: 'off'
-                    graph: true
-                    tracing: 'false'
-                    python_interpreter: python3
-                    qos: debug
+                compss_args: { get_input: pycompss_args }
                 app_file: '$(pwd)/uc2.py'
                 app_args: { get_input: drug_synergies_args }
             deployment:

@@ -1,0 +1,45 @@
+# VAULT
+iam_jwt: ''
+iam_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# HPC
+hpc_host: mahti.csc.fi
+hpc_scheduler: PYCOMPSS
+hpc_scheduler_modules:
+  - module load COMPSs/3.0
+  - module use /scratch/project_2003929/PerMedCoE/modulefiles
+  - module load permedcoe
+monitor_scheduler: SLURM
+
+# SINGLE DRUG PREDICTION args
+job_pre_script:
+  -
+single_drug_prediction_args:
+  cell_list: "--cell_list ${dataset}/cell_list_example.txt"
+  gene_expression: '--gene_expression ${dataset}/Cell_line_RMA_proc_basalExp.txt'
+  network: '--network ${dataset}/network.csv'
+  genelist: '--genelist $(pwd)/results_csvs/genelist.csv'
+  jax_input: '--jax_input ${dataset}/IC50'
+  results_folder: '--results_folder $(pwd)/results/'
+  results_csvs_folder: '--results_csvs_folder $(pwd)/results_csvs/'
+
+# PYCOMPSs args
+pycompss_args:
+  project_name: "project_2003929"
+  num_nodes: 2
+  exec_time: 20
+  worker_working_dir: $(pwd)
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: ''
+
+# DATAFLOW
+hpc_dai_host: mahti.csc.fi
+hpc_dai_internet_access: false
+
+target_dai_host: sodalite-fe.hlrs.de
+target_dai_internet_access: false

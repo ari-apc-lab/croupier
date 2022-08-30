@@ -1,0 +1,49 @@
+# VAULT
+iam_jwt: ''
+iam_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# HPC
+hpc_host: mn1.bsc.es
+hpc_scheduler: PYCOMPSS
+hpc_scheduler_modules:
+  - export COMPSS_PYTHON_VERSION=3
+  - module load COMPSs/3.0
+  - module load singularity/3.5.2
+  - module use /apps/modules/modulefiles/tools/COMPSs/libraries
+  - module load permedcoe
+monitor_scheduler: SLURM
+
+# DRUG SYNERGIES args
+job_pre_script:
+  - unset PYTHONSTARTUP
+  - unset PYTHONHOME
+  -
+drug_synergies_args:
+  list_genes: '${dataset}/Sub_genes.csv'
+  rnaseq_data: '${dataset}/rnaseq_fpkm_20191101.csv'
+  mutation_data: '${dataset}/mutations_20191101.csv'
+  cn_data: '${dataset}/cnv_gistic_20191101.csv'
+  genes_drugs: '${dataset}/genes_druggable.csv'
+  state_objective: '${dataset}/genes_target.csv'
+  results_folder: '$(pwd)/results/'
+
+# PYCOMPSs args
+pycompss_args:
+  project_name: ''
+  num_nodes: 2
+  exec_time: 20
+  worker_working_dir: $(pwd)
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: 'debug'
+
+# DATAFLOW
+hpc_dai_host: dt01.bsc.es
+hpc_dai_internet_access: false
+
+target_dai_host: sodalite-fe.hlrs.de
+target_dai_internet_access: false

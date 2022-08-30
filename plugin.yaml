@@ -514,6 +514,10 @@ data_types:
                 description: 'Path to the project XML file'
                 type: string
                 required: false
+            project_name:
+                description: 'Project name associated to PyCOMPSs installation in local HPC'
+                type: string
+                required: false
             resources:
                 description: 'Path to the resources XML file'
                 type: string

@@ -90,7 +90,7 @@ inputs:
     target_dai_internet_access:
         type: boolean
 
-################# Drug Synergy application ################
+################# Single Drug Prediction application ################
     job_pre_script:
         type: list
 
@@ -98,10 +98,9 @@ inputs:
         type: permedcoe.single_drug_prediction.args
 
 ##################### PYCOMPSs args ###################
-    num_nodes:
-        type: integer
-    exec_time:
-        type: integer
+    pycompss_args:
+        type: croupier.datatypes.pycompss_options
+
 
 #################### START WORKFLOW ###################
 node_templates:
@@ -125,7 +124,7 @@ node_templates:
             job_prefix: croupier
             base_dir: $HOME
             monitoring_options:
-                monitor_period: 15
+                monitor_period: 60
                 monitor_interface: { get_input: monitor_scheduler }
             skip_cleanup: true
             workdir_prefix: "pycompss-single-drug-prediction-deploy"
@@ -146,15 +145,7 @@ node_templates:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
                     - COMPUTING_UNITS: 1
                     - dataset: $HOME/permedcoe_apps/single-drug-prediction/single-drug-prediction-workflow-main/Resources/data
-                compss_args:
-                    num_nodes: { get_input: num_nodes }
-                    exec_time: { get_input: exec_time }
-                    worker_working_dir: $(pwd)
-                    log_level: 'off'
-                    graph: true
-                    tracing: 'false'
-                    python_interpreter: python3
-                    qos: debug
+                compss_args: { get_input: pycompss_args }
                 app_file: '$(pwd)/sdp.py'
                 app_args: { get_input: single_drug_prediction_args }
             deployment:

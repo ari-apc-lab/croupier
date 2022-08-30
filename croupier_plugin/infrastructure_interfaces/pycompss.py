@@ -53,7 +53,7 @@ class Pycompss(InfrastructureInterface):
     pycompss_command_prefix = 'export COMPSS_PYTHON_VERSION=3; module load COMPSs/3.0; '
 
     def initialize(self, modules):
-        # TODO override pycompss_command_prefix if modules provided in blueprint
+        # override pycompss_command_prefix if modules provided in blueprint
         if len(modules) > 1:
             self.pycompss_command_prefix = ';'.join(modules) + ';'
 
@@ -117,7 +117,7 @@ class Pycompss(InfrastructureInterface):
         pass
 
     def _get_jobid(self, output):
-        return output.split('\n')[0].split(' ')[-1].strip()
+        return output.strip().split('\n')[-1].split(' ')[-1].strip()
 
     def _build_job_cancellation_call(self, name, job_settings):
         """
