@@ -61,7 +61,7 @@ if [ -z "$hpc_user" ]; then
   exit 1
 fi
 
-if [ -z "$hpc_pkey"] || [-z "$hpc_password" ]; then
+if [ -z "$hpc_pkey" ] && [ -z "$hpc_password" ]; then
   echo "Error: Either private key or password not given"
   exit 1
 fi
@@ -117,6 +117,23 @@ fi
 if [ -n "$hpc_password" ]; then
   echo "synchronizing Covid19 app to target HPC..."
   rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" covid-19-workflow-main  "$hpc_host":permedcoe_apps/covid19
+fi
+
+
+# Edit routes in covid-19-workflow-main/Resources/data/metadata_clean.ts
+
+if [ -n "$hpc_pkey" ]; then
+  echo "editing paths in covid-19-workflow-main/Resources/data/metadata_clean.ts..."
+  pwd=`ssh -i "$hpc_pkey" "$hpc_user"@"$hpc_host" pwd`
+  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/metadata_clean.tsv"
+  ssh -i "$hpc_pkey" "$hpc_user"@"$hpc_host" "$cmd"
+fi
+
+if [ -n "$hpc_password" ]; then
+  echo "editing paths in covid-19-workflow-main/Resources/data/metadata_clean.ts..."
+  pwd=`sshpass -p "$hpc_password" ssh "$hpc_user"@"$hpc_host" pwd`
+  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/metadata_clean.tsv"
+  sshpass -p "$hpc_password" ssh "$hpc_user"@"$hpc_host" "$cmd"
 fi
 
 # Remove temp folder

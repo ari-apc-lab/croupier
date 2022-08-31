@@ -74,6 +74,9 @@ inputs:
     hpc_scheduler:
         type: string
 
+    hpc_scheduler_modules:
+        type: list
+
     monitor_scheduler:
         type: string
 
@@ -91,14 +94,15 @@ inputs:
         type: boolean
 
 ################# Covid 19 application ################
+    job_pre_script:
+        type: list
+
     covid19_args:
         type: permedcoe.covid19.args
 
 ##################### PYCOMPSs args ###################
-    num_nodes:
-        type: integer
-    exec_time:
-        type: integer
+    pycompss_args:
+        type: croupier.datatypes.pycompss_options
 
 #################### START WORKFLOW ###################
 node_templates:
@@ -116,6 +120,7 @@ node_templates:
         properties:
             config:
                 infrastructure_interface: { get_input: hpc_scheduler }
+                modules: { get_input: hpc_scheduler_modules}
             credentials:
                 host: { get_input: hpc_host }
             job_prefix: croupier
@@ -135,24 +140,14 @@ node_templates:
         type: croupier.nodes.PyCOMPSsJob
         properties:
             job_options:
-                modules:
-                    - load singularity/3.5.2
-                    - use /apps/modules/modulefiles/tools/COMPSs/libraries
-                    - load permedcoe
+                pre_script: { get_input: job_pre_script}
                 app_name: covid19
                 app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src
                 env:
                     - COMPSS_PYTHON_VERSION: 3
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
                     - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
-                compss_args:
-                    num_nodes: { get_input: num_nodes }
-                    exec_time: { get_input: exec_time }
-                    log_level: 'off'
-                    graph: true
-                    tracing: 'false'
-                    python_interpreter: python3
-                    qos: debug
+                compss_args: { get_input: pycompss_args }
                 app_file: '$(pwd)/covid19_pilot.py'
                 app_args: { get_input: covid19_args }
             deployment:

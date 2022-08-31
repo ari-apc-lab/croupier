@@ -1,0 +1,46 @@
+# VAULT
+iam_jwt: ''
+iam_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# HPC
+hpc_host: mn1.bsc.es
+hpc_scheduler: PYCOMPSS
+hpc_scheduler_modules:
+  - export COMPSS_PYTHON_VERSION=3
+  - module load COMPSs/3.0
+  - module load singularity/3.5.2
+  - module use /apps/modules/modulefiles/tools/COMPSs/libraries
+  - module load permedcoe
+monitor_scheduler: SLURM
+
+# COVID19 args
+job_pre_script:
+  -
+covid19_args:
+  metadata: '${dataset}/metadata_clean.tsv'
+  model_prefix: '${dataset}/epithelial_cell_2'
+  outdir: '$(pwd)/results/'
+  ko_file: '$(pwd)/ko_file.txt'
+  reps: 2
+  model: 'epithelial_cell_2'
+  data_folder: '${dataset}'
+  simulation_time: 100
+
+# PYCOMPSs args
+pycompss_args:
+  num_nodes: 2
+  exec_time: 45
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: debug
+
+# DATAFLOW
+hpc_dai_host: dt01.bsc.es
+hpc_dai_internet_access: false
+
+target_dai_host: sodalite-fe.hlrs.de
+target_dai_internet_access: false
