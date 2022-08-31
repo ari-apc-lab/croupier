@@ -57,5 +57,5 @@ if [ -n "$pkey" ]; then
   ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $pkey $user@$host 'rm -rf permedcoe_apps/covid19/'
 fi
 if [ -n "$password" ]; then
-  sshpass -p "$password" ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $pkey $user@$host 'rm -rf permedcoe_apps/covid19/'
+  sshpass -p "$password" ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no $user@$host 'rm -rf permedcoe_apps/covid19/'
 fi
