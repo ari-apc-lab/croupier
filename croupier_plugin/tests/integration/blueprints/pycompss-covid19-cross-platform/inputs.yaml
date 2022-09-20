@@ -1,0 +1,120 @@
+# VAULT
+iam_jwt: ''
+iam_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# NM4
+hpc1_host: mn1.bsc.es
+hpc1_scheduler: PYCOMPSS
+hpc1_scheduler_modules:
+  - export COMPSS_PYTHON_VERSION=3
+  - module load COMPSs/3.0
+  - module load singularity/3.5.2
+  - module use /apps/modules/modulefiles/tools/COMPSs/libraries
+  - module load permedcoe
+hpc1_monitor_scheduler: SLURM
+
+
+# MN4
+hpc2_host: mn1.bsc.es
+hpc2_scheduler: PYCOMPSS
+hpc2_scheduler_modules:
+  - export COMPSS_PYTHON_VERSION=3
+  - module load COMPSs/3.0
+  - module load singularity/3.5.2
+  - module use /apps/modules/modulefiles/tools/COMPSs/libraries
+  - module load permedcoe
+hpc2_monitor_scheduler: SLURM
+
+
+# Mahti
+#hpc2_host: mahti.csc.fi
+#hpc2_scheduler: PYCOMPSS
+#hpc2_scheduler_modules:
+#  - module load COMPSs/3.0
+#  - module use /scratch/project_2003929/PerMedCoE/modulefiles
+#  - module load permedcoe
+#hpc2_monitor_scheduler: SLURM
+
+# Task 1
+# COVID19 args
+task1_pre_script:
+  -
+task1_covid19_args:
+  metadata: '${dataset}/metadata_small.tsv'
+  outdir: '$(pwd)/results/'
+  ko_file: '$(pwd)/ko_file.txt'
+  model: 'epithelial_cell_2'
+  data_folder: '${dataset}'
+
+# PYCOMPSs args
+task1_pycompss_args:
+  project_name: ''
+  num_nodes: 2
+  exec_time: 10
+  worker_working_dir: $(pwd)
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: 'debug'
+
+# Task 2
+# COVID19 args
+task2_pre_script:
+  -
+task2_covid19_args:
+  metadata: '${dataset}/metadata_small.tsv'
+  model_prefix: '${dataset}/epithelial_cell_2'
+  outdir: '$(pwd)/results/'
+  ko_file: '$(pwd)/ko_file.txt'
+  reps: 2
+  model: 'epithelial_cell_2'
+  simulation_time: 100
+
+# PYCOMPSs args
+task2_pycompss_args:
+  project_name: ''
+  num_nodes: 2
+  exec_time: 45
+  worker_working_dir: $(pwd)
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: 'debug'
+
+# Task 3
+# COVID19 args
+task3_pre_script:
+  -
+task3_covid19_args:
+  metadata: '${dataset}/metadata_small.tsv'
+  outdir: '$(pwd)/results/'
+  ko_file: '$(pwd)/ko_file.txt'
+  reps: 2
+  model: 'epithelial_cell_2'
+
+# PYCOMPSs args
+task3_pycompss_args:
+  project_name: ''
+  num_nodes: 2
+  exec_time: 45
+  worker_working_dir: $(pwd)
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: 'debug'
+
+
+# DATAFLOW
+hpc1_dai_host: dt01.bsc.es
+hpc1_dai_internet_access: false
+
+hpc2_dai_host: dt01.bsc.es
+hpc2_dai_internet_access: false
+
+target_dai_host: sodalite-fe.hlrs.de
+target_dai_internet_access: false

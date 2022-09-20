@@ -1,0 +1,500 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+    - plugin:croupier #For Cloudify
+#    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+
+##################### COVID 19 ARGS ###################
+data_types:
+    permedcoe.covid19.args:
+        properties:
+            metadata:
+                type: string
+                required: true
+            model_prefix:
+                type: string
+                required: true
+            outdir:
+                type: string
+                required: true
+            ko_file:
+                type: string
+                required: true
+            reps:
+                type: integer
+                required: true
+            model:
+                type: string
+                required: true
+            data_folder:
+                type: string
+                required: true
+            simulation_time:
+                type: integer
+                required: true
+
+inputs:
+########################## VAULT ######################
+    iam_jwt:
+        type: string
+    iam_user:
+        type: string
+
+################# HPC Infrastructures #################
+    hpc1_host:
+        type: string
+
+    hpc1_scheduler:
+        type: string
+
+    hpc1_scheduler_modules:
+        type: list
+
+    hpc1_monitor_scheduler:
+        type: string
+
+    hpc2_host:
+        type: string
+
+    hpc2_scheduler:
+        type: string
+
+    hpc3_scheduler_modules:
+        type: list
+
+    hpc4_monitor_scheduler:
+        type: string
+
+################## DS Infrastructures #################
+    hpc1_dai_host:
+        type: string
+
+    hpc1_dai_internet_access:
+        type: boolean
+
+    hpc2_dai_host:
+        type: string
+
+    hpc2_dai_internet_access:
+        type: boolean
+
+    target_dai_host:
+        type: string
+
+    target_dai_internet_access:
+        type: boolean
+
+################# Covid 19 application ################
+    task1_pre_script:
+        type: list
+
+    task2_pre_script:
+        type: list
+
+    task3_pre_script:
+        type: list
+
+    task1_covid19_args:
+        type: permedcoe.covid19.args
+
+    task2_covid19_args:
+        type: permedcoe.covid19.args
+
+    task3_covid19_args:
+        type: permedcoe.covid19.args
+
+##################### PYCOMPSs args ###################
+    task1_pycompss_args:
+        type: croupier.datatypes.pycompss_options
+
+    task2_pycompss_args:
+        type: croupier.datatypes.pycompss_options
+
+    task3_pycompss_args:
+        type: croupier.datatypes.pycompss_options
+
+#################### START WORKFLOW ###################
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            jwt: { get_input: iam_jwt }
+            user: { get_input: iam_user }
+
+    hpc1:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc1_scheduler }
+                modules: { get_input: hpc1_scheduler_modules}
+            credentials:
+                host: { get_input: hpc1_host }
+            job_prefix: croupier
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 60
+                monitor_interface: { get_input: hpc1_monitor_scheduler }
+            skip_cleanup: true
+            workdir_prefix: "covid19-deploy"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+            - type: interface_monitored_by
+              target: hpc_exporter
+
+    hpc2:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc2_scheduler }
+                modules: { get_input: hpc2_scheduler_modules }
+            credentials:
+                host: { get_input: hpc2_host }
+            job_prefix: croupier
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 60
+                monitor_interface: { get_input: hpc2_monitor_scheduler }
+            skip_cleanup: true
+            workdir_prefix: "covid19-deploy"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+            - type: interface_monitored_by
+              target: hpc_exporter
+
+    task1:
+        type: croupier.nodes.PyCOMPSsJob
+        properties:
+            job_options:
+                pre_script: { get_input: task1_pre_script}
+                app_name: covid19_task1
+                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src_split
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - COMPUTING_UNITS: 1
+                compss_args: { get_input: task1_pycompss_args }
+                app_file: '$(pwd)/src_split/1_covid19_pilot.py'
+                app_args: { get_input: task1_covid19_args }
+            deployment:
+                bootstrap: "scripts/deploy.sh"
+                revert: "scripts/revert.sh"
+                hpc_execution: false
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc1
+            - type: input
+              target: hpc1_data_small
+            - type: output
+              target: out1_results
+            - type: output
+              target: out_ko_file
+            - type: deployment_source
+              target: github_data_access_infra
+
+    task2:
+        type: croupier.nodes.PyCOMPSsJob
+        properties:
+            job_options:
+                pre_script: { get_input: task2_pre_script}
+                app_name: covid19_task2
+                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src_split
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - COMPUTING_UNITS: 1
+                compss_args: { get_input: task2_pycompss_args }
+                app_file: '$(pwd)/src_split/2_covid19_pilot.py'
+                app_args: { get_input: task2_covid19_args }
+            deployment:
+                bootstrap: "scripts/deploy.sh"
+                revert: "scripts/revert.sh"
+                hpc_execution: false
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc2
+            - type: input
+              target: hpc2_data_small
+            - type: input
+              target: task2_inputs
+            - type: output
+              target: out2_results
+            - type: deployment_source
+              target: github_data_access_infra
+            - type: job_depends_on
+              target: task1
+
+
+    task3:
+        type: croupier.nodes.PyCOMPSsJob
+        properties:
+            job_options:
+                pre_script: { get_input: task3_pre_script}
+                app_name: covid19_task3
+                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src_split
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - COMPUTING_UNITS: 1
+                compss_args: { get_input: task3_pycompss_args }
+                app_file: '$(pwd)/src_split/3_covid19_pilot.py'
+                app_args: { get_input: task3_covid19_args }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc1
+            - type: input
+              target: hpc1_data_small
+            - type: input
+              target: task3_inputs
+            - type: output
+              target: out3_results
+            - type: deployment_source
+              target: github_data_access_infra
+            - type: job_depends_on
+              target: task2
+
+
+#################### END WORKFLOW ###################
+
+#################### START DATAFLOW #################
+
+    #HPC1 DataManagement Infrastructure
+    hpc1_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: hpc1_dai_host }
+            internet_access: { get_input: hpc1_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #HPC2 DataManagement Infrastructure
+    hpc2_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: hpc2_dai_host }
+            internet_access: { get_input: hpc2_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #GitHub DataManagement Infrastructure
+    github_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: github.com
+            supported_protocols:
+                - HTTP
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #TARGET DataManagement Infrastructure
+    target_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: { get_input: target_dai_host }
+            internet_access: { get_input: target_dai_internet_access }
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #INPUTS
+    hpc1_data_small:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    hpc2_data_small:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
+        relationships:
+            - type: ds_located_at
+              target: hpc2_data_access_infra
+
+    data_small_source:
+        type: croupier.nodes.WebDataSource
+        properties:
+            resource: /PerMedCoE/covid-19-workflow/tree/main/Resources/data/small
+        relationships:
+            - type: ds_located_at
+              target: github_data_access_infra
+
+    task2_inputs:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/
+        relationships:
+            - type: ds_located_at
+              target: hpc2_data_access_infra
+
+    task3_inputs:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    #OUTPUTS
+    out_ko_file:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/ko_file.txt
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    out1_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    out2_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/
+        relationships:
+            - type: ds_located_at
+              target: hpc2_data_access_infra
+
+    out3_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/meta_analysis/
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    out3_results_target:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe/apps/covid19/${workdir}
+        relationships:
+            - type: ds_located_at
+              target: target_data_access_infra
+
+    # DATA TRANSFER
+    dt_http_hpc1:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: data_small_source
+            - type: to_target
+              target: hpc1_data_small
+
+    dt_http_hpc2:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: data_small_source
+            - type: to_target
+              target: hpc2_data_small
+
+    dt_rsync_ko_file_task2:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: out_ko_file
+            - type: to_target
+              target: task2_inputs
+
+    dt_rsync_ko_file_task3:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: out_ko_file
+            - type: to_target
+              target: task3_inputs
+
+    dt_rsync_results_t1_t2:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: out1_results
+            - type: to_target
+              target: task2_inputs
+
+    dt_rsync_results_t2_t3:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: out2_results
+            - type: to_target
+              target: task3_inputs
+
+    dt_rsync_out3:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: out3_results
+            - type: to_target
+              target: out3_results_target
+
+#################### END DATAFLOW ###################
+
+outputs:
+    job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [job, job_name] }
