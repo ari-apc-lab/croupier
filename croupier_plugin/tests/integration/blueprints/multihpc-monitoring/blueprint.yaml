@@ -78,6 +78,7 @@ node_templates:
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 15
+                only_jobs: true
             skip_cleanup: true
             workdir_prefix: "multihpc-monitoring"
         relationships:
@@ -97,6 +98,7 @@ node_templates:
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 15
+                only_jobs: true
             skip_cleanup: true
             workdir_prefix: "multihpc-monitoring"
         relationships:
@@ -117,6 +119,7 @@ node_templates:
                 tasks: 1
                 tasks_per_node: 1
                 max_time: '00:01:00'
+                cpu_memory: 1M
                 partition: { get_input: hpc1_queue }
             skip_cleanup: True
         relationships:

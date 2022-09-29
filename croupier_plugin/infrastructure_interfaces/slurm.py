@@ -23,6 +23,7 @@ license information in the project root.
 
 slurm.py: Holds the slurm functions
 """
+import re
 from builtins import str
 import datetime, pytz
 import time
@@ -134,7 +135,10 @@ class Slurm(InfrastructureInterface):
         pass  # Not required
 
     def _get_jobid(self, output):
-        return output.split(' ')[-1].strip()
+        # Parse sentence "Submitted batch job <job_id>" with regex
+        pattern = 'Submitted batch job ([\d]*)'
+        job_id = re.search(pattern, output)
+        return job_id.group().split(' ')[-1].strip()
 
     def _parse_job_settings(
             self,
@@ -152,7 +156,7 @@ class Slurm(InfrastructureInterface):
 
         if not script:
             # sbatch command plus job name
-            _settings += "sbatch --parsable -J '" + job_id + "'"
+            _settings += "sbatch -J '" + job_id + "'"
 
         # Check if exists and has content
         def _check_job_settings_key(key):

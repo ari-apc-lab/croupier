@@ -25,8 +25,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://www.getcloudify.org/spec/cloudify/6.2.0/types.yaml
-#    - plugin:croupier #For Cloudify
-    - plugin.yaml #For debugging in PyCharm, comment it out for Cloudify
+    - plugin:croupier #For Cloudify
+#    - plugin.yaml #For debugging in PyCharm, comment it out for Cloudify
 
 inputs:
     jwt:

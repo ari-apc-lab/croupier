@@ -27,12 +27,11 @@ from builtins import str
 from builtins import range
 from past.builtins import basestring
 from builtins import object
-import io
-import os
 import string
 import random
 from datetime import datetime
 from croupier_plugin.ssh import SshClient
+from cloudify.exceptions import NonRecoverableError
 
 BOOTFAIL = 0
 CANCELLED = 1
@@ -160,6 +159,11 @@ class InfrastructureInterface(object):
         elif infrastructure_interface == "PYCOMPSS":
             from croupier_plugin.infrastructure_interfaces.pycompss import Pycompss
             wm = Pycompss(infrastructure_interface, logger, workdir)
+        else:
+            msg = '{interface_type} Workflow Manager not supported. ' \
+                  'Supported WMs: SLURM, TORQUE, PBSPRO, SHELL, PYCOMPSS'.format(interface_type=infrastructure_interface)
+            logger.error(msg)
+            raise NonRecoverableError(msg)
 
         # Initialize Scheduler (required by some but not all schedulers: e.g. PyCOMPSs)
         wm.initialize(wm_modules)

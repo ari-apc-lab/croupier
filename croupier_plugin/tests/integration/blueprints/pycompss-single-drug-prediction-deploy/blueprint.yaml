@@ -125,6 +125,7 @@ node_templates:
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 60
+                only_jobs: true
                 monitor_interface: { get_input: monitor_scheduler }
             skip_cleanup: true
             workdir_prefix: "pycompss-single-drug-prediction-deploy"
