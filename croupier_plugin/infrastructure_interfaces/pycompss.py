@@ -280,7 +280,7 @@ class Pycompss(InfrastructureInterface):
         _command += ' --pythonpath=/apps/COMPSs/PerMedCoE/lib/python3.7/site-packages/:' \
                     + job_settings['workdir']
 
-        _command += ' --job_name=' + name
+        _command += ' --job_name=' + job_settings['app_name']
 
         _command += ' ' + job_settings['app_file']
 

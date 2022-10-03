@@ -28,8 +28,8 @@ tosca_definitions_version: cloudify_dsl_1_3
 
 imports:
     - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
-    - plugin:croupier #For Cloudify
-#    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
 
 ##################### COVID 19 ARGS ###################
 data_types:
@@ -40,7 +40,7 @@ data_types:
                 required: true
             model_prefix:
                 type: string
-                required: true
+                required: false
             outdir:
                 type: string
                 required: true
@@ -49,16 +49,16 @@ data_types:
                 required: true
             reps:
                 type: integer
-                required: true
+                required: false
             model:
                 type: string
                 required: true
             data_folder:
                 type: string
-                required: true
+                required: false
             simulation_time:
                 type: integer
-                required: true
+                required: false
 
 inputs:
 ########################## VAULT ######################
@@ -86,10 +86,10 @@ inputs:
     hpc2_scheduler:
         type: string
 
-    hpc3_scheduler_modules:
+    hpc2_scheduler_modules:
         type: list
 
-    hpc4_monitor_scheduler:
+    hpc2_monitor_scheduler:
         type: string
 
 ################## DS Infrastructures #################
@@ -165,7 +165,7 @@ node_templates:
                 monitor_period: 60
                 monitor_interface: { get_input: hpc1_monitor_scheduler }
             skip_cleanup: true
-            workdir_prefix: "covid19-deploy"
+            workdir_prefix: "covid19-crossplatform"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -186,7 +186,7 @@ node_templates:
                 monitor_period: 60
                 monitor_interface: { get_input: hpc2_monitor_scheduler }
             skip_cleanup: true
-            workdir_prefix: "covid19-deploy"
+            workdir_prefix: "covid19-crossplatform"
         relationships:
             - type: retrieve_credentials_from_vault
               target: vault
@@ -199,13 +199,13 @@ node_templates:
             job_options:
                 pre_script: { get_input: task1_pre_script}
                 app_name: covid19_task1
-                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src_split
+                app_source: permedcoe_apps/covid19/covid-19-workflow-split-workflow/Workflow/PyCOMPSs/src_split
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
-                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data
                     - COMPUTING_UNITS: 1
                 compss_args: { get_input: task1_pycompss_args }
-                app_file: '$(pwd)/src_split/1_covid19_pilot.py'
+                app_file: '$(pwd)/1_covid19_pilot.py'
                 app_args: { get_input: task1_covid19_args }
             deployment:
                 bootstrap: "scripts/deploy.sh"
@@ -216,11 +216,11 @@ node_templates:
             - type: task_managed_by_interface
               target: hpc1
             - type: input
-              target: hpc1_data_small
+              target: task1_in_data_small
             - type: output
-              target: out1_results
+              target: task1_out_results
             - type: output
-              target: out_ko_file
+              target: task1_out_ko_file
             - type: deployment_source
               target: github_data_access_infra
 
@@ -230,13 +230,13 @@ node_templates:
             job_options:
                 pre_script: { get_input: task2_pre_script}
                 app_name: covid19_task2
-                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src_split
+                app_source: permedcoe_apps/covid19/covid-19-workflow-split-workflow/Workflow/PyCOMPSs/src_split
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
-                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data
                     - COMPUTING_UNITS: 1
                 compss_args: { get_input: task2_pycompss_args }
-                app_file: '$(pwd)/src_split/2_covid19_pilot.py'
+                app_file: '$(pwd)/2_covid19_pilot.py'
                 app_args: { get_input: task2_covid19_args }
             deployment:
                 bootstrap: "scripts/deploy.sh"
@@ -247,11 +247,13 @@ node_templates:
             - type: task_managed_by_interface
               target: hpc2
             - type: input
-              target: hpc2_data_small
+              target: task2_in_data_small
             - type: input
-              target: task2_inputs
+              target: task2_in_ko_file
+            - type: input
+              target: task2_in_results
             - type: output
-              target: out2_results
+              target: task2_out_results
             - type: deployment_source
               target: github_data_access_infra
             - type: job_depends_on
@@ -264,24 +266,26 @@ node_templates:
             job_options:
                 pre_script: { get_input: task3_pre_script}
                 app_name: covid19_task3
-                app_source: permedcoe_apps/covid19/covid-19-workflow-main/Workflow/PyCOMPSs/src_split
+                app_source: permedcoe_apps/covid19/covid-19-workflow-split-workflow/Workflow/PyCOMPSs/src_split
                 env:
                     - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
-                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data
                     - COMPUTING_UNITS: 1
                 compss_args: { get_input: task3_pycompss_args }
-                app_file: '$(pwd)/src_split/3_covid19_pilot.py'
+                app_file: '$(pwd)/3_covid19_pilot.py'
                 app_args: { get_input: task3_covid19_args }
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc1
             - type: input
-              target: hpc1_data_small
+              target: task3_in_data_small
             - type: input
-              target: task3_inputs
+              target: task3_in_ko_file
+            - type: input
+              target: task3_in_results
             - type: output
-              target: out3_results
+              target: task3_out_results
             - type: deployment_source
               target: github_data_access_infra
             - type: job_depends_on
@@ -340,48 +344,63 @@ node_templates:
               target: vault
 
     #INPUTS
-    hpc1_data_small:
+    task1_in_data_small:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
+            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/small/
         relationships:
             - type: ds_located_at
               target: hpc1_data_access_infra
 
-    hpc2_data_small:
+    task2_in_data_small:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/small/
+            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/small/
         relationships:
             - type: ds_located_at
               target: hpc2_data_access_infra
+
+    task3_in_data_small:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/small/
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
 
     data_small_source:
         type: croupier.nodes.WebDataSource
         properties:
-            resource: /PerMedCoE/covid-19-workflow/tree/main/Resources/data/small
+            resource: /PerMedCoE/covid-19-workflow/tree/split-workflow/Resources/data/small
         relationships:
             - type: ds_located_at
               target: github_data_access_infra
 
-    task2_inputs:
+    task2_in_results:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ${workdir}/
+            filepath: ${workdir}/results/
         relationships:
             - type: ds_located_at
               target: hpc2_data_access_infra
 
-    task3_inputs:
+    task3_in_results:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ${workdir}/
+            filepath: ${workdir}//results/
         relationships:
             - type: ds_located_at
               target: hpc1_data_access_infra
 
-    #OUTPUTS
-    out_ko_file:
+    task2_in_ko_file:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/ko_file.txt
+        relationships:
+            - type: ds_located_at
+              target: hpc2_data_access_infra
+
+    task3_in_ko_file:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ${workdir}/ko_file.txt
@@ -389,7 +408,16 @@ node_templates:
             - type: ds_located_at
               target: hpc1_data_access_infra
 
-    out1_results:
+    #OUTPUTS
+    task1_out_ko_file:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/ko_file.txt
+        relationships:
+            - type: ds_located_at
+              target: hpc1_data_access_infra
+
+    task1_out_results:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ${workdir}/results/
@@ -397,7 +425,7 @@ node_templates:
             - type: ds_located_at
               target: hpc1_data_access_infra
 
-    out2_results:
+    task2_out_results:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ${workdir}/results/
@@ -405,7 +433,7 @@ node_templates:
             - type: ds_located_at
               target: hpc2_data_access_infra
 
-    out3_results:
+    task3_out_results:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ${workdir}/results/meta_analysis/
@@ -413,7 +441,7 @@ node_templates:
             - type: ds_located_at
               target: hpc1_data_access_infra
 
-    out3_results_target:
+    task3_out_results_target:
         type: croupier.nodes.FileDataSource
         properties:
             filepath: ~/permedcoe/apps/covid19/${workdir}
@@ -430,7 +458,7 @@ node_templates:
             - type: from_source
               target: data_small_source
             - type: to_target
-              target: hpc1_data_small
+              target: task1_in_data_small
 
     dt_http_hpc2:
         type: croupier.nodes.DataTransfer
@@ -440,7 +468,17 @@ node_templates:
             - type: from_source
               target: data_small_source
             - type: to_target
-              target: hpc2_data_small
+              target: task2_in_data_small
+
+    dt_http_hpc3:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: HTTP
+        relationships:
+            - type: from_source
+              target: data_small_source
+            - type: to_target
+              target: task3_in_data_small
 
     dt_rsync_ko_file_task2:
         type: croupier.nodes.DataTransfer
@@ -448,9 +486,9 @@ node_templates:
             transfer_protocol: RSYNC
         relationships:
             - type: from_source
-              target: out_ko_file
+              target: task1_out_ko_file
             - type: to_target
-              target: task2_inputs
+              target: task2_in_ko_file
 
     dt_rsync_ko_file_task3:
         type: croupier.nodes.DataTransfer
@@ -458,9 +496,9 @@ node_templates:
             transfer_protocol: RSYNC
         relationships:
             - type: from_source
-              target: out_ko_file
+              target: task1_out_ko_file
             - type: to_target
-              target: task3_inputs
+              target: task3_in_ko_file
 
     dt_rsync_results_t1_t2:
         type: croupier.nodes.DataTransfer
@@ -468,9 +506,9 @@ node_templates:
             transfer_protocol: RSYNC
         relationships:
             - type: from_source
-              target: out1_results
+              target: task1_out_results
             - type: to_target
-              target: task2_inputs
+              target: task2_in_results
 
     dt_rsync_results_t2_t3:
         type: croupier.nodes.DataTransfer
@@ -478,9 +516,9 @@ node_templates:
             transfer_protocol: RSYNC
         relationships:
             - type: from_source
-              target: out2_results
+              target: task2_out_results
             - type: to_target
-              target: task3_inputs
+              target: task3_in_results
 
     dt_rsync_out3:
         type: croupier.nodes.DataTransfer
@@ -488,13 +526,19 @@ node_templates:
             transfer_protocol: RSYNC
         relationships:
             - type: from_source
-              target: out3_results
+              target: task3_out_results
             - type: to_target
-              target: out3_results_target
+              target: task3_out_results_target
 
 #################### END DATAFLOW ###################
 
 outputs:
-    job_name:
+    task1_name:
         description: single job name in the HPC
-        value: { get_attribute: [job, job_name] }
+        value: { get_attribute: [task1, job_name] }
+    task2_name:
+        description: single job name in the HPC
+        value: { get_attribute: [ task2, job_name ] }
+    task3_name:
+        description: single job name in the HPC
+        value: { get_attribute: [ task3, job_name ] }

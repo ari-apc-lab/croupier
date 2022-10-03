@@ -1,5 +1,5 @@
 # VAULT
-iam_jwt: ''
+iam_jwt: 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJOUUltaGZfc2xqbTFsZmRvak9PTUdFazRCMVBOS1hWMUg2MzEzYmxQUnFFIn0.eyJleHAiOjE2NjQ4MDY2MTUsImlhdCI6MTY2NDgwNjMxNSwianRpIjoiZDVjM2YxY2ItNjBkMi00Mzc4LTk4MjAtZDMzYTZhOGNmYmU0IiwiaXNzIjoiaHR0cHM6Ly9wcnVudXMtMjEyLm1hbi5wb3puYW4ucGwvYXV0aC9yZWFsbXMvSGlkYWxnbyIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiI5YTVlM2FmZC0yYjMzLTRmNTctYjI5Yy0zZDY2NDAzNzI1NTgiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmcm9udGVuZCIsInNlc3Npb25fc3RhdGUiOiI0OWY3MWZkZC1lODA5LTQ3NzAtOTgyMC1hNzFkYzZhNGM1NjkiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIioiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIm9mZmxpbmVfYWNjZXNzIiwiZGVmYXVsdC1yb2xlcy1oaWRhbGdvIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6ImVtYWlsIHByb2ZpbGUiLCJzaWQiOiI0OWY3MWZkZC1lODA5LTQ3NzAtOTgyMC1hNzFkYzZhNGM1NjkiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6Illvc3UgR29ycm_DsW9nb2l0aWEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJ5b3N1IiwiZ2l2ZW5fbmFtZSI6Illvc3UiLCJmYW1pbHlfbmFtZSI6IkdvcnJvw7FvZ29pdGlhIiwiZW1haWwiOiJqZXN1cy5nb3Jyb25vZ29pdGlhQGF0b3MubmV0In0.hJCwztbXmhwjb9CGXw623BbwrgNCfBS317wjRRrvkkdfqI9U8ZgqAZ6SvIrNe1m0lkRowmF0MBBO2bDMDDbiFonQj8yXvU1RJWjibFrdu-vx2j0DVtdBPTJoHLnATKpznx7LHWEfMeTVxChn9-Cet0H_-R0CfbaLEerbZWEGyhluzKjICgjRTkBpEh69B6fRz4zE7AW6-8vpuwGVpJ7VABuXwJPzwCoOBbubaZrrtPveT62Rv_KxF2oEhIm0lTyk4ihi3azMtKyRfaH4h6REeM0PNmPviqYCGs99RXDiRiAXZcnOwAiAsNnAByLf_Jrm5Ss_2lRFHBwVsZbWb_eIog'
 iam_user: 'yosu'
 
 # WORKFLOW
@@ -16,41 +16,29 @@ hpc1_scheduler_modules:
 hpc1_monitor_scheduler: SLURM
 
 
-# MN4
-hpc2_host: mn1.bsc.es
+# Mahti
+hpc2_host: mahti.csc.fi
 hpc2_scheduler: PYCOMPSS
 hpc2_scheduler_modules:
-  - export COMPSS_PYTHON_VERSION=3
   - module load COMPSs/3.0
-  - module load singularity/3.5.2
-  - module use /apps/modules/modulefiles/tools/COMPSs/libraries
+  - module use /scratch/project_2003929/PerMedCoE/modulefiles
   - module load permedcoe
 hpc2_monitor_scheduler: SLURM
-
-
-# Mahti
-#hpc2_host: mahti.csc.fi
-#hpc2_scheduler: PYCOMPSS
-#hpc2_scheduler_modules:
-#  - module load COMPSs/3.0
-#  - module use /scratch/project_2003929/PerMedCoE/modulefiles
-#  - module load permedcoe
-#hpc2_monitor_scheduler: SLURM
 
 # Task 1
 # COVID19 args
 task1_pre_script:
   -
 task1_covid19_args:
-  metadata: '${dataset}/metadata_small.tsv'
-  outdir: '$(pwd)/results/'
   ko_file: '$(pwd)/ko_file.txt'
   model: 'epithelial_cell_2'
   data_folder: '${dataset}'
+  metadata: '${dataset}/metadata_small.tsv'
+  outdir: '$(pwd)/results/'
+
 
 # PYCOMPSs args
 task1_pycompss_args:
-  project_name: ''
   num_nodes: 2
   exec_time: 10
   worker_working_dir: $(pwd)
@@ -75,7 +63,7 @@ task2_covid19_args:
 
 # PYCOMPSs args
 task2_pycompss_args:
-  project_name: ''
+  project_name: 'project_2003929'
   num_nodes: 2
   exec_time: 45
   worker_working_dir: $(pwd)
@@ -83,7 +71,7 @@ task2_pycompss_args:
   graph: true
   tracing: 'false'
   python_interpreter: python3
-  qos: 'debug'
+  qos: ''
 
 # Task 3
 # COVID19 args
@@ -98,7 +86,6 @@ task3_covid19_args:
 
 # PYCOMPSs args
 task3_pycompss_args:
-  project_name: ''
   num_nodes: 2
   exec_time: 45
   worker_working_dir: $(pwd)
@@ -113,8 +100,8 @@ task3_pycompss_args:
 hpc1_dai_host: dt01.bsc.es
 hpc1_dai_internet_access: false
 
-hpc2_dai_host: dt01.bsc.es
+hpc2_dai_host: mahti.csc.fi
 hpc2_dai_internet_access: false
 
-target_dai_host: sodalite-fe.hlrs.de
+target_dai_host: mahti.csc.fi
 target_dai_internet_access: false

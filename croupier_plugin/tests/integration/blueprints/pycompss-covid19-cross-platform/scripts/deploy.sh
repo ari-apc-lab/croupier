@@ -91,48 +91,48 @@ cd "$WORK_DIR" || exit
 # Get Covid19 app from Github in temp folder
 echo "Downloading Covid19 app into temp working directory $WORK_DIR"
 if [ -z "$github_token" ]; then
-  wget https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
+  wget https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/split-workflow.zip
 else
-  wget --header="Authorization: token $github_token" https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/main.zip
+  wget --header="Authorization: token $github_token" https://github.com/PerMedCoE/covid-19-workflow/archive/refs/heads/split-workflow.zip
 fi
 
 #Unzip repo
 echo "Unzipping Covid19 app"
-unzip main.zip covid-19-workflow-main/Resources/data/*
-unzip main.zip covid-19-workflow-main/Workflow/PyCOMPSs/src/*
+unzip split-workflow.zip covid-19-workflow-split-workflow/Resources/data/*
+unzip split-workflow.zip covid-19-workflow-split-workflow/Workflow/PyCOMPSs/src_split/*
 
 #Get Covid19 data files
 wget https://www.ncbi.nlm.nih.gov/geo/download/?acc=GSE145926\&format=file -O GSE145926_RAW.tar
 mkdir $WORK_DIR/GSE145926_covid19
 tar xvf GSE145926_RAW.tar --directory $WORK_DIR/GSE145926_covid19
 rm $WORK_DIR/GSE145926_covid19/*.csv.gz
-mv $WORK_DIR/GSE145926_covid19 covid-19-workflow-main/Resources/data
+mv $WORK_DIR/GSE145926_covid19 covid-19-workflow-split-workflow/Resources/data
 
 #Rsync transfer Covid19 app and data to target HPC using user user's credentials and ssh
 if [ -n "$hpc_pkey" ]; then
   echo "synchronizing Covid19 app to target HPC..."
-  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $hpc_pkey" covid-19-workflow-main "$hpc_user"@"$hpc_host":permedcoe_apps/covid19
+  rsync -ratlz -e "ssh -o IdentitiesOnly=yes -o StrictHostKeyChecking=no -i $hpc_pkey" covid-19-workflow-split-workflow "$hpc_user"@"$hpc_host":permedcoe_apps/covid19
 fi
 
 if [ -n "$hpc_password" ]; then
   echo "synchronizing Covid19 app to target HPC..."
-  rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" covid-19-workflow-main  "$hpc_host":permedcoe_apps/covid19
+  rsync -ratlz --rsh="/usr/bin/sshpass -p $hpc_password ssh -o StrictHostKeyChecking=no -o IdentitiesOnly=yes -l $hpc_user" covid-19-workflow-split-workflow  "$hpc_host":permedcoe_apps/covid19
 fi
 
 
-# Edit routes in covid-19-workflow-main/Resources/data/metadata_clean.ts
+# Edit routes in covid-19-workflow-split-workflow/Resources/data/metadata_clean.ts
 
 if [ -n "$hpc_pkey" ]; then
-  echo "editing paths in covid-19-workflow-main/Resources/data/metadata_clean.ts..."
+  echo "editing paths in covid-19-workflow-split-workflow/Resources/data/metadata_clean.ts..."
   pwd=`ssh -i "$hpc_pkey" "$hpc_user"@"$hpc_host" pwd`
-  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/metadata_clean.tsv"
+  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/metadata_clean.tsv"
   ssh -i "$hpc_pkey" "$hpc_user"@"$hpc_host" "$cmd"
 fi
 
 if [ -n "$hpc_password" ]; then
-  echo "editing paths in covid-19-workflow-main/Resources/data/metadata_clean.ts..."
+  echo "editing paths in covid-19-workflow-split-workflow/Resources/data/metadata_clean.ts..."
   pwd=`sshpass -p "$hpc_password" ssh "$hpc_user"@"$hpc_host" pwd`
-  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-main/Resources/data/metadata_clean.tsv"
+  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/metadata_clean.tsv"
   sshpass -p "$hpc_password" ssh "$hpc_user"@"$hpc_host" "$cmd"
 fi
 
