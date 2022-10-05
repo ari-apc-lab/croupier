@@ -8,7 +8,7 @@ set -e
 trap 'catch $? $LINENO' ERR
 catch() {
   echo "proxied_rsync: error $1 occurred on line $2"
-  cleanup
+  #cleanup
 }
 
 cleanup() {
@@ -156,11 +156,11 @@ if [ -z ${target_private_key+x} ]; then
 	echo "Invoking: sshpass -p $target_password ssh -o StrictHostKeyChecking=no $target_endpoint mkdir -p $target_dir"
 	sshpass -p "$target_password" ssh -o StrictHostKeyChecking=no "$target_endpoint" mkdir -p "$target_dir"
 	if [ -z ${source_file+x} ]; then
-		echo "Invoking: rsync --rsh="/usr/bin/sshpass -p "$target_password"" $FLAGS /tmp/sshfstmp/* $target"
-		sshpass -p "$target_password" rsync "$FLAGS" /tmp/sshfstmp/* "$target"
+		echo "Invoking: sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/* $target"
+		sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/* $target
 	else
-		echo "Invoking: rsync --rsh="/usr/bin/sshpass -p "$target_password"" $FLAGS /tmp/sshfstmp/$source_file $target"
-		sshpass -p "$target_password" rsync "$FLAGS" /tmp/sshfstmp/"$source_file" "$target"
+		echo "Invoking: sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/$source_file $target"
+		sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/$source_file $target
 	fi
 elif [ -z ${target_password+x} ]; then
 	#Using target_private_key for rsync authentication

@@ -35,6 +35,9 @@ class RSyncDataTransfer(DataTransfer):
         else:
             self.process_rsync_transfer(rsync_source_to_target)
 
+        # Mark dt transfer executed
+        self.dt_config['done'] = True
+
     '''
         Rsync data transfer executed from Croupier server
         Requires sshfs command available (install sshfs package)
@@ -68,6 +71,9 @@ class RSyncDataTransfer(DataTransfer):
                     workdir = self.workdir[self.workdir.rfind('/') + 1:]
                 from_source_data_url = from_source_data_url.replace('${workdir}', workdir)
 
+            if from_source_data_url is not None and '$HOME' in from_source_data_url:
+                from_source_data_url = from_source_data_url[from_source_data_url.find('/') + 1:]
+
             from_source_infra_endpoint = self.dt_config['from_source']['located_at']['endpoint']
             from_source_infra_credentials = self.dt_config['from_source']['located_at']['credentials']
 
@@ -86,6 +92,9 @@ class RSyncDataTransfer(DataTransfer):
                 if not to_target_data_url.startswith('${workdir}'):
                     workdir = self.workdir[self.workdir.rfind('/') + 1:]
                 to_target_data_url = to_target_data_url.replace('${workdir}', workdir)
+
+            if to_target_data_url is not None and '$HOME' in to_target_data_url:
+                to_target_data_url = to_target_data_url[to_target_data_url.find('/') + 1:]
 
             to_target_infra_endpoint = self.dt_config['to_target']['located_at']['endpoint']
             to_target_infra_credentials = self.dt_config['to_target']['located_at']['credentials']

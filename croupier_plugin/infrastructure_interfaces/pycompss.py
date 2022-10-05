@@ -275,12 +275,13 @@ class Pycompss(InfrastructureInterface):
                 value = str(job_settings['compss_args'][key])
                 if value in ["True", "False"]:
                     value = value.lower()
-                _command += ' --' + key + '=' + value
+                if len(value) > 0:
+                    _command += ' --' + key + '=' + value
         # PATCH: required because a pycompss bug - remove it when fix
-        _command += ' --pythonpath=/apps/COMPSs/PerMedCoE/lib/python3.7/site-packages/:' \
-                    + job_settings['workdir']
+        # _command += ' --pythonpath=/apps/COMPSs/PerMedCoE/lib/python3.7/site-packages/:' \
+        #             + job_settings['workdir']
 
-        _command += ' --job_name=' + job_settings['app_name']
+        _command += ' --job_name=' + name  # Do not change, this internal Croupier name is used to monitor state
 
         _command += ' ' + job_settings['app_file']
 

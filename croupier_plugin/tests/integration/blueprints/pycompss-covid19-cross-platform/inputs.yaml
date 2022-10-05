@@ -1,5 +1,5 @@
 # VAULT
-iam_jwt: 'eyJhbGciOiJSUzI1NiIsInR5cCIgOiAiSldUIiwia2lkIiA6ICJOUUltaGZfc2xqbTFsZmRvak9PTUdFazRCMVBOS1hWMUg2MzEzYmxQUnFFIn0.eyJleHAiOjE2NjQ4MDY2MTUsImlhdCI6MTY2NDgwNjMxNSwianRpIjoiZDVjM2YxY2ItNjBkMi00Mzc4LTk4MjAtZDMzYTZhOGNmYmU0IiwiaXNzIjoiaHR0cHM6Ly9wcnVudXMtMjEyLm1hbi5wb3puYW4ucGwvYXV0aC9yZWFsbXMvSGlkYWxnbyIsImF1ZCI6ImFjY291bnQiLCJzdWIiOiI5YTVlM2FmZC0yYjMzLTRmNTctYjI5Yy0zZDY2NDAzNzI1NTgiLCJ0eXAiOiJCZWFyZXIiLCJhenAiOiJmcm9udGVuZCIsInNlc3Npb25fc3RhdGUiOiI0OWY3MWZkZC1lODA5LTQ3NzAtOTgyMC1hNzFkYzZhNGM1NjkiLCJhY3IiOiIxIiwiYWxsb3dlZC1vcmlnaW5zIjpbIioiXSwicmVhbG1fYWNjZXNzIjp7InJvbGVzIjpbIm9mZmxpbmVfYWNjZXNzIiwiZGVmYXVsdC1yb2xlcy1oaWRhbGdvIiwidW1hX2F1dGhvcml6YXRpb24iXX0sInJlc291cmNlX2FjY2VzcyI6eyJhY2NvdW50Ijp7InJvbGVzIjpbIm1hbmFnZS1hY2NvdW50IiwibWFuYWdlLWFjY291bnQtbGlua3MiLCJ2aWV3LXByb2ZpbGUiXX19LCJzY29wZSI6ImVtYWlsIHByb2ZpbGUiLCJzaWQiOiI0OWY3MWZkZC1lODA5LTQ3NzAtOTgyMC1hNzFkYzZhNGM1NjkiLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwibmFtZSI6Illvc3UgR29ycm_DsW9nb2l0aWEiLCJwcmVmZXJyZWRfdXNlcm5hbWUiOiJ5b3N1IiwiZ2l2ZW5fbmFtZSI6Illvc3UiLCJmYW1pbHlfbmFtZSI6IkdvcnJvw7FvZ29pdGlhIiwiZW1haWwiOiJqZXN1cy5nb3Jyb25vZ29pdGlhQGF0b3MubmV0In0.hJCwztbXmhwjb9CGXw623BbwrgNCfBS317wjRRrvkkdfqI9U8ZgqAZ6SvIrNe1m0lkRowmF0MBBO2bDMDDbiFonQj8yXvU1RJWjibFrdu-vx2j0DVtdBPTJoHLnATKpznx7LHWEfMeTVxChn9-Cet0H_-R0CfbaLEerbZWEGyhluzKjICgjRTkBpEh69B6fRz4zE7AW6-8vpuwGVpJ7VABuXwJPzwCoOBbubaZrrtPveT62Rv_KxF2oEhIm0lTyk4ihi3azMtKyRfaH4h6REeM0PNmPviqYCGs99RXDiRiAXZcnOwAiAsNnAByLf_Jrm5Ss_2lRFHBwVsZbWb_eIog'
+iam_jwt: ''
 iam_user: 'yosu'
 
 # WORKFLOW
@@ -53,12 +53,12 @@ task1_pycompss_args:
 task2_pre_script:
   -
 task2_covid19_args:
-  metadata: '${dataset}/metadata_small.tsv'
-  model_prefix: '${dataset}/epithelial_cell_2'
-  outdir: '$(pwd)/results/'
   ko_file: '$(pwd)/ko_file.txt'
-  reps: 2
   model: 'epithelial_cell_2'
+  metadata: '${dataset}/metadata_small.tsv'
+  outdir: '$(pwd)/results/'
+  model_prefix: '${dataset}/epithelial_cell_2'
+  reps: 2
   simulation_time: 100
 
 # PYCOMPSs args
@@ -78,11 +78,12 @@ task2_pycompss_args:
 task3_pre_script:
   -
 task3_covid19_args:
-  metadata: '${dataset}/metadata_small.tsv'
   outdir: '$(pwd)/results/'
+  metadata: '${dataset}/metadata_small.tsv'
+  model: 'epithelial_cell_2'
   ko_file: '$(pwd)/ko_file.txt'
   reps: 2
-  model: 'epithelial_cell_2'
+
 
 # PYCOMPSs args
 task3_pycompss_args:

@@ -1295,12 +1295,19 @@ relationships:
                 postconfigure:
                     implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
 
-
     input:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_input_output_relationship
 
     output:
         derived_from: cloudify.relationships.connected_to
+        source_interfaces:
+            cloudify.interfaces.relationship_lifecycle:
+                preconfigure:
+                    implementation: croupier.croupier_plugin.tasks.configure_input_output_relationship
 
     retrieve_credentials_from_vault:
         derived_from: cloudify.relationships.depends_on

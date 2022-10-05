@@ -11,22 +11,42 @@ def isDataManagementRelationship(relationship):
     return isDataManagementNode(relationship.target_node)
 
 
-def getDataTransferInstances(direction, job):
-    dt_instances = []
+def getDataTransferInstances(global_dt_instances, global_data_workspaces, direction, job):
+    dt_instances = {}
+    filterWorkspaces(global_dt_instances, global_data_workspaces)  # Only first invocation makes the work
     for rel in job.relationships:
         if rel.type == direction:
-            if 'dt_instances' in rel.target.instance.runtime_properties:
-                _dt_instances = rel.target.instance.runtime_properties['dt_instances']
-                for instance in _dt_instances:
-                    from_credentials = instance.get("from_source", {}).get("located_at", {}).get("credentials")
-                    if from_credentials:
-                        filterOutEmptyValueEntries(from_credentials)
-                    to_credentials = instance.get("to_target", {}).get("located_at", {}).get("credentials")
-                    if to_credentials:
-                        filterOutEmptyValueEntries(to_credentials)
-                dt_instances.extend(_dt_instances)
+
+            dt_instances[rel.target.instance.id] = global_dt_instances[rel.target.instance.id]
+            for instance in dt_instances[rel.target.instance.id]:
+                from_credentials = instance.get("from_source", {}).get("located_at", {}).get("credentials")
+                if from_credentials:
+                    filterOutEmptyValueEntries(from_credentials)
+                to_credentials = instance.get("to_target", {}).get("located_at", {}).get("credentials")
+                if to_credentials:
+                    filterOutEmptyValueEntries(to_credentials)
                 continue
+
     return dt_instances
+
+
+# TODO Improve this approach for data management based on global dictionaries.
+def filterWorkspaces(global_dt_instances, global_data_workspaces):
+    #  Replace {workspace} occurrences with those for task where data has to be sent
+    for data_object in global_data_workspaces:
+        workspace = global_data_workspaces[data_object]
+        for key in global_dt_instances:
+            for dt_instance in global_dt_instances[key]:
+                if dt_instance["from_source"]["name"] in data_object:
+                    if "filepath" in dt_instance["from_source"]:
+                        if '${workdir}' in dt_instance["from_source"]["filepath"]:
+                            dt_instance["from_source"]["filepath"] = \
+                                dt_instance["from_source"]["filepath"].replace('${workdir}', workspace)
+                if dt_instance["to_target"]["name"] in data_object:
+                    if "filepath" in dt_instance["to_target"]:
+                        if '${workdir}' in dt_instance["to_target"]["filepath"]:
+                            dt_instance["to_target"]["filepath"] = \
+                                dt_instance["to_target"]["filepath"].replace('${workdir}', workspace)
 
 
 def filterOutEmptyValueEntries(dictionary):
@@ -36,14 +56,16 @@ def filterOutEmptyValueEntries(dictionary):
             del dictionary[key]
 
 
-def processDataTransfer(job, logger, direction, workdir):
+def processDataTransfer(global_dt_instances, global_data_workspaces, job, logger, direction, workdir):
     # For each data transfer object
     # execute data_transfer
     # TODO parallel processing of data transfer
-    dt_instances = getDataTransferInstances(direction, job)
-    for dt_config in dt_instances:
-        dt = DataTransfer.factory(dt_config, logger, workdir)
-        dt.process()
+    dt_instances = getDataTransferInstances(global_dt_instances, global_data_workspaces, direction, job)
+    for data_instance_id in dt_instances:
+        for dt_instance in dt_instances[data_instance_id]:
+            dt = DataTransfer.factory(dt_instance, logger, workdir)
+            if not dt.dt_config["done"]:
+                dt.process()
 
 
 # helper functions

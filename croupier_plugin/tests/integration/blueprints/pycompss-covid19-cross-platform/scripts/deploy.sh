@@ -120,19 +120,19 @@ if [ -n "$hpc_password" ]; then
 fi
 
 
-# Edit routes in covid-19-workflow-split-workflow/Resources/data/metadata_clean.ts
+# Edit routes in covid-19-workflow-split-workflow/Resources/data/metadata_small.tsv
 
 if [ -n "$hpc_pkey" ]; then
-  echo "editing paths in covid-19-workflow-split-workflow/Resources/data/metadata_clean.ts..."
+  echo "editing paths in covid-19-workflow-split-workflow/Resources/data/metadata_small.tsv..."
   pwd=`ssh -i "$hpc_pkey" "$hpc_user"@"$hpc_host" pwd`
-  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/metadata_clean.tsv"
+  cmd="sed -i s+../../data/small+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/metadata_small.tsv"
   ssh -i "$hpc_pkey" "$hpc_user"@"$hpc_host" "$cmd"
 fi
 
 if [ -n "$hpc_password" ]; then
-  echo "editing paths in covid-19-workflow-split-workflow/Resources/data/metadata_clean.ts..."
+  echo "editing paths in covid-19-workflow-split-workflow/Resources/data/metadata_small.tsv..."
   pwd=`sshpass -p "$hpc_password" ssh "$hpc_user"@"$hpc_host" pwd`
-  cmd="sed -i s+/apps/COMPSs/PerMedCoE/resources/covid-19-workflow/Resources/data/GSE145926_covid19+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/metadata_clean.tsv"
+  cmd="sed -i s+../../data/small+""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/GSE145926_covid19+ ""$pwd""/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/metadata_small.tsv"
   sshpass -p "$hpc_password" ssh "$hpc_user"@"$hpc_host" "$cmd"
 fi
 

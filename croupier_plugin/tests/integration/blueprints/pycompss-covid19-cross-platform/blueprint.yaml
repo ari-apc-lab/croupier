@@ -33,30 +33,63 @@ imports:
 
 ##################### COVID 19 ARGS ###################
 data_types:
-    permedcoe.covid19.args:
+    permedcoe.covid19.task1.args:
         properties:
+            ko_file:
+                type: string
+                required: true
+            model:
+                type: string
+                required: true
+            data_folder:
+                type: string
+                required: true
             metadata:
+                type: string
+                required: true
+            outdir:
+                type: string
+                required: true
+
+    permedcoe.covid19.task2.args:
+        properties:
+            ko_file:
+                type: string
+                required: true
+            model:
+                type: string
+                required: true
+            metadata:
+                type: string
+                required: true
+            outdir:
                 type: string
                 required: true
             model_prefix:
                 type: string
                 required: false
+            reps:
+                type: integer
+                required: false
+            simulation_time:
+                type: integer
+                required: false
+
+    permedcoe.covid19.task3.args:
+        properties:
             outdir:
+                type: string
+                required: true
+            metadata:
+                type: string
+                required: true
+            model:
                 type: string
                 required: true
             ko_file:
                 type: string
                 required: true
             reps:
-                type: integer
-                required: false
-            model:
-                type: string
-                required: true
-            data_folder:
-                type: string
-                required: false
-            simulation_time:
                 type: integer
                 required: false
 
@@ -122,13 +155,13 @@ inputs:
         type: list
 
     task1_covid19_args:
-        type: permedcoe.covid19.args
+        type: permedcoe.covid19.task1.args
 
     task2_covid19_args:
-        type: permedcoe.covid19.args
+        type: permedcoe.covid19.task2.args
 
     task3_covid19_args:
-        type: permedcoe.covid19.args
+        type: permedcoe.covid19.task3.args
 
 ##################### PYCOMPSs args ###################
     task1_pycompss_args:
@@ -207,16 +240,14 @@ node_templates:
                 compss_args: { get_input: task1_pycompss_args }
                 app_file: '$(pwd)/1_covid19_pilot.py'
                 app_args: { get_input: task1_covid19_args }
-            deployment:
-                bootstrap: "scripts/deploy.sh"
-                revert: "scripts/revert.sh"
-                hpc_execution: false
+#            deployment:
+#                bootstrap: "scripts/deploy.sh"
+#                revert: "scripts/revert.sh"
+#                hpc_execution: false
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc1
-            - type: input
-              target: task1_in_data_small
             - type: output
               target: task1_out_results
             - type: output
@@ -238,16 +269,14 @@ node_templates:
                 compss_args: { get_input: task2_pycompss_args }
                 app_file: '$(pwd)/2_covid19_pilot.py'
                 app_args: { get_input: task2_covid19_args }
-            deployment:
-                bootstrap: "scripts/deploy.sh"
-                revert: "scripts/revert.sh"
-                hpc_execution: false
+#            deployment:
+#                bootstrap: "scripts/deploy.sh"
+#                revert: "scripts/revert.sh"
+#                hpc_execution: false
             skip_cleanup: True
         relationships:
             - type: task_managed_by_interface
               target: hpc2
-            - type: input
-              target: task2_in_data_small
             - type: input
               target: task2_in_ko_file
             - type: input
@@ -278,8 +307,6 @@ node_templates:
         relationships:
             - type: task_managed_by_interface
               target: hpc1
-            - type: input
-              target: task3_in_data_small
             - type: input
               target: task3_in_ko_file
             - type: input
@@ -344,38 +371,6 @@ node_templates:
               target: vault
 
     #INPUTS
-    task1_in_data_small:
-        type: croupier.nodes.FileDataSource
-        properties:
-            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/small/
-        relationships:
-            - type: ds_located_at
-              target: hpc1_data_access_infra
-
-    task2_in_data_small:
-        type: croupier.nodes.FileDataSource
-        properties:
-            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/small/
-        relationships:
-            - type: ds_located_at
-              target: hpc2_data_access_infra
-
-    task3_in_data_small:
-        type: croupier.nodes.FileDataSource
-        properties:
-            filepath: ~/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data/small/
-        relationships:
-            - type: ds_located_at
-              target: hpc1_data_access_infra
-
-    data_small_source:
-        type: croupier.nodes.WebDataSource
-        properties:
-            resource: /PerMedCoE/covid-19-workflow/tree/split-workflow/Resources/data/small
-        relationships:
-            - type: ds_located_at
-              target: github_data_access_infra
-
     task2_in_results:
         type: croupier.nodes.FileDataSource
         properties:
@@ -387,7 +382,7 @@ node_templates:
     task3_in_results:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ${workdir}//results/
+            filepath: ${workdir}/results/
         relationships:
             - type: ds_located_at
               target: hpc1_data_access_infra
@@ -450,36 +445,6 @@ node_templates:
               target: target_data_access_infra
 
     # DATA TRANSFER
-    dt_http_hpc1:
-        type: croupier.nodes.DataTransfer
-        properties:
-            transfer_protocol: HTTP
-        relationships:
-            - type: from_source
-              target: data_small_source
-            - type: to_target
-              target: task1_in_data_small
-
-    dt_http_hpc2:
-        type: croupier.nodes.DataTransfer
-        properties:
-            transfer_protocol: HTTP
-        relationships:
-            - type: from_source
-              target: data_small_source
-            - type: to_target
-              target: task2_in_data_small
-
-    dt_http_hpc3:
-        type: croupier.nodes.DataTransfer
-        properties:
-            transfer_protocol: HTTP
-        relationships:
-            - type: from_source
-              target: data_small_source
-            - type: to_target
-              target: task3_in_data_small
-
     dt_rsync_ko_file_task2:
         type: croupier.nodes.DataTransfer
         properties:
