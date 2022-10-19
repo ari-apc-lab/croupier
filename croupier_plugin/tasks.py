@@ -40,6 +40,7 @@ import pytz
 import tempfile
 import subprocess
 from subprocess import PIPE
+from time import sleep
 
 import requests
 from cloudify import ctx
@@ -68,11 +69,12 @@ global_data_workspaces = {}
 
 
 @operation()
-def create_vault(jwt, address, **kwargs):
+def create_vault(jwt, user, address, **kwargs):
     if not jwt:
         ctx.logger.error("No jwt provided, Vault not properly configured")
         raise NonRecoverableError("No jwt provided, Vault not properly configured")
     ctx.instance.runtime_properties['jwt'] = jwt
+    ctx.instance.runtime_properties['user'] = user
     if not address:
         ctx.logger.info("No address provided, getting vault address from croupier's config file")
         address = vault.getVaultAddressFromConfiguration()
@@ -88,6 +90,7 @@ def download_vault_credentials(jwt, user, cubbyhole, **kwargs):
             raise NonRecoverableError("If cubbyhole is false, a user must be provided to download Vault credentials")
 
         ctx.source.instance.runtime_properties['jwt'] = jwt  # Saving JWT token in infrastructure for further usage
+        ctx.source.instance.runtime_properties['user'] = user
 
         # Get token from vault
         token = vault.get_token(user, address, jwt)
@@ -231,6 +234,7 @@ def findDTInstance(dt_instance):
             if dti['id'] == dt_instance['id']:
                 found = dti
     return found
+
 
 @operation
 def preconfigure_interface(
@@ -424,9 +428,8 @@ def create_monitor(hpc_exporter_address, grafana_registry_address, **kwargs):
             "No Grafana Registry address provided. Using address set in croupier installation's config file")
         grafana_registry_address = default_grafana_registry_address
 
-    monitoring_id = ctx.deployment.id
-    ctx.logger.info("Monitoring_id generated: " + monitoring_id)
-    ctx.instance.runtime_properties["monitoring_id"] = monitoring_id
+    ctx.logger.info("deployment_id for monitoring: " + ctx.deployment.id)
+    ctx.instance.runtime_properties["deployment_id"] = ctx.deployment.id
 
     ctx.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address if hpc_exporter_address.startswith(
         "http") \
@@ -434,13 +437,13 @@ def create_monitor(hpc_exporter_address, grafana_registry_address, **kwargs):
 
     ctx.instance.runtime_properties["grafana_registry_address"] = \
         grafana_registry_address if grafana_registry_address.startswith("http") \
-        else "http://" + grafana_registry_address
+            else "http://" + grafana_registry_address
 
 
 @operation
 def preconfigure_interface_monitor(**kwargs):
-    ctx.source.instance.runtime_properties["monitoring_id"] = \
-        ctx.target.instance.runtime_properties["monitoring_id"]
+    ctx.source.instance.runtime_properties["deployment_id"] = \
+        ctx.target.instance.runtime_properties["deployment_id"]
     ctx.source.instance.runtime_properties["hpc_exporter_address"] = \
         ctx.target.instance.runtime_properties["hpc_exporter_address"]
     ctx.source.instance.runtime_properties["grafana_registry_address"] = \
@@ -458,7 +461,7 @@ def start_monitoring_hpc(
 
     if not simulate and "hpc_exporter_address" in ctx.instance.runtime_properties and \
             ctx.instance.runtime_properties["hpc_exporter_address"]:
-        monitoring_id = ctx.instance.runtime_properties["monitoring_id"]
+        deployment_id = ctx.instance.runtime_properties["deployment_id"]
         hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
         ctx.logger.info('Creating Collector in HPC Exporter...')
         if 'credentials' in ctx.instance.runtime_properties:
@@ -467,9 +470,9 @@ def start_monitoring_hpc(
         infrastructure_interface = "pbs" if infrastructure_interface == "torque" else infrastructure_interface
         monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
 
-        deployment_label = ctx.deployment.id
-        hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else ctx.node.name
-        only_jobs = monitoring_options["only_jobs"] if "only_jobs" in monitoring_options else False
+        blueprint_id = ctx.blueprint.id
+        hpc_label = monitoring_options["hpc_label"] if "hpc_label" in monitoring_options else credentials["host"]
+        user = ctx.instance.runtime_properties['user']
 
         if infrastructure_interface not in monitoring_supported_interfaces:
             ctx.logger.warning("HPC Exporter doesn't support '{0}' interface. Collector will not be created."
@@ -481,15 +484,18 @@ def start_monitoring_hpc(
         if 'monitor_interface' in monitoring_options:
             monitor_interface = monitoring_options['monitor_interface'].lower()
 
-        # Register monitoring collector
-        # TODO Register collector for infrastructure and user if not yet registered.
-        create_monitoring_collector(hpc_exporter_address, monitoring_id, deployment_label, monitor_interface,
-                                    monitor_period, hpc_label, only_jobs, credentials)
+        # Register monitoring collectors
+        # Register collector for infrastructure and user if not yet registered.
+        create_monitoring_collector_for_infra(hpc_exporter_address, monitor_interface,
+                                              monitor_period, hpc_label, credentials, user)
+        # Register collector for workflow.
+        create_monitoring_collector_for_workflow(hpc_exporter_address, monitor_interface, monitor_period, hpc_label,
+                                                 blueprint_id, deployment_id, credentials, user)
 
         # Register monitoring Grafana dashboard
         # TODO Implement dashboard registry by user and not by deployment (needs to be done in Croupier frontend)
         grafana_registry_address = ctx.instance.runtime_properties["grafana_registry_address"]
-        create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label, monitor_interface)
+        create_monitoring_dashboard(grafana_registry_address, deployment_id, blueprint_id, monitor_interface)
 
     elif simulate:
         ctx.logger.warning('monitor simulated')
@@ -498,19 +504,35 @@ def start_monitoring_hpc(
                            .format(ctx.node.name))
 
 
-def create_monitoring_collector(hpc_exporter_address, monitoring_id, deployment_label, monitor_interface,
-                                monitor_period, hpc_label, only_jobs, credentials):
+def create_monitoring_collector_for_infra(hpc_exporter_address, monitor_interface,
+                                          monitor_period, hpc_label, credentials, user):
     payload = {
         "host": credentials["host"],
         "scheduler": monitor_interface,
         "scrape_interval": monitor_period,
-        "deployment_label": deployment_label,
-        "monitoring_id": monitoring_id,
         "hpc_label": hpc_label,
-        "only_jobs": only_jobs,
-        "ssh_user": credentials["user"]
+        "ssh_user": credentials["user"],
+        "iam_user": user,
     }
+    return create_monitoring_collector(hpc_exporter_address, credentials,  hpc_label, payload)
 
+
+def create_monitoring_collector_for_workflow(hpc_exporter_address, monitor_interface, monitor_period, hpc_label,
+                                             blueprint_id, deployment_id, credentials, user):
+    payload = {
+        "host": credentials["host"],
+        "scheduler": monitor_interface,
+        "scrape_interval": monitor_period,
+        "blueprint_id": blueprint_id,
+        "deployment_id": deployment_id,
+        "hpc_label": hpc_label,
+        "ssh_user": credentials["user"],
+        "iam_user": user,
+    }
+    return create_monitoring_collector(hpc_exporter_address, credentials, hpc_label, payload)
+
+
+def create_monitoring_collector(hpc_exporter_address, credentials, hpc_label, payload):
     if "password" in credentials and credentials["password"]:
         payload["ssh_password"] = credentials["password"]
     else:
@@ -526,10 +548,10 @@ def create_monitoring_collector(hpc_exporter_address, monitoring_id, deployment_
     ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
 
 
-def create_monitoring_dashboard(grafana_registry_address, monitoring_id, deployment_label, infrastructure_interface):
+def create_monitoring_dashboard(grafana_registry_address, deployment_id, blueprint_id, infrastructure_interface):
     payload = {
-        "deployment_label": deployment_label,
-        "monitoring_id": monitoring_id,
+        "deployment_label": blueprint_id,
+        "monitoring_id": deployment_id,
     }
     jwt = ctx.instance.runtime_properties['jwt']
     url = grafana_registry_address + '/dashboards/' + infrastructure_interface
@@ -542,48 +564,61 @@ def create_monitoring_dashboard(grafana_registry_address, monitoring_id, deploym
 
     if not response.ok:
         ctx.logger.error(
-            "Failed to create monitoring dashboard for monitoring_id: {0}, with response code {1} and message {2}"
-            .format(monitoring_id, response.status_code, response.content))
+            "Failed to create monitoring dashboard for deployment_id: {0}, with response code {1} and message {2}"
+            .format(deployment_id, response.status_code, response.content))
         return
-    ctx.logger.info("Monitoring dashboard created for monitoring_id: {0}".format(monitoring_id))
+    ctx.logger.info("Monitoring dashboard created for deployment_id: {0}".format(deployment_id))
 
 
 @operation
 def stop_monitoring_hpc(
         credentials,
+        monitoring_options,
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Removes the HPC Exporter's collector """
     #  TODO Current approach removes the collector, as the collector is associated to the deployment
-    #  TODO but on the future approach, collector should be created one per user and infrastructure (if not existing)
-    #  TODO and never removed by Croupier but by the user from the frontend.
+    #  TODO but on the future approach, there should be two collectors, one associated to the deployment
+    #  TODO removed herein, and another to the infrastructure, removed from the frontend by the user.
     #  In current implementation terminated jobs are removed automatically by the collector from its list
     #  once it detects the job has finished and metrics have been collected.
+    #  Here, Croupier requests hpc-exporter to remove the collector associated to this deployment, but it
+    #  could failed if it still holds some jobs whose metrics are no collected. Therefore, Croupier insists until
+    #  collector is deleted.
     if "hpc_exporter_address" in ctx.instance.runtime_properties and \
             ctx.instance.runtime_properties["hpc_exporter_address"]:
-        hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
-        ctx.logger.info('Removing collector from HPC Exporter...')
-
+        host = credentials['host']
+        monitor_period = monitoring_options["monitor_period"] if "monitor_period" in monitoring_options else 30
         if not simulate:
-            host = credentials['host']
-            monitoring_id = ctx.instance.runtime_properties["monitoring_id"]
-            url = hpc_exporter_address + '/collector'
-
-            payload = {
-                "host": host,
-                "monitoring_id": monitoring_id
-            }
-
-            response = requests.request("DELETE", url, json=payload)
-
-            if not response.ok:
-                ctx.logger.error("Failed to remove collector from HPC Exporter: {0}".format(response.status_code))
-                return
+            succeeded = False
+            while not succeeded:
+                response = remove_collector_for_workflow(host)
+                if response.status_code == 409:  # Still jobs pending of monitoring, wait and try again
+                    sleep(monitor_period)
+                elif response.ok:  # response.status_code 409 conflict
+                    succeeded = True
+                else:
+                    ctx.logger.error("Failed to remove collector from HPC Exporter: {0}".format(response.status_code))
+                    break
             ctx.logger.info("Monitor stopped for HPC: {0}".format(host))
         else:
             ctx.logger.warning('monitor removal simulated')
     else:
         ctx.logger.info("No collector to delete for node {0}".format(ctx.node.name))
+
+
+def remove_collector_for_workflow(host):
+    hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
+    ctx.logger.info('Removing collector from HPC Exporter...')
+
+    deployment_id = ctx.instance.runtime_properties["deployment_id"]
+    url = hpc_exporter_address + '/collector'
+
+    payload = {
+        "host": host,
+        "deployment_id": deployment_id
+    }
+    return requests.request("DELETE", url, json=payload)
 
 
 @operation
@@ -617,8 +652,8 @@ def preconfigure_task(
                 ctx.target.instance.runtime_properties['hpc_exporter_address']:
             ctx.source.instance.runtime_properties['hpc_exporter_address'] = \
                 ctx.target.instance.runtime_properties['hpc_exporter_address']
-            ctx.source.instance.runtime_properties['monitoring_id'] = \
-                ctx.target.instance.runtime_properties['monitoring_id']
+            ctx.source.instance.runtime_properties['deployment_id'] = \
+                ctx.target.instance.runtime_properties['deployment_id']
 
     elif ctx.target.node.properties['recurring_workflow'] and kwargs["recurring"]:
         ctx.source.instance.runtime_properties['workdir'] = ctx.target.instance.runtime_properties['workdir']
@@ -728,7 +763,8 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
             execution_in_hpc = deployment['hpc_execution']
             #  Get deployment source if set
             deployment_source_credentials = getJobDeploymentSourceCredentials()
-            if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, interface_modules, workdir, name, ctx.logger,
+            if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, interface_modules, workdir,
+                          name, ctx.logger,
                           skip_cleanup, deployment_source_credentials):
                 ctx.logger.info('..job reverted')
             else:
@@ -904,7 +940,7 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
     if hpc_exporter_address:
         monitor_job(jobid,
                     hpc_exporter_address,
-                    ctx.instance.runtime_properties['monitoring_id'],
+                    ctx.instance.runtime_properties['deployment_id'],
                     ctx.instance.runtime_properties['credentials']['host'])
     ctx.instance.update()
 
@@ -1056,7 +1092,8 @@ def publish(publish_list, **kwargs):
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
             # Process data flow for outputs in this job
-            dm.processDataTransfer(global_dt_instances, global_data_workspaces, ctx.instance, ctx.logger, 'output', workdir)
+            dm.processDataTransfer(global_dt_instances, global_data_workspaces, ctx.instance, ctx.logger, 'output',
+                                   workdir)
 
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
@@ -1076,8 +1113,8 @@ def publish(publish_list, **kwargs):
                                                  croupier_reporter_id=croupier_reporter_id, logger=ctx.logger)
                 else:
                     ctx.logger.error(
-                        'Consumed resources by workflow {workflow_id} could not be reported to Accounting: '
-                        'Croupier instance not registered in Accounting'.format(workflow_id=ctx.workflow_id))
+                        'Consumed resources by workflow {deployment_id} could not be reported to Accounting: '
+                        'Croupier instance not registered in Accounting'.format(deployment_id=ctx.deployment_id))
 
             for publish_item in publish_list:
                 if not published:
@@ -1206,7 +1243,7 @@ def parse_hours(cput):
 def monitor_job(jobid, hpc_exporter_entrypoint, deployment_id, host):
     url = hpc_exporter_entrypoint + "/job"
     payload = {
-        "monitoring_id": deployment_id,
+        "deployment_id": deployment_id,
         "host": host,
         "job_id": jobid
     }
@@ -1244,7 +1281,7 @@ def convert_cput(cput, job_id, workdir, ssh_client, logger):
 
 
 def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, logger):
-    workflow_id = ctx.workflow_id
+    deployment_id = ctx.deployment_id
     try:
         start_transaction = audit['start_timestamp']
         stop_transaction = audit['stop_timestamp']
@@ -1264,7 +1301,7 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
                                  .format(username, str(err)))
                 raise Exception(
                     'User {0} could not be registered into Accounting, raising an error: {1}'
-                        .format(username, str(err)))
+                    .format(username, str(err)))
 
         # Register HPC CPU total
         server = ctx.instance.runtime_properties['credentials']['host']
@@ -1283,14 +1320,14 @@ def report_metrics_to_accounting(audit, job_id, username, croupier_reporter_id, 
         cpu_consumption = ResourceConsumption(audit["cput"], MeasureUnit.Hours, cpu_resource.id)
         consumptions.append(cpu_consumption)
 
-        record = ResourceConsumptionRecord(start_transaction, stop_transaction, workflow_id,
+        record = ResourceConsumptionRecord(start_transaction, stop_transaction, deployment_id,
                                            job_id, workflow_parameters, consumptions, user.id, croupier_reporter_id)
         new_record = accounting_client.add_consumption_record(record)
         logger.info("Resource consumption record registered into Accounting with id {}".format(new_record.id))
     except Exception as err:
         logger.error(
-            'Consumed resources by workflow {workflow_id} could not be reported to Accounting, raising an error: {err}'.
-                format(workflow_id=workflow_id, err=str(err)))
+            'Consumed resources by deployment_id {deployment_id} could not be reported to Accounting, raising an error: {err}'.
+            format(deployment_id=deployment_id, err=str(err)))
 
 
 def read_processors_per_node(job_id, workdir, ssh_client, logger):

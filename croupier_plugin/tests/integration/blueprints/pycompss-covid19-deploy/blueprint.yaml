@@ -152,7 +152,7 @@ node_templates:
                 app_args: { get_input: covid19_args }
             deployment:
                 bootstrap: "scripts/deploy.sh"
-                revert: "scripts/revert.sh"
+                # revert: "scripts/revert.sh"
                 hpc_execution: false
             skip_cleanup: True
         relationships:

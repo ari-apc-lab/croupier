@@ -125,7 +125,6 @@ node_templates:
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 60
-                only_jobs: true
                 monitor_interface: { get_input: monitor_scheduler }
             skip_cleanup: true
             workdir_prefix: "pycompss-single-drug-prediction-deploy"
@@ -151,7 +150,7 @@ node_templates:
                 app_args: { get_input: single_drug_prediction_args }
             deployment:
                 bootstrap: "scripts/deploy.sh"
-                revert: "scripts/revert.sh"
+                # revert: "scripts/revert.sh"
                 hpc_execution: false
             skip_cleanup: True
         relationships:

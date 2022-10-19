@@ -78,7 +78,6 @@ node_templates:
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 15
-                only_jobs: true
             skip_cleanup: true
             workdir_prefix: "multihpc-monitoring"
         relationships:
@@ -98,7 +97,6 @@ node_templates:
             base_dir: $HOME
             monitoring_options:
                 monitor_period: 15
-                only_jobs: true
             skip_cleanup: true
             workdir_prefix: "multihpc-monitoring"
         relationships:

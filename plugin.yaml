@@ -79,11 +79,6 @@ data_types:
                 description: HPC label to apply to the metrics to identify the HPC WM
                 type: string
                 required: false
-            only_jobs:
-                description: Set to true to not monitor the infrastructure metrics (queues/partitions)
-                type: boolean
-                required: false
-                default: false
 
     croupier.datatypes.accounting_options:
         properties:
@@ -974,6 +969,8 @@ node_types:
                     inputs:
                         credentials:
                             default: { get_property: [SELF, credentials] }
+                        monitoring_options:
+                            default: { get_property: [ SELF, monitoring_options ] }
                         simulate:
                             default: { get_property: [SELF, simulate] }
 
@@ -1208,6 +1205,8 @@ node_types:
                     inputs:
                         jwt:
                             default: { get_property: [ SELF,jwt ] }
+                        user:
+                            default: { get_property: [ SELF,user ] }
                         address:
                             default: { get_property: [ SELF,address ] }
 
