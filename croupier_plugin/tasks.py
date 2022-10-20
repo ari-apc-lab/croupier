@@ -493,9 +493,8 @@ def start_monitoring_hpc(
                                                  blueprint_id, deployment_id, credentials, user)
 
         # Register monitoring Grafana dashboard
-        # TODO Implement dashboard registry by user and not by deployment (needs to be done in Croupier frontend)
         grafana_registry_address = ctx.instance.runtime_properties["grafana_registry_address"]
-        create_monitoring_dashboard(grafana_registry_address, deployment_id, blueprint_id, monitor_interface)
+        create_monitoring_dashboard(grafana_registry_address, monitor_interface, user)
 
     elif simulate:
         ctx.logger.warning('monitor simulated')
@@ -548,11 +547,8 @@ def create_monitoring_collector(hpc_exporter_address, credentials, hpc_label, pa
     ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
 
 
-def create_monitoring_dashboard(grafana_registry_address, deployment_id, blueprint_id, infrastructure_interface):
-    payload = {
-        "deployment_label": blueprint_id,
-        "monitoring_id": deployment_id,
-    }
+def create_monitoring_dashboard(grafana_registry_address, infrastructure_interface, user):
+    payload = {}
     jwt = ctx.instance.runtime_properties['jwt']
     url = grafana_registry_address + '/dashboards/' + infrastructure_interface
     headers = {
@@ -564,10 +560,10 @@ def create_monitoring_dashboard(grafana_registry_address, deployment_id, bluepri
 
     if not response.ok:
         ctx.logger.error(
-            "Failed to create monitoring dashboard for deployment_id: {0}, with response code {1} and message {2}"
-            .format(deployment_id, response.status_code, response.content))
+            "Failed to create monitoring dashboard for user: {0}, with response code {1} and message {2}"
+            .format(user, response.status_code, response.content))
         return
-    ctx.logger.info("Monitoring dashboard created for deployment_id: {0}".format(deployment_id))
+    ctx.logger.info("Monitoring dashboard created for user: {0}".format(user))
 
 
 @operation
