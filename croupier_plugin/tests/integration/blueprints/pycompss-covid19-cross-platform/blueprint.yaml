@@ -439,7 +439,7 @@ node_templates:
     task3_out_results_target:
         type: croupier.nodes.FileDataSource
         properties:
-            filepath: ~/permedcoe/apps/covid19/${workdir}
+            filepath: ~/permedcoe/apps/covid19/results/
         relationships:
             - type: ds_located_at
               target: target_data_access_infra

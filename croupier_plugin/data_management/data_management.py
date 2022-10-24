@@ -22,19 +22,21 @@ def getDataTransferInstances(direction, job, dts):
                 from_workdir = instance.get("from_source", {}).get("workdir")
                 if from_credentials:
                     filterOutEmptyValueEntries(from_credentials)
-                if "filepath" in instance["from_source"]:
-                    if '${workdir}' in instance["from_source"]["filepath"]:
-                        instance["from_source"]["filepath"] = \
-                            instance["from_source"]["filepath"].replace('${workdir}', from_workdir)
+                if from_workdir:
+                    if "filepath" in instance["from_source"]:
+                        if '${workdir}' in instance["from_source"]["filepath"]:
+                            instance["from_source"]["filepath"] = \
+                                instance["from_source"]["filepath"].replace('${workdir}', from_workdir)
 
                 to_credentials = instance.get("to_target", {}).get("located_at", {}).get("credentials")
                 to_workdir = instance.get("to_target", {}).get("workdir")
                 if to_credentials:
                     filterOutEmptyValueEntries(to_credentials)
-                if "filepath" in instance["to_target"]:
-                    if '${workdir}' in instance["to_target"]["filepath"]:
-                        instance["to_target"]["filepath"] = \
-                            instance["to_target"]["filepath"].replace('${workdir}', to_workdir)
+                if to_workdir:
+                    if "filepath" in instance["to_target"]:
+                        if '${workdir}' in instance["to_target"]["filepath"]:
+                            instance["to_target"]["filepath"] = \
+                                instance["to_target"]["filepath"].replace('${workdir}', to_workdir)
                 # continue
             dict_dt_instances[rel.target.instance.id] = dt_instances
     return dict_dt_instances
