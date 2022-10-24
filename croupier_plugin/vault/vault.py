@@ -68,8 +68,12 @@ def get_token(vault_user, vault_address, jwt):
     if token_response.ok and "auth" in json and json["auth"]:
         return json["auth"]["client_token"]
     else:
-        raise Exception("Could not get token from Vault at {} for user {}\nStatus: {}"
-                        .format(vault_address, vault_user, token_response.status_code))
+        msg = "Could not get token from Vault at {address} for user {user}" \
+              "\nStatus: {status}" \
+              "\nMessage: {message}" \
+              .format(address=token_response.url, user=vault_user, status=token_response.status_code,
+                    message=token_response.content)
+        raise Exception(msg)
 
 
 def getVaultAddressFromConfiguration():

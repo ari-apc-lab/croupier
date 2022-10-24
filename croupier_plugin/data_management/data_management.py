@@ -11,42 +11,33 @@ def isDataManagementRelationship(relationship):
     return isDataManagementNode(relationship.target_node)
 
 
-def getDataTransferInstances(global_dt_instances, global_data_workspaces, direction, job):
-    dt_instances = {}
-    filterWorkspaces(global_dt_instances, global_data_workspaces)  # Only first invocation makes the work
+def getDataTransferInstances(direction, job, dts):
+    dict_dt_instances = {}
     for rel in job.relationships:
         if rel.type == direction:
-
-            dt_instances[rel.target.instance.id] = global_dt_instances[rel.target.instance.id]
-            for instance in dt_instances[rel.target.instance.id]:
+            data_id = rel.target.node.id
+            dt_instances = dts[data_id]
+            for instance in dt_instances:
                 from_credentials = instance.get("from_source", {}).get("located_at", {}).get("credentials")
+                from_workdir = instance.get("from_source", {}).get("workdir")
                 if from_credentials:
                     filterOutEmptyValueEntries(from_credentials)
+                if "filepath" in instance["from_source"]:
+                    if '${workdir}' in instance["from_source"]["filepath"]:
+                        instance["from_source"]["filepath"] = \
+                            instance["from_source"]["filepath"].replace('${workdir}', from_workdir)
+
                 to_credentials = instance.get("to_target", {}).get("located_at", {}).get("credentials")
+                to_workdir = instance.get("to_target", {}).get("workdir")
                 if to_credentials:
                     filterOutEmptyValueEntries(to_credentials)
-                continue
-
-    return dt_instances
-
-
-# TODO Improve this approach for data management based on global dictionaries.
-def filterWorkspaces(global_dt_instances, global_data_workspaces):
-    #  Replace {workspace} occurrences with those for task where data has to be sent
-    for data_object in global_data_workspaces:
-        workspace = global_data_workspaces[data_object]
-        for key in global_dt_instances:
-            for dt_instance in global_dt_instances[key]:
-                if dt_instance["from_source"]["name"] in data_object:
-                    if "filepath" in dt_instance["from_source"]:
-                        if '${workdir}' in dt_instance["from_source"]["filepath"]:
-                            dt_instance["from_source"]["filepath"] = \
-                                dt_instance["from_source"]["filepath"].replace('${workdir}', workspace)
-                if dt_instance["to_target"]["name"] in data_object:
-                    if "filepath" in dt_instance["to_target"]:
-                        if '${workdir}' in dt_instance["to_target"]["filepath"]:
-                            dt_instance["to_target"]["filepath"] = \
-                                dt_instance["to_target"]["filepath"].replace('${workdir}', workspace)
+                if "filepath" in instance["to_target"]:
+                    if '${workdir}' in instance["to_target"]["filepath"]:
+                        instance["to_target"]["filepath"] = \
+                            instance["to_target"]["filepath"].replace('${workdir}', to_workdir)
+                # continue
+            dict_dt_instances[rel.target.instance.id] = dt_instances
+    return dict_dt_instances
 
 
 def filterOutEmptyValueEntries(dictionary):
@@ -56,11 +47,11 @@ def filterOutEmptyValueEntries(dictionary):
             del dictionary[key]
 
 
-def processDataTransfer(global_dt_instances, global_data_workspaces, job, logger, direction, workdir):
+def processDataTransfer(job, logger, direction, workdir, dts):
     # For each data transfer object
     # execute data_transfer
     # TODO parallel processing of data transfer
-    dt_instances = getDataTransferInstances(global_dt_instances, global_data_workspaces, direction, job)
+    dt_instances = getDataTransferInstances(direction, job, dts)
     for data_instance_id in dt_instances:
         for dt_instance in dt_instances[data_instance_id]:
             dt = DataTransfer.factory(dt_instance, logger, workdir)

@@ -1105,6 +1105,9 @@ node_types:
             cloudify.interfaces.lifecycle:
                 configure:
                     implementation: croupier.croupier_plugin.tasks.configure_data_transfer
+                    inputs:
+                        transfer_protocol:
+                            default: { get_property: [ SELF, transfer_protocol ] }
 
     croupier.nodes.DataSource:
         derived_from: cloudify.nodes.Root
@@ -1282,31 +1285,15 @@ relationships:
 
     from_source:
         derived_from: cloudify.relationships.connected_to
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                postconfigure:
-                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
 
     to_target:
         derived_from: cloudify.relationships.connected_to
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                postconfigure:
-                    implementation: croupier.croupier_plugin.tasks.configure_dt_ds_relationship
 
     input:
         derived_from: cloudify.relationships.connected_to
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.configure_input_output_relationship
 
     output:
         derived_from: cloudify.relationships.connected_to
-        source_interfaces:
-            cloudify.interfaces.relationship_lifecycle:
-                preconfigure:
-                    implementation: croupier.croupier_plugin.tasks.configure_input_output_relationship
 
     retrieve_credentials_from_vault:
         derived_from: cloudify.relationships.depends_on

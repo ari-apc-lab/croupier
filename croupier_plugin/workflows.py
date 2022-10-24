@@ -86,7 +86,7 @@ class GraphInstance(object):
 class JobGraphInstance(GraphInstance):
     """ Wrap to add job functionalities to node instances """
 
-    def __init__(self, parent, instance, root_nodes):
+    def __init__(self, parent, instance, root_nodes, dts):
 
         super().__init__(parent, instance, root_nodes)
         self.instance = instance
@@ -104,12 +104,13 @@ class JobGraphInstance(GraphInstance):
         self.reservation = self.node.cfy_node.properties["job_options"]["reservation"] \
             if "reservation" in self.node.cfy_node.properties["job_options"] else ""
         self.name = self.runtime_properties["job_prefix"] + self.instance.id
+        self.dts = dts
 
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
         self.instance.send_event('Queuing job..')
         result = self.instance.execute_operation(
-            'croupier.interfaces.lifecycle.queue', kwargs={"name": self.name})
+            'croupier.interfaces.lifecycle.queue', kwargs={"name": self.name, "dts": self.dts})
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
@@ -132,7 +133,7 @@ class JobGraphInstance(GraphInstance):
 
         self.instance.send_event('Publishing job outputs..')
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.publish',
-                                                 kwargs={"name": self.name, "audit": self.audit})
+                                                 kwargs={"name": self.name, "audit": self.audit, "dts": self.dts})
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
             self.instance.send_event('..outputs sent for publication')
@@ -176,7 +177,7 @@ class JobGraphInstance(GraphInstance):
 class GraphNode(object):
     """ Wrap to add job functionalities to nodes """
 
-    def __init__(self, node, job_instances_map, root_nodes):
+    def __init__(self, node, job_instances_map, root_nodes, dts):
         self.name = node.id
         self.type = node.type
         self.cfy_node = node
@@ -186,6 +187,7 @@ class GraphNode(object):
         self.parents = []
         self.children = []
         self.parent_dependencies_left = 0
+        self.dts = dts
         if self.is_job:
             self.status = 'WAITING'
         else:
@@ -194,7 +196,7 @@ class GraphNode(object):
         self.instances = []
         for instance in node.instances:
             if self.is_job:
-                graph_instance = JobGraphInstance(self, instance, root_nodes)
+                graph_instance = JobGraphInstance(self, instance, root_nodes, dts)
                 job_instances_map[graph_instance.name] = graph_instance
             else:
                 graph_instance = GraphInstance(self, instance, root_nodes)
@@ -388,9 +390,73 @@ class Monitor(object):
         return self._execution_pool
 
 
-def build_graph(nodes):
-    """ Creates a new graph of nodes and instances with the job wrapper """
+def isTaskNode(node):
+    return 'croupier.nodes.Job' in node.type_hierarchy
 
+
+def isDataTransferNode(node):
+    return 'croupier.nodes.DataTransfer' in node.type_hierarchy
+
+
+def isIORelationship(node):
+    return 'croupier.nodes.DataSource' in node.type_hierarchy
+
+
+def process_dts_for_node(node, ctx):
+    dts = {}
+    # If node is task, search for its inputs and outputs. For each of them:
+    #  2- Find in nodes associated data transfer objects, return a dict {i_o_data: [dts]}
+    workdir = getWorkdir(node)
+    for rel in node.relationships:
+        if isIORelationship(rel.target_node):
+            data_node = rel.target_node
+            for data_instance in data_node.instances:
+                dt_instances = find_dt_instances_for_data(data_node.id, workdir, ctx)
+                if dt_instances:
+                    dts[data_node.id] = dt_instances
+    return dts
+
+
+def getWorkdir(task_node):
+    workdir = None
+    for task_instance in task_node.instances:
+        workdir = task_instance._node_instance.runtime_properties['workdir'] \
+            if 'workdir' in task_instance._node_instance.runtime_properties else None
+    return workdir
+
+
+def find_dt_instances_for_data(data_id, workdir, ctx):
+    dt_instances = []
+    for node in ctx.nodes:
+        if isDataTransferNode(node):
+            for instance in node.instances:
+                dt_instance = instance._node_instance.runtime_properties['dt_instance']
+                if data_id == dt_instance['from_source']['name']:
+                    dt_instance['from_source']['workdir'] = workdir
+                    target_workdir = findWorkdir(dt_instance['to_target']['name'], ctx)
+                    dt_instance['to_target']['workdir'] = target_workdir
+                    dt_instances.append(dt_instance)
+                if data_id == dt_instance['to_target']['name']:
+                    dt_instance['to_target']['workdir'] = workdir
+                    target_workdir = findWorkdir(dt_instance['from_source']['name'], ctx)
+                    dt_instance['from_source']['workdir'] = target_workdir
+                    dt_instances.append(dt_instance)
+    return dt_instances
+
+
+def findWorkdir(data_id, ctx):
+    for node in ctx.nodes:
+        for rel in node.relationships:
+            if isIORelationship(rel.target_node):
+                data_node = rel.target_node
+                if data_node.id == data_id:
+                    return getWorkdir(node)
+    return None
+
+
+def build_graph(ctx):
+    """ Creates a new graph of nodes and instances with the job wrapper """
+    nodes = ctx.nodes
     job_instances_map = {}
 
     # first create node structure
@@ -399,7 +465,12 @@ def build_graph(nodes):
     for node in nodes:
         if dm.isDataManagementNode(node):  # Ignore nodes defined for data management for building the graph
             continue
-        new_node = GraphNode(node, job_instances_map, root_nodes)
+        # If node is task, search for its inputs and outputs. For each of them:
+        #  2- Find in nodes associated data transfer objects (dts), return a dict {i_o_data: [dts]}
+        dts = {}
+        if isTaskNode(node):
+            dts = process_dts_for_node(node, ctx)
+        new_node = GraphNode(node, job_instances_map, root_nodes, dts)
         nodes_map[node.id] = new_node
         # check if it is root node
         try:
@@ -482,7 +553,7 @@ def build_configure_graph(nodes):
 def run_jobs(**kwargs):  # pylint: disable=W0613
     """ Workflow to execute long running batch operations """
     success = True
-    root_nodes, job_instances_map = build_graph(ctx.nodes)
+    root_nodes, job_instances_map = build_graph(ctx)
     monitor = Monitor(job_instances_map, ctx.logger)
 
     new_exec_nodes = root_nodes

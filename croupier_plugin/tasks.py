@@ -64,8 +64,6 @@ standard_library.install_aliases()
 
 accounting_client = AccountingClient()
 monitoring_supported_interfaces = ["slurm", "pbs", "pycompss"]
-global_dt_instances = {}
-global_data_workspaces = {}
 
 
 @operation()
@@ -152,7 +150,7 @@ def configure_data_source(**kwargs):
 
 
 @operation
-def configure_data_transfer(**kwargs):
+def configure_data_transfer(transfer_protocol, **kwargs):
     # Configure Data Transfer from_source
     ctx.logger.info('Configuring data transfer: ' + ctx.node.name)
     from_source_rel = ctx.instance.relationships[0] if ctx.instance.relationships[0].type == 'from_source' \
@@ -190,7 +188,17 @@ def configure_data_transfer(**kwargs):
         if "located_at" in to_target_instance.runtime_properties else None}
     ctx.instance.runtime_properties['to_target'] = to_target
 
-    ctx.logger.info("Data Source {0} configured".format(ctx.node.name))
+    dt_instance = {
+        "id": ctx.instance.id,
+        "transfer_protocol": transfer_protocol,
+        "from_source": from_source,
+        "to_target": to_target,
+        "done": False,
+    }
+
+    ctx.instance.runtime_properties['dt_instance'] = dt_instance
+
+    ctx.logger.info("Data Transfer {0} configured".format(ctx.node.name))
 
 
 def containsDTInstance(dt, dt_instances):
@@ -198,42 +206,6 @@ def containsDTInstance(dt, dt_instances):
         if instance['id'] == dt['id']:
             return True
     return False
-
-
-@operation
-def configure_input_output_relationship(**kwargs):
-    ctx.logger.info('Configuring job data inputs/outputs')
-    global_data_workspaces[ctx.target.instance.id] = ctx.source.instance.runtime_properties["workdir"]
-
-
-@operation
-def configure_dt_ds_relationship(**kwargs):
-    ctx.logger.info('Configuring data transfer source')
-    dt_instance = {
-        "id": ctx.source.instance.id,
-        "transfer_protocol": ctx.source.node.properties['transfer_protocol'],
-        "from_source": ctx.source.instance.runtime_properties['from_source'],
-        "to_target": ctx.source.instance.runtime_properties['to_target'],
-        "done": False,
-    }
-    data_instance_id = ctx.target.instance.id
-
-    if data_instance_id not in global_dt_instances:
-        global_dt_instances[data_instance_id] = []
-
-    if not containsDTInstance(dt_instance, global_dt_instances[data_instance_id]):
-        global_dt_instances[data_instance_id].append(findDTInstance(dt_instance))
-
-    ctx.target.instance.runtime_properties['dt_instances'] = global_dt_instances[data_instance_id]
-
-
-def findDTInstance(dt_instance):
-    found = dt_instance
-    for key in global_dt_instances:
-        for dti in global_dt_instances[key]:
-            if dti['id'] == dt_instance['id']:
-                found = dti
-    return found
 
 
 @operation
@@ -890,7 +862,9 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
     if not simulate:
         # Process data flow for inputs in this job
         workdir = ctx.instance.runtime_properties['workdir']
-        dm.processDataTransfer(global_dt_instances, global_data_workspaces, ctx.instance, ctx.logger, 'input', workdir)
+        # TODO Move to @operation for Croupier lifecycle
+        dts = kwargs['dts']
+        dm.processDataTransfer(ctx.instance, ctx.logger, 'input', workdir, dts)
 
         # Prepare HPC interface to send job
         workdir = ctx.instance.runtime_properties['workdir']
@@ -1088,8 +1062,9 @@ def publish(publish_list, **kwargs):
         if not simulate:
             workdir = ctx.instance.runtime_properties['workdir']
             # Process data flow for outputs in this job
-            dm.processDataTransfer(global_dt_instances, global_data_workspaces, ctx.instance, ctx.logger, 'output',
-                                   workdir)
+            # TODO Move to @operation for Croupier lifecycle
+            dts = kwargs['dts']
+            dm.processDataTransfer(ctx.instance, ctx.logger, 'output', workdir, dts)
 
             client = SshClient(ctx.instance.runtime_properties['credentials'])
 
