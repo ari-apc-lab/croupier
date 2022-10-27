@@ -5,20 +5,25 @@
 
 set -e
 
-trap 'catch $? $LINENO' ERR
+trap 'catch $? $LINENO' ERR EXIT
 catch() {
   echo "proxied_rsync: error $1 occurred on line $2"
-  #cleanup
+  cleanup
 }
 
 cleanup() {
   echo "proxied_rsync: cleanup"
+  if [ -n "$SSHFS_TEMP_DIR" ]; then
+    echo "Unmounting directory $SSHFS_TEMP_DIR"
+    sleep 1
 
-  # unmount
-  fusermount -u /tmp/sshfstmp
+    # unmount
+    fusermount -u $SSHFS_TEMP_DIR
 
-  # remove tmp directory
-  rm -rf /tmp/sshfstmp 2>/dev/null
+    # remove tmp directory
+    rm -rf $SSHFS_TEMP_DIR 2>/dev/null
+
+  fi
 }
 
 if [ $# -ne 8 ]; then
@@ -128,21 +133,23 @@ if [[ $target =~ $re ]]; then
 fi
 
 # remove stale tmp directory
-rm -rf /tmp/sshfstmp
+# rm -rf /tmp/sshfstmp
 
 # create temporary directory
-mkdir /tmp/sshfstmp
-chmod go-wrx /tmp/sshfstmp
+#mkdir /tmp/sshfstmp
+SSHFS_TEMP_DIR=`mktemp -d -p "$DIR"`
+chmod go-wrx $SSHFS_TEMP_DIR
 
 # mount sshfs
 if [ -z ${source_private_key+x} ]; then
 	#Using source_password for sshfs authentication
-	echo "Invoking: sshfs -o password_stdin $source_mount_point /tmp/sshfstmp <<< '$source_password'"
-	sshfs -o password_stdin "$source_mount_point" /tmp/sshfstmp <<< "$source_password"
+	echo "Invoking: sshfs -o password_stdin $source_mount_point $SSHFS_TEMP_DIR <<< '$source_password'"
+	sshfs -o password_stdin "$source_mount_point" "$SSHFS_TEMP_DIR" <<< "$source_password"
 elif [ -z ${source_password+x} ]; then
 	#Using source_private_key for sshfs authentication
-	echo "Invoking: sshfs -o StrictHostKeyChecking=no -oIdentityFile=$source_private_key $source_mount_point /tmp/sshfstmp"
-	sshfs -o StrictHostKeyChecking=no -oIdentityFile="$source_private_key" "$source_mount_point" /tmp/sshfstmp
+	echo "Invoking: sshfs -o StrictHostKeyChecking=no -oIdentityFile=$source_private_key $source_mount_point $SSHFS_TEMP_DIR
+else"
+	sshfs -o StrictHostKeyChecking=no -oIdentityFile="$source_private_key" "$source_mount_point" "$SSHFS_TEMP_DIR"
 else
 	echo "either source_password or source_private_key not set, exiting ..."
       	exit 127
@@ -156,11 +163,11 @@ if [ -z ${target_private_key+x} ]; then
 	echo "Invoking: sshpass -p $target_password ssh -o StrictHostKeyChecking=no $target_endpoint mkdir -p $target_dir"
 	sshpass -p "$target_password" ssh -o StrictHostKeyChecking=no "$target_endpoint" mkdir -p "$target_dir"
 	if [ -z ${source_file+x} ]; then
-		echo "Invoking: sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/* $target"
-		sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/* $target
+		echo "Invoking: sshpass -p $target_password rsync $FLAGS $SSHFS_TEMP_DIR/* $target"
+		sshpass -p $target_password rsync $FLAGS $SSHFS_TEMP_DIR/* $target
 	else
-		echo "Invoking: sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/$source_file $target"
-		sshpass -p $target_password rsync $FLAGS /tmp/sshfstmp/$source_file $target
+		echo "Invoking: sshpass -p $target_password rsync $FLAGS $SSHFS_TEMP_DIR/$source_file $target"
+		sshpass -p $target_password rsync $FLAGS $SSHFS_TEMP_DIR/$source_file $target
 	fi
 elif [ -z ${target_password+x} ]; then
 	#Using target_private_key for rsync authentication
@@ -169,15 +176,14 @@ elif [ -z ${target_password+x} ]; then
 	echo "Invoking: ssh -o StrictHostKeyChecking=no -i $target_private_key $target_endpoint mkdir -p $target_dir"
 	ssh -o StrictHostKeyChecking=no -i "$target_private_key" "$target_endpoint" mkdir -p "$target_dir"
 	if [ -z ${source_file+x} ]; then
-		echo Invoking: rsync "$FLAGS" /tmp/sshfstmp/* "$target"
-		eval rsync "$FLAGS" /tmp/sshfstmp/* "$target"
+		echo Invoking: rsync "$FLAGS" $SSHFS_TEMP_DIR/* "$target"
+		eval rsync "$FLAGS" "$SSHFS_TEMP_DIR"/* "$target"
 	else
-		echo Invoking: rsync "$FLAGS" /tmp/sshfstmp/"$source_file" "$target"
-		eval rsync "$FLAGS" /tmp/sshfstmp/"$source_file" "$target"
+		echo Invoking: rsync "$FLAGS" $SSHFS_TEMP_DIR/"$source_file" "$target"
+		eval rsync "$FLAGS" "$SSHFS_TEMP_DIR"/"$source_file" "$target"
 	fi
 else
 	echo "either target_password or target_private_key not set, exiting ..."
       	exit 127
 fi
 
-cleanup
