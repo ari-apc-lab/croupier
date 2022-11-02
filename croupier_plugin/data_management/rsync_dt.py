@@ -156,7 +156,7 @@ class RSyncDataTransfer(DataTransfer):
                         self.dt_config['from_source']['name'], self.dt_config['to_target']['name']
                     ))
 
-            ctx.logger.info('rsync data transfer: executing command: {}'.format(cmd))
+            ctx.logger.debug('rsync data transfer: executing command: {}'.format(cmd))
             process = subprocess.run(cmd, stdout=PIPE, stderr=PIPE, shell=True)
             if process.returncode != 0:
                 raise CommandExecutionError(
@@ -179,7 +179,7 @@ class RSyncDataTransfer(DataTransfer):
         ftp_client = None
 
         try:
-            ctx.logger.info('Processing rsync data transfer')
+            # ctx.logger.info('Processing rsync data transfer')
             # Copy source data into target data by invoking rsync command at target data infrastructure Create rsync
             # command (check available credentials for target data infrastructure) If credential include
             # user/password, rsync command is: rsync -ratlz --rsh="/usr/bin/sshpass -p <passwd> ssh -o
@@ -276,7 +276,7 @@ class RSyncDataTransfer(DataTransfer):
                                     )
 
             # Execute data transfer command
-            ctx.logger.info('rsync data transfer: executing command: {}'.format(dt_command))
+            ctx.logger.debug('rsync data transfer: executing command: {}'.format(dt_command))
             exit_msg, exit_code = ssh_client.execute_shell_command(dt_command, wait_result=True)
 
             if exit_code != 0:

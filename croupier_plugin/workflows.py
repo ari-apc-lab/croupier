@@ -68,7 +68,8 @@ class GraphInstance(object):
         """ Update the instance state """
         if not status == self._status:
             self._status = status
-            self.instance.send_event('State changed to ' + self._status)
+            self.instance.send_event(
+                'State for job {} of task {} changed to {}'.format(self.name, self.node.name, self._status))
 
             self.completed = self._status == 'COMPLETED'
 
@@ -108,14 +109,14 @@ class JobGraphInstance(GraphInstance):
 
     def launch(self):
         """ Sends the job's instance to the infrastructure queue """
-        self.instance.send_event('Queuing job..')
+        self.instance.send_event('Queuing job {} for task {}'.format(self.name, self.node.name))
         result = self.instance.execute_operation(
             'croupier.interfaces.lifecycle.queue', kwargs={"name": self.name, "dts": self.dts})
         result.get()
         if result.task.get_state() == tasks.TASK_FAILED:
             init_state = 'FAILED'
         else:
-            self.instance.send_event('.. job queued')
+            self.instance.send_event('Job {} for task {} queued'.format(self.name, self.node.name))
             init_state = 'PENDING'
         self.set_status(init_state)
         return result
@@ -130,13 +131,13 @@ class JobGraphInstance(GraphInstance):
 
     def publish(self):
         """ Publish the job's instance outputs """
-
-        self.instance.send_event('Publishing job outputs..')
+        self.instance.send_event('Publishing outputs of job {} for task {}'.format(self.name, self.node.name))
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.publish',
                                                  kwargs={"name": self.name, "audit": self.audit, "dts": self.dts})
         result.get()
         if result.task.get_state() != tasks.TASK_FAILED:
-            self.instance.send_event('..outputs sent for publication')
+            self.instance.send_event('Outputs of job {} for task {} sent for publication'
+                                     .format(self.name, self.node.name))
 
         return result.task
 
@@ -151,12 +152,11 @@ class JobGraphInstance(GraphInstance):
 
     def clean(self):
         """ Cleans job's aux files """
-
-        self.instance.send_event('Cleaning job..')
+        self.instance.send_event('Cleaning job {} for task {}'.format(self.name, self.node.name))
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.cleanup',
                                                  kwargs={"name": self.name})
 
-        self.instance.send_event('.. job cleaned')
+        self.instance.send_event('job {} for task {} cleaned'.format(self.name, self.node.name))
 
         return result.task
 
@@ -165,10 +165,10 @@ class JobGraphInstance(GraphInstance):
         # First perform clean operation
         self.clean()
 
-        self.instance.send_event('Cancelling job..')
+        self.instance.send_event('Cancelling job {} for task {}'.format(self.name, self.node.name))
         result = self.instance.execute_operation('croupier.interfaces.lifecycle.cancel',
                                                  kwargs={"name": self.name})
-        self.instance.send_event('.. job canceled')
+        self.instance.send_event('job {} for task {} canceled'.format(self.name, self.node.name))
         result.get()
 
         self._status = 'CANCELLED'

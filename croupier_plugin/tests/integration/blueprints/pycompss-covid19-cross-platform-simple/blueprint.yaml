@@ -1,0 +1,454 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+
+inputs:
+########################## VAULT ######################
+    iam_jwt:
+        type: string
+    iam_user:
+        type: string
+
+################# Covid 19 application ################
+
+    metadata:
+        type: string
+
+    reps:
+        type: integer
+
+    simulation_time:
+        type: integer
+
+##################### PYCOMPSs args ###################
+    task1_num_nodes:
+        type: integer
+
+    task1_exec_time:
+        type: integer
+
+    task2_num_nodes:
+        type: integer
+
+    task2_exec_time:
+        type: integer
+
+    task3_num_nodes:
+        type: integer
+
+    task3_exec_time:
+        type: integer
+
+#################### START WORKFLOW ###################
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            jwt: { get_input: iam_jwt }
+            user: { get_input: iam_user }
+
+    mn4:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: PYCOMPSS
+                modules:
+                    - export COMPSS_PYTHON_VERSION=3
+                    - module load COMPSs/3.0
+                    - module load singularity/3.5.2
+                    - module use /apps/modules/modulefiles/tools/COMPSs/libraries
+                    - module load permedcoe
+            credentials:
+                host: mn1.bsc.es
+            job_prefix: croupier
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 60
+                monitor_interface: SLURM
+            skip_cleanup: true
+            workdir_prefix: "covid19-crossplatform"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+            - type: interface_monitored_by
+              target: hpc_exporter
+
+    mahti:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: PYCOMPSS
+                modules:
+                    - module load COMPSs/3.0
+                    - module use /scratch/project_2003929/PerMedCoE/modulefiles
+                    - module load permedcoe
+            credentials:
+                host: mahti.csc.fi
+            job_prefix: croupier
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 60
+                monitor_interface: SLURM
+            skip_cleanup: true
+            workdir_prefix: "covid19-crossplatform"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+            - type: interface_monitored_by
+              target: hpc_exporter
+
+    task1:
+        type: croupier.nodes.PyCOMPSsJob
+        # description: "Compute ko_file and single cell processing for all patients"
+        properties:
+            job_options:
+                app_name: covid19_task1
+                app_source: permedcoe_apps/covid19/covid-19-workflow-split-workflow/Workflow/PyCOMPSs/src_split
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data
+                    - COMPUTING_UNITS: 1
+                compss_args:
+                    num_nodes: { get_input: task1_num_nodes }
+                    exec_time: { get_input: task1_exec_time }
+                    worker_working_dir: $(pwd)
+                    log_level: 'off'
+                    graph: true
+                    tracing: 'false'
+                    python_interpreter: python3
+                    qos: 'debug'
+                app_file: '$(pwd)/1_covid19_pilot.py'
+                app_args:
+                    ko_file: '$(pwd)/ko_file.txt'
+                    model: 'epithelial_cell_2'
+                    data_folder: '${dataset}'
+                    metadata: { get_input: metadata }
+                    outdir: '$(pwd)/results/'
+#            deployment:
+#                bootstrap: "scripts/deploy.sh"
+#                revert: "scripts/revert.sh"
+#                hpc_execution: false
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: mn4
+            - type: output
+              target: task1_out_results
+            - type: output
+              target: task1_out_ko_file
+            - type: deployment_source
+              target: github_data_access_infra
+
+    task2:
+        type: croupier.nodes.PyCOMPSsJob
+        # description: "Computes all patient personalization and all PhysiBoSS simulations"
+        properties:
+            job_options:
+                app_name: covid19_task2
+                app_source: permedcoe_apps/covid19/covid-19-workflow-split-workflow/Workflow/PyCOMPSs/src_split
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data
+                    - COMPUTING_UNITS: 1
+                compss_args:
+                    project_name: 'project_2003929'
+                    num_nodes: { get_input: task2_num_nodes }
+                    exec_time: { get_input: task2_exec_time }
+                    worker_working_dir: $(pwd)
+                    log_level: 'off'
+                    graph: true
+                    tracing: 'false'
+                    python_interpreter: python3
+                    qos: ''
+                app_file: '$(pwd)/2_covid19_pilot.py'
+                app_args:
+                    ko_file: '$(pwd)/ko_file.txt'
+                    model: 'epithelial_cell_2'
+                    metadata: '${dataset}/metadata_small.tsv'
+                    outdir: '$(pwd)/results/'
+                    model_prefix: '${dataset}/epithelial_cell_2'
+                    reps: { get_input: reps }
+                    simulation_time: { get_input: simulation_time }
+#            deployment:
+#                bootstrap: "scripts/deploy.sh"
+#                revert: "scripts/revert.sh"
+#                hpc_execution: false
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: mahti
+            - type: input
+              target: task2_in_ko_file
+            - type: input
+              target: task2_in_results
+            - type: output
+              target: task2_out_results
+            - type: deployment_source
+              target: github_data_access_infra
+            - type: job_depends_on
+              target: task1
+
+
+    task3:
+        type: croupier.nodes.PyCOMPSsJob
+        # description: "Computes the meta-analysis"
+        properties:
+            job_options:
+                app_name: covid19_task3
+                app_source: permedcoe_apps/covid19/covid-19-workflow-split-workflow/Workflow/PyCOMPSs/src_split
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - dataset: $HOME/permedcoe_apps/covid19/covid-19-workflow-split-workflow/Resources/data
+                    - COMPUTING_UNITS: 1
+                compss_args:
+                    num_nodes: { get_input: task3_num_nodes }
+                    exec_time: { get_input: task3_exec_time }
+                    worker_working_dir: $(pwd)
+                    log_level: 'off'
+                    graph: true
+                    tracing: 'false'
+                    python_interpreter: python3
+                    qos: 'debug'
+                app_file: '$(pwd)/3_covid19_pilot.py'
+                app_args:
+                    outdir: '$(pwd)/results/'
+                    metadata: '${dataset}/metadata_small.tsv'
+                    model: 'epithelial_cell_2'
+                    ko_file: '$(pwd)/ko_file.txt'
+                    reps: { get_input: reps }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: mn4
+            - type: input
+              target: task3_in_ko_file
+            - type: input
+              target: task3_in_results
+            - type: output
+              target: task3_out_results
+            - type: deployment_source
+              target: github_data_access_infra
+            - type: job_depends_on
+              target: task2
+
+
+#################### END WORKFLOW ###################
+
+#################### START DATAFLOW #################
+
+    #MN4 DataManagement Infrastructure
+    mn4_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: dt01.bsc.es
+            internet_access: false
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #Mahti DataManagement Infrastructure
+    mahti_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: mahti.csc.fi
+            internet_access: false
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #GitHub DataManagement Infrastructure
+    github_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: github.com
+            supported_protocols:
+                - HTTP
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #TARGET DataManagement Infrastructure
+    target_data_access_infra:
+        type: croupier.nodes.DataAccessInfrastructure
+        properties:
+            endpoint: mahti.csc.fi
+            internet_access: false
+            supported_protocols:
+                - RSync
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+
+    #INPUTS
+    task2_in_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/
+        relationships:
+            - type: ds_located_at
+              target: mahti_data_access_infra
+
+    task3_in_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/
+        relationships:
+            - type: ds_located_at
+              target: mn4_data_access_infra
+
+    task2_in_ko_file:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/ko_file.txt
+        relationships:
+            - type: ds_located_at
+              target: mahti_data_access_infra
+
+    task3_in_ko_file:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/ko_file.txt
+        relationships:
+            - type: ds_located_at
+              target: mn4_data_access_infra
+
+    #OUTPUTS
+    task1_out_ko_file:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/ko_file.txt
+        relationships:
+            - type: ds_located_at
+              target: mn4_data_access_infra
+
+    task1_out_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/
+        relationships:
+            - type: ds_located_at
+              target: mn4_data_access_infra
+
+    task2_out_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/
+        relationships:
+            - type: ds_located_at
+              target: mahti_data_access_infra
+
+    task3_out_results:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ${workdir}/results/meta_analysis/
+        relationships:
+            - type: ds_located_at
+              target: mn4_data_access_infra
+
+    task3_out_results_target:
+        type: croupier.nodes.FileDataSource
+        properties:
+            filepath: ~/permedcoe/apps/covid19/results/
+        relationships:
+            - type: ds_located_at
+              target: target_data_access_infra
+
+    # DATA TRANSFER
+    dt_rsync_ko_file_task2:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: task1_out_ko_file
+            - type: to_target
+              target: task2_in_ko_file
+
+    dt_rsync_ko_file_task3:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: task1_out_ko_file
+            - type: to_target
+              target: task3_in_ko_file
+
+    dt_rsync_results_t1_t2:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: task1_out_results
+            - type: to_target
+              target: task2_in_results
+
+    dt_rsync_results_t2_t3:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: task2_out_results
+            - type: to_target
+              target: task3_in_results
+
+    dt_rsync_out3:
+        type: croupier.nodes.DataTransfer
+        properties:
+            transfer_protocol: RSYNC
+        relationships:
+            - type: from_source
+              target: task3_out_results
+            - type: to_target
+              target: task3_out_results_target
+
+#################### END DATAFLOW ###################
+
+outputs:
+    task1_name:
+        description: single job name in the HPC
+        value: { get_attribute: [task1, job_name] }
+    task2_name:
+        description: single job name in the HPC
+        value: { get_attribute: [ task2, job_name ] }
+    task3_name:
+        description: single job name in the HPC
+        value: { get_attribute: [ task3, job_name ] }

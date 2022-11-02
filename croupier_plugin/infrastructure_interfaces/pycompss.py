@@ -203,7 +203,7 @@ class Pycompss(InfrastructureInterface):
         # submit the job
         command = submission_command['command']
 
-        self.logger.info("Invoking command: {command} for job {job}".format(
+        self.logger.debug("Invoking command: {command} for job {job}".format(
             command=command, job=context.node.name
         ))
         output, exit_code = ssh_client.execute_shell_command(command, env=environment, workdir=self.workdir,

@@ -262,6 +262,20 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # -------------------- Covid19 cross platform simple version --------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'pycompss-covid19-cross-platform-simple', 'blueprint.yaml'),
+        resources_to_copy=[
+            (os.path.join('blueprints', 'pycompss-covid19-cross-platform-simple', 'scripts', 'deploy.sh'), 'scripts'),
+            (os.path.join('blueprints', 'pycompss-covid19-cross-platform-simple', 'scripts', 'revert.sh'), 'scripts')
+        ],
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='pycompss-covid19-cross-platform-simple')
+    def test_pycompss_covid19_cross_platform_simple(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ---------------------------------- Drug Synergies -----------------------------
     # -------------------------------------------------------------------------------
     @workflow_test(

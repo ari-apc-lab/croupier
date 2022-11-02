@@ -1,0 +1,19 @@
+# VAULT
+iam_jwt: ''
+iam_user: 'yosu'
+
+# WORKFLOW
+# COVID19 args
+metadata: '${dataset}/metadata_small.tsv'
+reps: 2
+simulation_time: 100
+
+# PYCOMPSs args
+task1_num_nodes: 2
+task1_exec_time: 10
+
+task2_num_nodes: 2
+task2_exec_time: 45
+
+task3_num_nodes: 2
+task3_exec_time: 45

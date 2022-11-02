@@ -74,7 +74,7 @@ def create_vault(jwt, user, address, **kwargs):
     ctx.instance.runtime_properties['jwt'] = jwt
     ctx.instance.runtime_properties['user'] = user
     if not address:
-        ctx.logger.info("No address provided, getting vault address from croupier's config file")
+        ctx.logger.debug("No Vault address provided, getting Vault address from croupier's config file")
         address = vault.getVaultAddressFromConfiguration()
     ctx.instance.runtime_properties['address'] = address if address.startswith('http') else 'http://' + address
 
@@ -101,17 +101,17 @@ def download_vault_credentials(jwt, user, cubbyhole, **kwargs):
                 credentials = ctx.source.node.properties['credentials']
                 credentials.update(downloaded_credentials)
                 ctx.source.instance.runtime_properties['credentials'] = credentials
-                ctx.logger.info("SSH credentials downloaded from Vault for host {0}.".format(host))
+                ctx.logger.debug("SSH credentials downloaded from Vault for host {0}.".format(host))
             else:
-                ctx.logger.info("Using provided ssh credentials.")
+                ctx.logger.debug("Using provided ssh credentials.")
 
         if 'keycloak_credentials' in ctx.source.node.properties:
             keycloak_credentials = vault.download_credentials('keycloak', token, user, address, cubbyhole)
             if keycloak_credentials:
                 ctx.source.instance.runtime_properties['keycloak_credentials'] = keycloak_credentials
-                ctx.logger.info("Keycloak credentials downloaded from Vault for user {0}.".format(user))
+                ctx.logger.debug("Keycloak credentials downloaded from Vault for user {0}.".format(user))
             else:
-                ctx.logger.info("Using provided credentials.")
+                ctx.logger.debug("Using provided credentials.")
 
     except Exception as exp:
         ctx.logger.error("Failed trying to get credentials from Vault for user: {0} because of error {1}".
@@ -279,13 +279,13 @@ def configure_execution(
     elif not recurring_workflow and "recurring" in kwargs and kwargs["recurring"]:
         pass
     elif not simulate:
-        ctx.logger.info('Connecting to infrastructure interface {0}'.format(ctx.instance.id))
+        ctx.logger.info('Connecting to infrastructure {0}'.format(ctx.node.id))
         if 'infrastructure_interface' not in config:
             raise NonRecoverableError(
                 "'infrastructure_interface' key missing on config")
         interface_type = config['infrastructure_interface']
         interface_modules = config['modules'] if "modules" in config else []
-        ctx.logger.info(' - manager: {interface_type}'.format(interface_type=interface_type))
+        ctx.logger.debug(' - manager: {interface_type}'.format(interface_type=interface_type))
         wm = InfrastructureInterface.factory(interface_type, interface_modules, ctx.logger, workdir_prefix)
         if not wm:
             raise NonRecoverableError("Infrastructure Interface '" + interface_type + "' not supported.")
@@ -319,9 +319,9 @@ def configure_execution(
         if accounting_client.report_to_accounting:
             register_orchestrator_instance_accounting()
 
-        ctx.logger.info('..infrastructure ready to be used on ' + workdir)
+        ctx.logger.info('{} infrastructure ready to be used on {}'.format(ctx.node.id, workdir))
     else:
-        ctx.logger.info(' - [simulation]..')
+        ctx.logger.debug(' - [simulation]..')
         ctx.instance.runtime_properties['login'] = True
         ctx.instance.runtime_properties['workdir'] = "simulation"
         ctx.logger.warning('Infrastructure Interface connection simulated')
@@ -391,16 +391,16 @@ def getMonitoringConfiguration():
 def create_monitor(hpc_exporter_address, grafana_registry_address, **kwargs):
     default_hpc_exporter_address, default_grafana_registry_address = getMonitoringConfiguration()
     if not hpc_exporter_address:
-        ctx.logger.info(
+        ctx.logger.debug(
             "No HPC Exporter address provided. Using address set in croupier installation's config file")
         hpc_exporter_address = default_hpc_exporter_address
 
     if not grafana_registry_address:
-        ctx.logger.info(
+        ctx.logger.debug(
             "No Grafana Registry address provided. Using address set in croupier installation's config file")
         grafana_registry_address = default_grafana_registry_address
 
-    ctx.logger.info("deployment_id for monitoring: " + ctx.deployment.id)
+    ctx.logger.debug("deployment_id for monitoring: " + ctx.deployment.id)
     ctx.instance.runtime_properties["deployment_id"] = ctx.deployment.id
 
     ctx.instance.runtime_properties["hpc_exporter_address"] = hpc_exporter_address if hpc_exporter_address.startswith(
@@ -435,7 +435,6 @@ def start_monitoring_hpc(
             ctx.instance.runtime_properties["hpc_exporter_address"]:
         deployment_id = ctx.instance.runtime_properties["deployment_id"]
         hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
-        ctx.logger.info('Creating Collector in HPC Exporter...')
         if 'credentials' in ctx.instance.runtime_properties:
             credentials = ctx.instance.runtime_properties['credentials']
         infrastructure_interface = config_infra['infrastructure_interface'].lower()
@@ -458,6 +457,7 @@ def start_monitoring_hpc(
 
         # Register monitoring collectors
         # Register collector for infrastructure and user if not yet registered.
+        ctx.logger.info('Creating Collector in HPC Exporter for infrastructure {} with period {} secs'.format(hpc_label, monitor_period))
         create_monitoring_collector_for_infra(hpc_exporter_address, monitor_interface,
                                               monitor_period, hpc_label, credentials, user)
         # Register collector for workflow.
@@ -510,11 +510,11 @@ def create_monitoring_collector(hpc_exporter_address, credentials, hpc_label, pa
         payload["ssh_pkey"] = credentials["private_key"]
 
     url = hpc_exporter_address + '/collector'
-    ctx.logger.info("Creating collector in " + str(url))
+    ctx.logger.debug("Creating collector in " + str(url))
     response = requests.request("POST", url, json=payload)
 
     if not response.ok:
-        ctx.logger.error("Failed to start node monitor: {0}: {1}".format(response.status_code, response.content))
+        ctx.logger.warning("Failed to start node monitor: {0}: {1}".format(response.status_code, response.content))
         return
     ctx.logger.info("Monitor started for HPC: {0} ({1})".format(credentials["host"], hpc_label))
 
@@ -527,11 +527,11 @@ def create_monitoring_dashboard(grafana_registry_address, infrastructure_interfa
         "Content-Type": "application/json",
         "Authorization": "Bearer " + jwt
     }
-    ctx.logger.info("Creating dashboard in " + str(url))
+    ctx.logger.debug("Creating dashboard in " + str(url))
     response = requests.request("POST", url, headers=headers, json=payload)
 
     if not response.ok:
-        ctx.logger.error(
+        ctx.logger.warning(
             "Failed to create monitoring dashboard for user: {0}, with response code {1} and message {2}"
             .format(user, response.status_code, response.content))
         return
@@ -572,12 +572,12 @@ def stop_monitoring_hpc(
         else:
             ctx.logger.warning('monitor removal simulated')
     else:
-        ctx.logger.info("No collector to delete for node {0}".format(ctx.node.name))
+        ctx.logger.debug("No collector to delete for node {0}".format(ctx.node.name))
 
 
 def remove_collector_for_workflow(host):
     hpc_exporter_address = ctx.instance.runtime_properties["hpc_exporter_address"]
-    ctx.logger.info('Removing collector from HPC Exporter...')
+    ctx.logger.info('Removing collector from HPC Exporter for host {}'.format(host))
 
     deployment_id = ctx.instance.runtime_properties["deployment_id"]
     url = hpc_exporter_address + '/collector'
@@ -598,7 +598,7 @@ def preconfigure_task(
         simulate,
         **kwargs):  # pylint: disable=W0613
     """ Match the job with its credentials """
-    ctx.logger.info('Preconfiguring job {0}'.format(ctx.source.instance.id))
+    ctx.logger.info('Preconfiguring job {0}'.format(ctx.source.node.id))
 
     if "recurring" not in kwargs:
         if 'credentials' not in ctx.target.instance.runtime_properties:
@@ -650,7 +650,7 @@ def configure_job(
         ctx.logger.info('Recurring Bootstrap selected, job bootstrap will happen during croupier_configure')
         return
 
-    ctx.logger.info('Bootstraping job {0}'.format(ctx.instance.id))
+    ctx.logger.info('Bootstraping job {0}'.format(ctx.node.id))
     simulate = ctx.instance.runtime_properties['simulate']
 
     if not simulate and 'bootstrap' in deployment and deployment['bootstrap']:
@@ -667,15 +667,15 @@ def configure_job(
         deployment_source_credentials = getJobDeploymentSourceCredentials()
         if deploy_job(bootstrap, inputs, execution_in_hpc, credentials, interface_type, interface_modules,
                       workdir, name, ctx.logger, skip_cleanup, deployment_source_credentials):
-            ctx.logger.info('..job bootstraped')
+            ctx.logger.info('{} job bootstraped'.format(ctx.node.id))
         else:
-            ctx.logger.error('Job not bootstraped')
+            ctx.logger.error('Job {} not bootstraped'.format(ctx.node.id))
             raise NonRecoverableError("Bootstrap failed")
     else:
         if 'bootstrap' in deployment and deployment['bootstrap']:
-            ctx.logger.warning('..bootstrap simulated')
+            ctx.logger.warning('Bootstrap for job {} simulated'.format(ctx.node.id))
         else:
-            ctx.logger.info('..nothing to bootstrap')
+            ctx.logger.info('Nothing to bootstrap for job {}'.format(ctx.node.id))
 
     #  Deploy job if WM scheduler is PyCOMPSs
     interface_type = ctx.instance.runtime_properties['infrastructure_interface']
@@ -715,7 +715,7 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
     if not deployment:
         return
 
-    ctx.logger.info('Reverting job {0}'.format(ctx.instance.id))
+    ctx.logger.info('Reverting task {0}'.format(ctx.node.id))
     try:
         simulate = ctx.instance.runtime_properties['simulate']
 
@@ -734,18 +734,18 @@ def revert_job(deployment, skip_cleanup, **kwargs):  # pylint: disable=W0613
             if deploy_job(revert, inputs, execution_in_hpc, credentials, interface_type, interface_modules, workdir,
                           name, ctx.logger,
                           skip_cleanup, deployment_source_credentials):
-                ctx.logger.info('..job reverted')
+                ctx.logger.info('Task {} reverted'.format(ctx.node.id))
             else:
-                ctx.logger.error('Job not reverted')
+                ctx.logger.error('Task {} not reverted'.format(ctx.node.id))
                 raise NonRecoverableError("Revert failed")
         else:
             if 'revert' in deployment and deployment["revert"]:
-                ctx.logger.warning('..revert simulated')
+                ctx.logger.warning('Revert simulated for task {}'.format(ctx.node.id))
             else:
-                ctx.logger.info('..nothing to revert')
+                ctx.logger.info('Nothing to revert for task {}'.format(ctx.node.id))
     except KeyError:
         # The job wasn't configured properly, so there was no bootstrap
-        ctx.logger.warning('Job {0} was not reverted as it was not configured'.format(ctx.instance.id))
+        ctx.logger.warning('Task {0} was not reverted as it was not configured'.format(ctx.node.id))
 
 
 def deploy_job(script, inputs, execution_in_hpc, credentials, interface_type, wm_modules, workdir, name, logger,
@@ -804,7 +804,7 @@ def local_deploy(credentials, inputs, logger, name, script, skip_cleanup, wm, wo
 
         #  Execute deploy script
         try:
-            logger.info('deploying job with script: {}'.format(script))
+            logger.debug('deploying job with script: {}'.format(script))
             process = subprocess.run(deploy_cmd, stdout=PIPE, stderr=PIPE, shell=True)
             if process.returncode != 0:
                 logger.error("job {name} deploying failed with exit code {code}, stdout: {stdout}, stderr: {stderr}"
@@ -850,7 +850,7 @@ def inject_deploy_inputs(call, inputs):
 @operation
 def send_job(job_options, **kwargs):  # pylint: disable=W0613
     """ Sends a job to the infrastructure interface """
-    ctx.logger.info('Executing send_job task {0}'.format(ctx.instance.id))
+    ctx.logger.debug('Executing send_job task {0}'.format(ctx.node.id))
     simulate = ctx.instance.runtime_properties['simulate']
 
     name = kwargs['name']
@@ -882,13 +882,13 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
             'CFY_EXECUTION_ID': ctx.execution_id,
             'CFY_JOB_NAME': name
         }
-        ctx.logger.info('Submitting the job {0}'.format(ctx.instance.id))
+        ctx.logger.info('Submitting the job {0}'.format(ctx.node.id))
 
         try:
             job_options["workdir"] = workdir
             jobid = wm.submit_job(client, name, job_options, is_singularity, ctx, context_vars)
         except Exception as ex:
-            ctx.logger.error('Job {0} could not be submitted because error {1}'.format(ctx.instance.id, str(ex)))
+            ctx.logger.error('Job {0} could not be submitted because error {1}'.format(ctx.node.id, str(ex)))
             raise ex
         client.close_connection()
     else:
@@ -896,12 +896,12 @@ def send_job(job_options, **kwargs):  # pylint: disable=W0613
         jobid = "Simulated"
 
     if jobid:
-        ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') sent. Jobid: ' + jobid)
+        ctx.logger.info('Job ' + name + ' (' + ctx.node.id + ') sent. Jobid: ' + jobid)
     else:
         ctx.logger.error(
-            'Job ' + name + ' (' + ctx.instance.id + ') not sent.')
+            'Job ' + name + ' (' + ctx.node.id + ') not sent.')
         raise NonRecoverableError(
-            'Job ' + name + ' (' + ctx.instance.id + ') not sent.')
+            'Job ' + name + ' (' + ctx.node.id + ') not sent.')
 
     ctx.instance.runtime_properties['job_name'] = name
     ctx.instance.runtime_properties['job_id'] = jobid
@@ -1104,7 +1104,7 @@ def publish(publish_list, **kwargs):
             ctx.logger.warning('Instance ' + ctx.instance.id + ' simulated')
 
         if published:
-            ctx.logger.info('Job ' + name + ' (' + ctx.instance.id + ') published.')
+            ctx.logger.info('Job ' + name + ' (' + ctx.node.id + ') published.')
         else:
             ctx.logger.error('Job ' + name + ' (' + ctx.instance.id + ') not published.')
             raise NonRecoverableError('Job ' + name + ' (' + ctx.instance.id + ') not published.')
