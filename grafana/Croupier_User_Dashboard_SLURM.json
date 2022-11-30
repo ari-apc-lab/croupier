@@ -1,0 +1,1430 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "gnetId": null,
+  "graphTooltip": 0,
+  "id": 18,
+  "iteration": 1661946509385,
+  "links": [],
+  "panels": [
+    {
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null,
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Workflow"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 155
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Workflow details",
+                    "url": "http://grafana.croupier.permedcoe.eu/d/Tkr_gc6nk/test?orgId=1&from=1657087416381&to=1657109016381&var-user=bsc08642&var-deployment_label=${__value.raw}"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deployment_label"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 197
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HPC"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 71
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Job ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 89
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "job_partition"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 117
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HPC User"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 101
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 152
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "from": "",
+                    "id": 1,
+                    "text": "COMPLETED",
+                    "to": "",
+                    "type": 1,
+                    "value": "0"
+                  },
+                  {
+                    "from": "1",
+                    "id": 2,
+                    "text": "FAILED",
+                    "to": "",
+                    "type": 2
+                  }
+                ]
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 1
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Partition"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 93
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Workflow"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 316
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Date"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 179
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 9,
+        "x": 7,
+        "y": 0
+      },
+      "id": 2,
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": [
+          {
+            "desc": false,
+            "displayName": "Workflow"
+          }
+        ]
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "max (slurm_job_state{job_user=\"$user\"}) by (deployment_label)",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{deployment_label}}",
+          "refId": "B"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Workflow Executions for user $user",
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": {
+            "byField": "job_id"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time 5": true,
+              "Time 6": true,
+              "Time 7": true,
+              "Value #B": true,
+              "Value #C": true,
+              "Value #E": true,
+              "Value #G": true,
+              "Value #H": true,
+              "__name__": true,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "__name__ 3": true,
+              "__name__ 4": true,
+              "__name__ 5": true,
+              "__name__ 6": true,
+              "__name__ 7": true,
+              "deployment_label 2": true,
+              "deployment_label 3": true,
+              "deployment_label 4": true,
+              "deployment_label 5": true,
+              "deployment_label 6": true,
+              "deployment_label 7": true,
+              "hpc": true,
+              "hpc 2": true,
+              "hpc 3": true,
+              "hpc 4": true,
+              "hpc 5": true,
+              "hpc 6": true,
+              "hpc 7": true,
+              "instance": true,
+              "instance 1": true,
+              "instance 2": true,
+              "instance 3": true,
+              "instance 4": true,
+              "instance 5": true,
+              "instance 6": true,
+              "instance 7": true,
+              "job": true,
+              "job 1": true,
+              "job 2": true,
+              "job 3": true,
+              "job 4": true,
+              "job 5": true,
+              "job 6": true,
+              "job 7": true,
+              "job_id": true,
+              "job_name": true,
+              "job_name 1": true,
+              "job_name 2": true,
+              "job_name 3": true,
+              "job_name 4": true,
+              "job_name 5": true,
+              "job_name 6": true,
+              "job_name 7": true,
+              "job_partition": true,
+              "job_partition 2": true,
+              "job_partition 3": true,
+              "job_partition 4": true,
+              "job_partition 5": true,
+              "job_partition 6": true,
+              "job_partition 7": true,
+              "job_user": true,
+              "job_user 2": true,
+              "job_user 3": true,
+              "job_user 4": true,
+              "job_user 5": true,
+              "job_user 6": true,
+              "job_user 7": true,
+              "monitoring_id": true,
+              "monitoring_id 1": true,
+              "monitoring_id 2": true,
+              "monitoring_id 3": true,
+              "monitoring_id 4": true,
+              "monitoring_id 5": true,
+              "monitoring_id 6": true,
+              "monitoring_id 7": true
+            },
+            "indexByName": {
+              "Time": 0,
+              "Value": 11,
+              "__name__": 2,
+              "deployment_label": 3,
+              "hpc": 4,
+              "instance": 5,
+              "job": 6,
+              "job_id": 1,
+              "job_name": 7,
+              "job_partition": 8,
+              "job_user": 9,
+              "monitoring_id": 10
+            },
+            "renameByName": {
+              "Time": "Date",
+              "Time 1": "Date",
+              "Time 2": "",
+              "Time 3": "",
+              "Time 4": "",
+              "Value": "State",
+              "Value #A": "State",
+              "Value #B": "Walltime",
+              "Value #C": "Queue Time",
+              "Value #E": "Virtual Memory Used",
+              "Value #F": "Physical Memory Used",
+              "Value #G": "Exit code",
+              "Value #H": "Exit signal",
+              "__name__": "",
+              "__name__ 1": "",
+              "__name__ 5": "",
+              "deployment_label": "Workflow",
+              "deployment_label 1": "Workflow",
+              "hpc": "",
+              "hpc 1": "HPC",
+              "instance": "",
+              "instance 1": "",
+              "job 1": "",
+              "job_id": "",
+              "job_name 1": "Job Name",
+              "job_name 7": "",
+              "job_partition 1": "Partition",
+              "job_user 1": "HPC User",
+              "monitoring_id 1": "",
+              "monitoring_id 5": ""
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "datasource": null,
+      "description": "",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {
+            "align": null,
+            "filterable": true
+          },
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "red",
+                "value": 80
+              }
+            ]
+          }
+        },
+        "overrides": [
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 155
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "deployment_label"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 197
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HPC"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 71
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Job ID"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 89
+              },
+              {
+                "id": "links",
+                "value": [
+                  {
+                    "title": "Show Job statistics",
+                    "url": "http://grafana.croupier.permedcoe.eu/d/Tkr_gc6nk/croupier-users-dashboard-slurm?orgId=1&from=1657087416381&to=1657109016381&var-user=bsc08642&var-deployment_label=${__data.fields.Workflow}&var-job_id=${__value.raw}\n\n"
+                  }
+                ]
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "job_partition"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 117
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "HPC User"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 101
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "State"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 102
+              },
+              {
+                "id": "mappings",
+                "value": [
+                  {
+                    "from": "",
+                    "id": 1,
+                    "text": "COMPLETED",
+                    "to": "",
+                    "type": 1,
+                    "value": "0"
+                  },
+                  {
+                    "from": "",
+                    "id": 2,
+                    "text": "COMPLETING",
+                    "to": "",
+                    "type": 1,
+                    "value": "1"
+                  }
+                ]
+              },
+              {
+                "id": "color",
+                "value": {
+                  "mode": "thresholds"
+                }
+              },
+              {
+                "id": "thresholds",
+                "value": {
+                  "mode": "absolute",
+                  "steps": [
+                    {
+                      "color": "green",
+                      "value": null
+                    },
+                    {
+                      "color": "red",
+                      "value": 2
+                    }
+                  ]
+                }
+              },
+              {
+                "id": "custom.displayMode",
+                "value": "color-background"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Partition"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 93
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Workflow"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 180
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "job_user"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 102
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "#CPUs"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 80
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Status"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 103
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Walltime"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 95
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Queue time"
+            },
+            "properties": [
+              {
+                "id": "custom.width",
+                "value": 123
+              },
+              {
+                "id": "unit",
+                "value": "s"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Virtual Memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "decbytes"
+              }
+            ]
+          },
+          {
+            "matcher": {
+              "id": "byName",
+              "options": "Physical Memory"
+            },
+            "properties": [
+              {
+                "id": "unit",
+                "value": "decbytes"
+              }
+            ]
+          }
+        ]
+      },
+      "gridPos": {
+        "h": 5,
+        "w": 24,
+        "x": 0,
+        "y": 5
+      },
+      "id": 3,
+      "links": [],
+      "options": {
+        "frameIndex": 0,
+        "showHeader": true,
+        "sortBy": []
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "slurm_job_cpu_n{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{deployment_label}}",
+          "refId": "A"
+        },
+        {
+          "expr": "slurm_job_state{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{deployment_label}}",
+          "refId": "B"
+        },
+        {
+          "expr": "slurm_job_walltime_used{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{deployment_label}}",
+          "refId": "C"
+        },
+        {
+          "expr": "slurm_job_queued{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{deployment_label}}",
+          "refId": "D"
+        },
+        {
+          "expr": "slurm_job_memory_virtual_max{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{deployment_label}}",
+          "refId": "E"
+        },
+        {
+          "expr": "slurm_job_memory_physical_max{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "{{deployment_label}}",
+          "refId": "F"
+        },
+        {
+          "expr": "slurm_job_exit_code{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "G"
+        },
+        {
+          "expr": "slurm_job_exit_signal{deployment_label=\"$deployment_label\"}",
+          "format": "table",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "",
+          "refId": "H"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Job Executions  $deployment_label",
+      "transformations": [
+        {
+          "id": "seriesToColumns",
+          "options": {
+            "byField": "job_id"
+          }
+        },
+        {
+          "id": "organize",
+          "options": {
+            "excludeByName": {
+              "Time 2": true,
+              "Time 3": true,
+              "Time 4": true,
+              "Time 5": true,
+              "Time 6": true,
+              "Time 7": true,
+              "Time 8": true,
+              "Value #G": false,
+              "__name__ 1": true,
+              "__name__ 2": true,
+              "__name__ 3": true,
+              "__name__ 4": true,
+              "__name__ 5": true,
+              "__name__ 6": true,
+              "__name__ 7": true,
+              "__name__ 8": true,
+              "deployment_label 2": true,
+              "deployment_label 3": true,
+              "deployment_label 4": true,
+              "deployment_label 5": true,
+              "deployment_label 6": true,
+              "deployment_label 7": true,
+              "deployment_label 8": true,
+              "hpc 2": true,
+              "hpc 3": true,
+              "hpc 4": true,
+              "hpc 5": true,
+              "hpc 6": true,
+              "hpc 7": true,
+              "hpc 8": true,
+              "instance 1": true,
+              "instance 2": true,
+              "instance 3": true,
+              "instance 4": true,
+              "instance 5": true,
+              "instance 6": true,
+              "instance 7": true,
+              "instance 8": true,
+              "job 1": true,
+              "job 2": true,
+              "job 3": true,
+              "job 4": true,
+              "job 5": true,
+              "job 6": true,
+              "job 7": true,
+              "job 8": true,
+              "job_name 2": true,
+              "job_name 3": true,
+              "job_name 4": true,
+              "job_name 5": true,
+              "job_name 6": true,
+              "job_name 7": true,
+              "job_name 8": true,
+              "job_partition 2": true,
+              "job_partition 3": true,
+              "job_partition 4": true,
+              "job_partition 5": true,
+              "job_partition 6": true,
+              "job_partition 7": true,
+              "job_partition 8": true,
+              "job_user 2": true,
+              "job_user 3": true,
+              "job_user 4": true,
+              "job_user 5": true,
+              "job_user 6": true,
+              "job_user 7": true,
+              "job_user 8": true,
+              "monitoring_id 1": true,
+              "monitoring_id 2": true,
+              "monitoring_id 3": true,
+              "monitoring_id 4": true,
+              "monitoring_id 5": true,
+              "monitoring_id 6": true,
+              "monitoring_id 7": true,
+              "monitoring_id 8": true
+            },
+            "indexByName": {
+              "Time 1": 0,
+              "Time 2": 12,
+              "Time 3": 23,
+              "Time 4": 34,
+              "Time 5": 45,
+              "Time 6": 56,
+              "Time 7": 67,
+              "Time 8": 78,
+              "Value #A": 11,
+              "Value #B": 22,
+              "Value #C": 33,
+              "Value #D": 44,
+              "Value #E": 55,
+              "Value #F": 66,
+              "Value #G": 77,
+              "Value #H": 88,
+              "__name__ 1": 2,
+              "__name__ 2": 13,
+              "__name__ 3": 24,
+              "__name__ 4": 35,
+              "__name__ 5": 46,
+              "__name__ 6": 57,
+              "__name__ 7": 68,
+              "__name__ 8": 79,
+              "deployment_label 1": 3,
+              "deployment_label 2": 14,
+              "deployment_label 3": 25,
+              "deployment_label 4": 36,
+              "deployment_label 5": 47,
+              "deployment_label 6": 58,
+              "deployment_label 7": 69,
+              "deployment_label 8": 80,
+              "hpc 1": 4,
+              "hpc 2": 15,
+              "hpc 3": 26,
+              "hpc 4": 37,
+              "hpc 5": 48,
+              "hpc 6": 59,
+              "hpc 7": 70,
+              "hpc 8": 81,
+              "instance 1": 5,
+              "instance 2": 16,
+              "instance 3": 27,
+              "instance 4": 38,
+              "instance 5": 49,
+              "instance 6": 60,
+              "instance 7": 71,
+              "instance 8": 82,
+              "job 1": 6,
+              "job 2": 17,
+              "job 3": 28,
+              "job 4": 39,
+              "job 5": 50,
+              "job 6": 61,
+              "job 7": 72,
+              "job 8": 83,
+              "job_id": 1,
+              "job_name 1": 7,
+              "job_name 2": 18,
+              "job_name 3": 29,
+              "job_name 4": 40,
+              "job_name 5": 51,
+              "job_name 6": 62,
+              "job_name 7": 73,
+              "job_name 8": 84,
+              "job_partition 1": 8,
+              "job_partition 2": 19,
+              "job_partition 3": 30,
+              "job_partition 4": 41,
+              "job_partition 5": 52,
+              "job_partition 6": 63,
+              "job_partition 7": 74,
+              "job_partition 8": 85,
+              "job_user 1": 9,
+              "job_user 2": 20,
+              "job_user 3": 31,
+              "job_user 4": 42,
+              "job_user 5": 53,
+              "job_user 6": 64,
+              "job_user 7": 75,
+              "job_user 8": 86,
+              "monitoring_id 1": 10,
+              "monitoring_id 2": 21,
+              "monitoring_id 3": 32,
+              "monitoring_id 4": 43,
+              "monitoring_id 5": 54,
+              "monitoring_id 6": 65,
+              "monitoring_id 7": 76,
+              "monitoring_id 8": 87
+            },
+            "renameByName": {
+              "Time 1": "Date",
+              "Time 2": "",
+              "Time 3": "",
+              "Time 4": "",
+              "Time 7": "",
+              "Value #A": "#CPUs",
+              "Value #B": "State",
+              "Value #C": "Walltime",
+              "Value #D": "Queue time",
+              "Value #E": "Virtual Memory",
+              "Value #F": "Physical Memory",
+              "Value #G": "Exit code",
+              "Value #H": "Exit signal",
+              "__name__ 1": "",
+              "__name__ 2": "",
+              "__name__ 8": "",
+              "deployment_label 1": "Workflow",
+              "hpc 1": "HPC",
+              "instance 1": "",
+              "job 1": "",
+              "job_id": "Job ID",
+              "job_name 1": "Job Name",
+              "job_partition 1": "Partition",
+              "job_user 1": "HPC User",
+              "monitoring_id 1": ""
+            }
+          }
+        }
+      ],
+      "type": "table"
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 5,
+        "x": 0,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 5,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 5,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "slurm_job_state{deployment_label=\"$deployment_label\",job_id=~\"$job_id\"}",
+          "instant": false,
+          "interval": "",
+          "legendFormat": "$job_id",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Job State ($job_id)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:238",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": "23",
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:239",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 5,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 9,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "slurm_job_memory_virtual_max{deployment_label=\"$deployment_label\",job_id=~\"$job_id\"}",
+          "interval": "",
+          "legendFormat": "Virtual Memory",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Virtual Memory ($job_id)",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:296",
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": "1",
+          "min": "0",
+          "show": true
+        },
+        {
+          "$$hashKey": "object:297",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "aliasColors": {},
+      "bars": false,
+      "dashLength": 10,
+      "dashes": false,
+      "datasource": null,
+      "fieldConfig": {
+        "defaults": {
+          "custom": {}
+        },
+        "overrides": []
+      },
+      "fill": 1,
+      "fillGradient": 0,
+      "gridPos": {
+        "h": 8,
+        "w": 8,
+        "x": 13,
+        "y": 10
+      },
+      "hiddenSeries": false,
+      "id": 10,
+      "legend": {
+        "avg": false,
+        "current": false,
+        "max": false,
+        "min": false,
+        "show": true,
+        "total": false,
+        "values": false
+      },
+      "lines": true,
+      "linewidth": 2,
+      "nullPointMode": "null",
+      "options": {
+        "alertThreshold": true
+      },
+      "percentage": false,
+      "pluginVersion": "7.3.7",
+      "pointradius": 2,
+      "points": false,
+      "renderer": "flot",
+      "seriesOverrides": [],
+      "spaceLength": 10,
+      "stack": false,
+      "steppedLine": false,
+      "targets": [
+        {
+          "expr": "slurm_job_memory_physical_max{deployment_label=\"$deployment_label\",job_id=~\"$job_id\"}",
+          "interval": "",
+          "legendFormat": "",
+          "refId": "A"
+        }
+      ],
+      "thresholds": [],
+      "timeFrom": null,
+      "timeRegions": [],
+      "timeShift": null,
+      "title": "Panel Title",
+      "tooltip": {
+        "shared": true,
+        "sort": 0,
+        "value_type": "individual"
+      },
+      "type": "graph",
+      "xaxis": {
+        "buckets": null,
+        "mode": "time",
+        "name": null,
+        "show": true,
+        "values": []
+      },
+      "yaxes": [
+        {
+          "$$hashKey": "object:455",
+          "format": "bytes",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        },
+        {
+          "$$hashKey": "object:456",
+          "format": "short",
+          "label": null,
+          "logBase": 1,
+          "max": null,
+          "min": null,
+          "show": true
+        }
+      ],
+      "yaxis": {
+        "align": false,
+        "alignLevel": null
+      }
+    },
+    {
+      "datasource": "Prometheus",
+      "fieldConfig": {
+        "defaults": {
+          "custom": {},
+          "mappings": [],
+          "thresholds": {
+            "mode": "absolute",
+            "steps": [
+              {
+                "color": "green",
+                "value": null
+              },
+              {
+                "color": "#EAB839",
+                "value": 70
+              },
+              {
+                "color": "#6ED0E0",
+                "value": 90
+              }
+            ]
+          },
+          "unit": "dthms"
+        },
+        "overrides": []
+      },
+      "gridPos": {
+        "h": 8,
+        "w": 3,
+        "x": 21,
+        "y": 10
+      },
+      "id": 12,
+      "options": {
+        "colorMode": "value",
+        "graphMode": "area",
+        "justifyMode": "auto",
+        "orientation": "auto",
+        "reduceOptions": {
+          "calcs": [
+            "lastNotNull"
+          ],
+          "fields": "",
+          "values": false
+        },
+        "textMode": "auto"
+      },
+      "pluginVersion": "7.3.7",
+      "targets": [
+        {
+          "expr": "slurm_job_walltime_used{deployment_label=\"$deployment_label\",job_id=~\"$job_id\"}",
+          "instant": true,
+          "interval": "",
+          "legendFormat": "$job_id",
+          "refId": "A"
+        }
+      ],
+      "timeFrom": null,
+      "timeShift": null,
+      "title": "Job walltime used ($job_id)",
+      "type": "stat"
+    }
+  ],
+  "refresh": false,
+  "schemaVersion": 26,
+  "style": "dark",
+  "tags": [],
+  "templating": {
+    "list": [
+      {
+        "allValue": null,
+        "current": {
+          "selected": true,
+          "text": "bsc08642",
+          "value": "bsc08642"
+        },
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": "HPC User",
+        "multi": false,
+        "name": "user",
+        "options": [
+          {
+            "selected": true,
+            "text": "bsc08642",
+            "value": "bsc08642"
+          },
+          {
+            "selected": false,
+            "text": "yosu",
+            "value": "yosu"
+          }
+        ],
+        "query": "bsc08642,yosu",
+        "queryValue": "",
+        "skipUrlSync": false,
+        "type": "custom"
+      },
+      {
+        "allValue": null,
+        "current": {
+          "selected": false,
+          "text": "test_pycompss_covid19_deploy",
+          "value": "test_pycompss_covid19_deploy"
+        },
+        "datasource": "Prometheus",
+        "definition": "label_values(slurm_job_state{job_user=\"bsc08642\"},deployment_label)",
+        "error": null,
+        "hide": 0,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "deployment_label",
+        "options": [],
+        "query": "label_values(slurm_job_state{job_user=\"bsc08642\"},deployment_label)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      },
+      {
+        "allValue": null,
+        "current": {
+          "isNone": true,
+          "selected": false,
+          "text": "None",
+          "value": ""
+        },
+        "datasource": "Prometheus",
+        "definition": "label_values(slurm_partition_availability{deployment_label=\"$deployment_label\"}, job_id)",
+        "error": null,
+        "hide": 2,
+        "includeAll": false,
+        "label": null,
+        "multi": false,
+        "name": "job_id",
+        "options": [],
+        "query": "label_values(slurm_partition_availability{deployment_label=\"$deployment_label\"}, job_id)",
+        "refresh": 2,
+        "regex": "",
+        "skipUrlSync": false,
+        "sort": 0,
+        "tagValuesQuery": "",
+        "tags": [],
+        "tagsQuery": "",
+        "type": "query",
+        "useTags": false
+      }
+    ]
+  },
+  "time": {
+    "from": "now-6h",
+    "to": "now"
+  },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Croupier User's Dashboard (SLURM)",
+  "uid": "Tkr_gc6nk",
+  "version": 54
+}
