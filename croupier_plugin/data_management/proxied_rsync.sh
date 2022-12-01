@@ -143,8 +143,8 @@ chmod go-wrx $SSHFS_TEMP_DIR
 # mount sshfs
 if [ -z ${source_private_key+x} ]; then
 	#Using source_password for sshfs authentication
-	echo "Invoking: sshfs -o password_stdin $source_mount_point $SSHFS_TEMP_DIR <<< '$source_password'"
-	sshfs -o password_stdin "$source_mount_point" "$SSHFS_TEMP_DIR" <<< "$source_password"
+	echo "Invoking: sshfs -o password_stdin -o StrictHostKeyChecking=no $source_mount_point $SSHFS_TEMP_DIR <<< '$source_password'"
+	sshfs -o password_stdin -o StrictHostKeyChecking=no "$source_mount_point" "$SSHFS_TEMP_DIR" <<< "$source_password"
 elif [ -z ${source_password+x} ]; then
 	#Using source_private_key for sshfs authentication
 	echo "Invoking: sshfs -o StrictHostKeyChecking=no -oIdentityFile=$source_private_key $source_mount_point $SSHFS_TEMP_DIR
