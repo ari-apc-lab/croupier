@@ -1,0 +1,26 @@
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://www.getcloudify.org/spec/cloudify/6.2.0/types.yaml
+
+node_templates:
+  inference:
+    type: cloudify.nodes.WebServer
+    capabilities:
+      scalable:
+        properties:
+          default_instances: 1
+    interfaces:
+      cloudify.interfaces.lifecycle:
+        start:
+          implementation: scripts/requests.sh
+          executor: central_deployment_agent
+          inputs: {}
+
+deployment_settings:
+    default_schedules:
+        main:
+            workflow: start
+            since: '2022-11-23 14:00'
+            recurrence: '1d'
+            timezone: 'CET'
