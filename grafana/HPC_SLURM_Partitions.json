@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 20,
-  "iteration": 1661946582693,
+  "id": 3,
+  "iteration": 1671465910834,
   "links": [],
   "panels": [
     {
@@ -88,7 +88,7 @@
                 "value": [
                   {
                     "title": "Show partition details",
-                    "url": "http://grafana.croupier.permedcoe.eu/d/BDPdQxgVz/hpc-slurm-clusters?orgId=1&var-hpc=$hpc&var-partition=${__value.raw}"
+                    "url": "http://grafana.croupier.ari-aidata.eu/d/BDPdQxgVz/hpc-slurm-clusters?orgId=1&var-hpc=$hpc&var-partition=${__value.raw}"
                   }
                 ]
               }
@@ -334,13 +334,19 @@
           "interval": "",
           "legendFormat": "#running jobs",
           "refId": "A"
+        },
+        {
+          "expr": "slurm_partition_pending_jobs{partition=\"$partition\", hpc=\"$hpc\"}",
+          "interval": "",
+          "legendFormat": "#pending jobs",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "#Running jobs in partition $partition",
+      "title": "#Running/Pending jobs in partition $partition",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -398,292 +404,7 @@
         "y": 7
       },
       "hiddenSeries": false,
-      "id": 21,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "slurm_partition_pending_jobs{partition=\"$partition\", hpc=\"$hpc\"}",
-          "interval": "",
-          "legendFormat": "#pending jobs",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "#Pending jobs in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 0,
-        "y": 15
-      },
-      "hiddenSeries": false,
       "id": 20,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "slurm_partition_node_alloc{partition=\"$partition\", hpc=\"$hpc\"}",
-          "interval": "",
-          "legendFormat": "Allocated nodes",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Allocated Nodes in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 15
-      },
-      "hiddenSeries": false,
-      "id": 9,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "slurm_partition_node_idle{partition=\"$partition\", hpc=\"$hpc\"}",
-          "interval": "",
-          "legendFormat": "Idle nodes",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Idle Nodes in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 15
-      },
-      "hiddenSeries": false,
-      "id": 8,
       "legend": {
         "avg": false,
         "current": false,
@@ -713,14 +434,26 @@
           "expr": "slurm_partition_node_total{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Total nodes",
+          "refId": "C"
+        },
+        {
+          "expr": "slurm_partition_node_alloc{partition=\"$partition\", hpc=\"$hpc\"}",
+          "interval": "",
+          "legendFormat": "Allocated nodes",
           "refId": "A"
+        },
+        {
+          "expr": "slurm_partition_node_idle{partition=\"$partition\", hpc=\"$hpc\"}",
+          "interval": "",
+          "legendFormat": "Idle nodes",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Total Nodes in partition $partition",
+      "title": "Total/Allocated/Idle Nodes in partition $partition",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -773,9 +506,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 9,
+        "w": 8,
         "x": 0,
-        "y": 23
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 7,
@@ -875,9 +608,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 9,
-        "x": 9,
-        "y": 23
+        "w": 8,
+        "x": 8,
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 11,
@@ -917,13 +650,19 @@
           "interval": "",
           "legendFormat": "Upper free memory",
           "refId": "B"
+        },
+        {
+          "expr": "slurm_partition_alloc_mem{partition=\"$partition\", hpc=\"$hpc\"}",
+          "interval": "",
+          "legendFormat": "Allocated memory",
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Free Memory in partition $partition",
+      "title": "Free/Allocated Memory in partition $partition",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -939,7 +678,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "$$hashKey": "object:510",
+          "format": "decmbytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -947,6 +687,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:511",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -976,104 +717,9 @@
       "fillGradient": 0,
       "gridPos": {
         "h": 7,
-        "w": 6,
-        "x": 18,
-        "y": 23
-      },
-      "hiddenSeries": false,
-      "id": 16,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "slurm_partition_alloc_mem{partition=\"$partition\", hpc=\"$hpc\"}",
-          "interval": "",
-          "legendFormat": "Allocated memory",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Allocated Memory in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
         "w": 8,
-        "x": 0,
-        "y": 30
+        "x": 16,
+        "y": 15
       },
       "hiddenSeries": false,
       "id": 17,
@@ -1107,203 +753,25 @@
           "interval": "",
           "legendFormat": "Queue tme per job",
           "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Queue time per job in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
         },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 8,
-        "y": 30
-      },
-      "hiddenSeries": false,
-      "id": 18,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
         {
           "expr": "slurm_partition_execution_time_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
-          "legendFormat": "Execution tme per job",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Execution time per job in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
+          "legendFormat": "Execution time per job",
+          "refId": "B"
         },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 8,
-        "x": 16,
-        "y": 30
-      },
-      "hiddenSeries": false,
-      "id": 19,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
         {
           "expr": "slurm_partition_time_left_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Time left per job",
-          "refId": "A"
+          "refId": "C"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Time left per job in partition $partition",
+      "title": "Queue/Execution/Left time per job in partition $partition",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1319,7 +787,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "$$hashKey": "object:614",
+          "format": "s",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1327,6 +796,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:615",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1355,10 +825,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 4,
+        "h": 7,
+        "w": 8,
         "x": 0,
-        "y": 38
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 13,
@@ -1392,13 +862,19 @@
           "interval": "",
           "legendFormat": "Min requested nodes per job",
           "refId": "A"
+        },
+        {
+          "expr": "slurm_partition_maximum_allocated_nodes_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "interval": "",
+          "legendFormat": "Max allocated nodes per job",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Min requested Nodes per job in partition $partition",
+      "title": "Min requested/Max allocated nodes per job in partition $partition",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1414,6 +890,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:722",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1422,6 +899,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:723",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1450,10 +928,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 5,
-        "y": 38
+        "h": 7,
+        "w": 8,
+        "x": 8,
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 14,
@@ -1487,13 +965,19 @@
           "interval": "",
           "legendFormat": "Min requested CPUs per job ",
           "refId": "A"
+        },
+        {
+          "expr": "slurm_partition_maximum_allocated_cpus_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "interval": "",
+          "legendFormat": "Max allocated CPUs per job",
+          "refId": "B"
         }
       ],
       "thresholds": [],
       "timeFrom": null,
       "timeRegions": [],
       "timeShift": null,
-      "title": "Min requested CPUs per job in partition $partition",
+      "title": "Min requested/Max allocated CPUs per job in partition $partition",
       "tooltip": {
         "shared": true,
         "sort": 0,
@@ -1509,6 +993,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:829",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1517,6 +1002,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:830",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1545,10 +1031,10 @@
       "fill": 1,
       "fillGradient": 0,
       "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 10,
-        "y": 38
+        "h": 7,
+        "w": 8,
+        "x": 16,
+        "y": 22
       },
       "hiddenSeries": false,
       "id": 15,
@@ -1604,7 +1090,8 @@
       },
       "yaxes": [
         {
-          "format": "short",
+          "$$hashKey": "object:883",
+          "format": "decmbytes",
           "label": null,
           "logBase": 1,
           "max": null,
@@ -1612,196 +1099,7 @@
           "show": true
         },
         {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 15,
-        "y": 38
-      },
-      "hiddenSeries": false,
-      "id": 10,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "slurm_partition_maximum_allocated_nodes_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
-          "interval": "",
-          "legendFormat": "Max allocated nodes per job",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Max allocated Nodes per job in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        }
-      ],
-      "yaxis": {
-        "align": false,
-        "alignLevel": null
-      }
-    },
-    {
-      "aliasColors": {},
-      "bars": false,
-      "dashLength": 10,
-      "dashes": false,
-      "datasource": null,
-      "fieldConfig": {
-        "defaults": {
-          "custom": {}
-        },
-        "overrides": []
-      },
-      "fill": 1,
-      "fillGradient": 0,
-      "gridPos": {
-        "h": 8,
-        "w": 4,
-        "x": 20,
-        "y": 38
-      },
-      "hiddenSeries": false,
-      "id": 12,
-      "legend": {
-        "avg": false,
-        "current": false,
-        "max": false,
-        "min": false,
-        "show": true,
-        "total": false,
-        "values": false
-      },
-      "lines": true,
-      "linewidth": 1,
-      "nullPointMode": "null",
-      "options": {
-        "alertThreshold": true
-      },
-      "percentage": false,
-      "pluginVersion": "7.3.7",
-      "pointradius": 2,
-      "points": false,
-      "renderer": "flot",
-      "seriesOverrides": [],
-      "spaceLength": 10,
-      "stack": false,
-      "steppedLine": false,
-      "targets": [
-        {
-          "expr": "slurm_partition_maximum_allocated_cpus_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
-          "interval": "",
-          "legendFormat": "Max allocated CPUs per job",
-          "refId": "A"
-        }
-      ],
-      "thresholds": [],
-      "timeFrom": null,
-      "timeRegions": [],
-      "timeShift": null,
-      "title": "Max allocated CPUs per job in partition $partition",
-      "tooltip": {
-        "shared": true,
-        "sort": 0,
-        "value_type": "individual"
-      },
-      "type": "graph",
-      "xaxis": {
-        "buckets": null,
-        "mode": "time",
-        "name": null,
-        "show": true,
-        "values": []
-      },
-      "yaxes": [
-        {
-          "format": "short",
-          "label": null,
-          "logBase": 1,
-          "max": null,
-          "min": null,
-          "show": true
-        },
-        {
+          "$$hashKey": "object:884",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -1852,8 +1150,8 @@
         "allValue": null,
         "current": {
           "selected": false,
-          "text": "gc",
-          "value": "gc"
+          "text": "medium",
+          "value": "medium"
         },
         "datasource": "Prometheus",
         "definition": "label_values(slurm_partition_availability{hpc=\"$hpc\"}, partition)",
@@ -1885,5 +1183,5 @@
   "timezone": "",
   "title": "HPC SLURM clusters",
   "uid": "BDPdQxgVz",
-  "version": 50
+  "version": 14
 }
