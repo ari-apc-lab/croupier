@@ -16,8 +16,8 @@
   "editable": true,
   "gnetId": null,
   "graphTooltip": 0,
-  "id": 3,
-  "iteration": 1671465910834,
+  "id": 1,
+  "iteration": 1673440090689,
   "links": [],
   "panels": [
     {
@@ -538,13 +538,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "slurm_partition_cpus_load_lower{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_cpus_load_lower{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Lower load",
           "refId": "A"
         },
         {
-          "expr": "slurm_partition_cpus_load_upper{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_cpus_load_upper{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Upper load",
           "refId": "B"
@@ -570,6 +570,7 @@
       },
       "yaxes": [
         {
+          "$$hashKey": "object:87",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -578,6 +579,7 @@
           "show": true
         },
         {
+          "$$hashKey": "object:88",
           "format": "short",
           "label": null,
           "logBase": 1,
@@ -640,19 +642,19 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "slurm_partition_free_mem_lower{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_free_mem_lower{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Lower free memory",
           "refId": "A"
         },
         {
-          "expr": "slurm_partition_free_mem_upper{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_free_mem_upper{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Upper free memory",
           "refId": "B"
         },
         {
-          "expr": "slurm_partition_alloc_mem{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_alloc_mem{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Allocated memory",
           "refId": "C"
@@ -749,19 +751,19 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "slurm_partition_queue_time_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_queue_time_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Queue tme per job",
           "refId": "A"
         },
         {
-          "expr": "slurm_partition_execution_time_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_execution_time_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Execution time per job",
           "refId": "B"
         },
         {
-          "expr": "slurm_partition_time_left_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_time_left_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Time left per job",
           "refId": "C"
@@ -858,13 +860,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "slurm_partition_minimum_requested_nodes_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_minimum_requested_nodes_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Min requested nodes per job",
           "refId": "A"
         },
         {
-          "expr": "slurm_partition_maximum_allocated_nodes_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_maximum_allocated_nodes_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Max allocated nodes per job",
           "refId": "B"
@@ -961,13 +963,13 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "slurm_partition_minimum_requested_cpus_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_minimum_requested_cpus_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Min requested CPUs per job ",
           "refId": "A"
         },
         {
-          "expr": "slurm_partition_maximum_allocated_cpus_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_maximum_allocated_cpus_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Max allocated CPUs per job",
           "refId": "B"
@@ -1064,7 +1066,7 @@
       "steppedLine": false,
       "targets": [
         {
-          "expr": "slurm_partition_minimum_requested_memory_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
+          "expr": "slurm_partition_avg_minimum_requested_memory_per_job{partition=\"$partition\", hpc=\"$hpc\"}",
           "interval": "",
           "legendFormat": "Min requested memory per job ",
           "refId": "A"
@@ -1176,12 +1178,12 @@
     ]
   },
   "time": {
-    "from": "now-6h",
+    "from": "now-1h",
     "to": "now"
   },
   "timepicker": {},
   "timezone": "",
   "title": "HPC SLURM clusters",
   "uid": "BDPdQxgVz",
-  "version": 14
+  "version": 3
 }
