@@ -6,7 +6,7 @@ download_metric()
   echo 'Downloading metric' $1
   target=$1_1w.csv
   metric=$1
-  ./prom_csv.py -s https://prometheus.croupier.ari-aidata.eu -l hpc=mahti.csc.fi -m $metric -p 1h > $d/$target
+  ./prom_csv.py -s https://prometheus.croupier.ari-aidata.eu -l hpc=mahti.csc.fi -m $metric -p 1w -r 5m > $d/$target
   cd $d
   tar cvzf $target.tgz $target
   rm $target

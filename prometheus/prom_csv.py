@@ -33,6 +33,10 @@ def parse_arguments(args):
     ap.add_argument("-p", "--period", required=False,
                     help="time period of collected metrics in Prometheus notation. Default: [1h]")
 
+    ap.add_argument("-r", "--resolution", required=False,
+                    help="time interval between reported metrics within the given period in Prometheus notation. "
+                         "Default: not set, Prometheus default")
+
     ap.add_argument("-sm", "--show_metrics", required=False,
                     help="print available metrics")
 
@@ -59,6 +63,7 @@ prometheus = args['prometheus_server']
 metrics = args['metrics']
 labels = args['labels']
 period = args['period']
+resolution = args['resolution']
 show_metrics = args["show_metrics"]
 metrics_prefix = args["metrics_prefix"]
 
@@ -77,10 +82,14 @@ if bool(show_metrics):
     exit(0)
 
 # period
-if not period:
+if not period and not resolution:
     period = '[1h]'
-else:
+elif not period and resolution:
+    period = '[1h:' + resolution + ']'
+elif period and not resolution:
     period = '[' + period + ']'
+else:
+    period = '[' + period + ":" + resolution + ']'
 
 # labels
 if labels:
