@@ -98,13 +98,14 @@ if labels:
     labels = ','.join(labels)
 
 writeHeader = True
+timeout = 60*10  # 10 minutes
 for metricName in metricNames:
     # now its hardcoded for hourly
     if not labels:
         query = metricName + period
     else:
         query = metricName + "{" + labels + "}" + period
-    response = requests.get('{0}/api/v1/query'.format(prometheus), params={'query': query})
+    response = requests.get('{0}/api/v1/query'.format(prometheus), params={'query': query}, timeout=timeout)
     results = response.json()['data']['result']
     # Build a list of all labelnames used.
     # gets all keys and discard __name__
