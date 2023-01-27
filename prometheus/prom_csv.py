@@ -5,14 +5,17 @@ import requests
 import sys
 
 
-def GetMetrixNames(url):
+def get_metrics_names(url, metrics_prefix):
     response = requests.get('{0}/api/v1/label/__name__/values'.format(url))
     names = response.json()['data']
+    # Filter by prefix
+    if metrics_prefix:
+        names = [n for n in names if n.startswith(metrics_prefix)]
     # Return metrix names
     return names
 
 
-def parseArguments(args):
+def parse_arguments(args):
     import argparse
 
     ap = argparse.ArgumentParser()
@@ -30,6 +33,12 @@ def parseArguments(args):
     ap.add_argument("-p", "--period", required=False,
                     help="time period of collected metrics in Prometheus notation. Default: [1h]")
 
+    ap.add_argument("-sm", "--show_metrics", required=False,
+                    help="print available metrics")
+
+    ap.add_argument("-mp", "--metrics_prefix", required=False,
+                    help="filter metrics by prefix")
+
     args = vars(ap.parse_args())
     return args
 
@@ -44,19 +53,28 @@ writer = csv.writer(sys.stdout)
 #     sys.exit(1)
 
 # Parse arguments
-args = parseArguments(sys.argv[1:])
+args = parse_arguments(sys.argv[1:])
 
 prometheus = args['prometheus_server']
 metrics = args['metrics']
 labels = args['labels']
 period = args['period']
+show_metrics = args["show_metrics"]
+metrics_prefix = args["metrics_prefix"]
+
 
 # metrics
 if metrics:
-    metrixNames = metrics.split(",")
-    metrixNames = [m.strip() for m in metrixNames]
+    metricNames = metrics.split(",")
+    metricNames = [m.strip() for m in metricNames]
 else:
-    metrixNames = GetMetrixNames(prometheus)
+    metricNames = get_metrics_names(prometheus, metrics_prefix)
+
+# show-metrics
+if bool(show_metrics):
+    print('Available Metrics:')
+    print(metricNames)
+    exit(0)
 
 # period
 if not period:
@@ -71,12 +89,12 @@ if labels:
     labels = ','.join(labels)
 
 writeHeader = True
-for metrixName in metrixNames:
+for metricName in metricNames:
     # now its hardcoded for hourly
     if not labels:
-        query = metrixName + period
+        query = metricName + period
     else:
-        query = metrixName + "{" + labels + "}" + period
+        query = metricName + "{" + labels + "}" + period
     response = requests.get('{0}/api/v1/query'.format(prometheus), params={'query': query})
     results = response.json()['data']['result']
     # Build a list of all labelnames used.
