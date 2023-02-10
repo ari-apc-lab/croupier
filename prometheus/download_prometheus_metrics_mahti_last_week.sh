@@ -25,23 +25,24 @@ declare -a metrics=(
 'slurm_partition_avg_time_limit' 
 'slurm_partition_cores' 
 'slurm_partition_cpus' 
-#'slurm_partition_job_allocated_minimum_requested_nodes' 
-#'slurm_partition_job_end_time' 
-#'slurm_partition_job_execution_time' 
-#'slurm_partition_job_maximum_allocated_cpus' 
-#'slurm_partition_job_maximum_allocated_nodes' 
-#'slurm_partition_job_minimum_requested_cpus' 
-#'slurm_partition_job_minimum_requested_memory' 
-#'slurm_partition_job_queue_time' 
-#'slurm_partition_job_requested_allocated_cpus' 
-#'slurm_partition_job_start_time' 
-#'slurm_partition_job_state' 
-#'slurm_partition_job_time_left' 
+'slurm_partition_job_allocated_minimum_requested_nodes' 
+'slurm_partition_job_end_time' 
+'slurm_partition_job_execution_time' 
+'slurm_partition_job_maximum_allocated_cpus' 
+'slurm_partition_job_maximum_allocated_nodes' 
+'slurm_partition_job_minimum_requested_cpus' 
+'slurm_partition_job_minimum_requested_memory' 
+'slurm_partition_job_queue_time' 
+'slurm_partition_job_requested_allocated_cpus' 
+'slurm_partition_job_start_time' 
+'slurm_partition_job_state' 
+'slurm_partition_job_time_left'
 'slurm_partition_node_alloc' 
 'slurm_partition_node_idle' 
 'slurm_partition_node_other' 
 'slurm_partition_node_total' 
-'slurm_partition_nodes')
+'slurm_partition_nodes'
+)
 
 download_metric()
 {
@@ -50,6 +51,7 @@ download_metric()
   metric=$1
   period=1w
   resolution=5m
+  #echo "./prom_csv.py -s https://prometheus.croupier.ari-aidata.eu -l hpc=mahti.csc.fi -m $metric -p $period -r $resolution"
   ./prom_csv.py -s https://prometheus.croupier.ari-aidata.eu -l hpc=mahti.csc.fi -m $metric -p $period -r $resolution > $d/$target
   cd $d
   tar cvzf $target.tgz $target
