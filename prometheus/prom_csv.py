@@ -37,6 +37,10 @@ def parse_arguments(args):
                     help="time interval between reported metrics within the given period in Prometheus notation. "
                          "Default: not set, Prometheus default")
 
+    ap.add_argument("-o", "--offset", required=False,
+                    help="allows changing the time offset for individual instant and range vectors in a query. "
+                         "Default: not set, Prometheus default")
+
     ap.add_argument("-sm", "--show_metrics", required=False,
                     help="print available metrics")
 
@@ -66,6 +70,7 @@ period = args['period']
 resolution = args['resolution']
 show_metrics = args["show_metrics"]
 metrics_prefix = args["metrics_prefix"]
+offset = args["offset"]
 
 
 # metrics
@@ -90,6 +95,9 @@ elif period and not resolution:
     period = '[' + period + ']'
 else:
     period = '[' + period + ":" + resolution + ']'
+
+if offset:
+    period = period + " offset " + offset
 
 # labels
 if labels:
