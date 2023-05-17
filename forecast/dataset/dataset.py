@@ -190,7 +190,7 @@ def remove_suffix(input_string, suffix):
 # Process the tarball with Prometheus metrics, and generates corresponding csv per partition for average partition and jobs metrics
 # Process all tarballs in target folder
 
-tarballs_path = "../../prometheus/metrics/tmp"
+tarballs_path = "../../prometheus/metrics"
 tarballs_target = "./tarballs"
 partition_metrics = {}
 job_metrics = {}
