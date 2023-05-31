@@ -71,7 +71,7 @@ def read_job_metrics(metrics_file, metrics):
             if (n_metadata == 8): # old recording of metrics
                 time_limit = line_split[-1].rstrip()
                 submit_time = line_split[-2]
-                priority = line_split[-3] # record priority as metric, not metadata
+                priority = line_split[-3] # record priority as metadata
                 partition = line_split[-4]
                 job_id = line_split[-5]
                 entry = line_split[-10:-8]
@@ -89,29 +89,41 @@ def read_job_metrics(metrics_file, metrics):
                 metrics[partition][job_id]["time_limit"] = time_limit
             if "submit_time" not in metrics[partition][job_id]:
                 metrics[partition][job_id]["submit_time"] = submit_time
-            # TODO process dynamic priority (for new collected metrics after hpc-exporter fix)
+
+            metric_timestamp = entry[0][2:].rstrip()
+            metric_value = entry[1][:-2].lstrip()
+                
+            # Collects initial priority (old style)
             if priority is not None:
                 if "priority" not in metrics[partition][job_id]:
-                    metrics[partition][job_id]["priority"] = []
-                if priority not in metrics[partition][job_id]["priority"]:
-                    metrics[partition][job_id]["priority"].append(priority)
+                    metrics[partition][job_id]["priority"] = {}
+                    metrics[partition][job_id]["priority"]["timestamp"] = metric_timestamp
+                    metrics[partition][job_id]["priority"]["value"] = priority
+                else:
+                    if metric_timestamp < metrics[partition][job_id]["priority"]["timestamp"]:
+                        metrics[partition][job_id]["priority"]["timestamp"] = metric_timestamp
+                        metrics[partition][job_id]["priority"]["value"] = priority
 
-            # TODO:
             # Process dynamic metrics: queue_time, execution_time, left_time
             # Adapt indexing when processing new metrics after hpc-exporter fix
             # process changing metrics: start_time (expected, actual), end_time (expected, actual)
             # Adapt indexing when processing new metrics after hpc-exporter fix
             
-            metric_timestamp = entry[0][2:].rstrip()
-            metric_value = entry[1][:-2].lstrip()
+            
             if metric_name not in metrics[partition][job_id]:
                 metrics[partition][job_id][metric_name] = {}
                 metrics[partition][job_id][metric_name]["timestamp"] = metric_timestamp
                 metrics[partition][job_id][metric_name]["value"] = metric_value
             else:
-                if metric_timestamp > metrics[partition][job_id][metric_name]["timestamp"]:
-                    metrics[partition][job_id][metric_name]["timestamp"] = metric_timestamp
-                    metrics[partition][job_id][metric_name]["value"] = metric_value    
+                if metric_name != "priority": #recording last value for metric
+                    if metric_timestamp > metrics[partition][job_id][metric_name]["timestamp"]:
+                        metrics[partition][job_id][metric_name]["timestamp"] = metric_timestamp
+                        metrics[partition][job_id][metric_name]["value"] = metric_value
+                else: # recording initial value for priority 
+                    if metric_timestamp < metrics[partition][job_id][metric_name]["timestamp"]:
+                        metrics[partition][job_id][metric_name]["timestamp"] = metric_timestamp
+                        metrics[partition][job_id][metric_name]["value"] = metric_value
+
 
 def write_partition_metrics(metrics):
     if not os.path.exists("partitions"):
@@ -211,16 +223,15 @@ for tarball in tarballs:
             # read metrics
             metrics_file = tarfile_target + '/' + file.replace(".tgz", "")
             if not file.startswith("slurm_partition_job"): 
-                pass
-                #read_partition_metrics(metrics_file, partition_metrics)
+                read_partition_metrics(metrics_file, partition_metrics)
             else:
-               read_job_metrics(metrics_file, job_metrics)
+                read_job_metrics(metrics_file, job_metrics)
             # remove unzip tarball
             os.remove(metrics_file)
             os.remove(tarfile_path)
 
 # Write Partition metrics in csv
-# write_partition_metrics(partition_metrics)
+write_partition_metrics(partition_metrics)
 
 # Write Partition metrics in csv
 write_job_metrics(job_metrics)
