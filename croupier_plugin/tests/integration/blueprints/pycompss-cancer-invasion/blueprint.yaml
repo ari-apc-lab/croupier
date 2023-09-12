@@ -1,0 +1,142 @@
+########
+# Copyright (c) 2019 Atos Spain SA. All rights reserved.
+#
+# This file is part of Croupier.
+#
+# Croupier is free software: you can redistribute it and/or modify it
+# under the terms of the Apache License, Version 2.0 (the License) License.
+#
+# THE SOFTWARE IS PROVIDED "AS IS", WITHOUT ANY WARRANTY OF ANY KIND, EXPRESS OR
+# IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+# FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT, IN NO EVENT SHALL THE
+# AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+# LIABILITY, WHETHER IN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM, OUT
+# OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+# SOFTWARE.
+#
+# See README file for full disclaimer information and LICENSE file for full
+# license information in the project root.
+#
+# @author: Jesus Gorronogoitia
+#          Atos Research & Innovation, Atos Spain S.A.
+#          e-mail: jesus.gorronogoitia@atos.net
+#
+# blueprint.yaml
+
+
+tosca_definitions_version: cloudify_dsl_1_3
+
+imports:
+    - http://raw.githubusercontent.com/ari-apc-lab/croupier/master/resources/types/cfy_types.yaml
+#    - plugin:croupier #For Cloudify
+    - plugin.yaml #For debugging in PyCharm, comment for Cloudify
+
+##################### CANCER INVASION ARGS ###################
+data_types:
+    permedcoe.cancer-invasion.args:
+        properties:
+            parameters_set:
+                type: string
+                required: true
+            outdir:
+                type: string
+                required: true
+            reps:
+                type: integer
+                required: true
+            max_time:
+                type: integer
+                required: true
+
+inputs:
+########################## VAULT ######################
+    iam_jwt:
+        type: string
+    iam_user:
+        type: string
+
+################# HPC Infrastructures #################
+    hpc_host:
+        type: string
+
+    hpc_scheduler:
+        type: string
+
+    hpc_scheduler_modules:
+        type: list
+
+    monitor_scheduler:
+        type: string
+
+################# Cancer Invasion application ################
+    job_pre_script:
+        type: list
+
+    cancer-invasion_args:
+        type: permedcoe.cancer-invasion.args
+
+##################### PYCOMPSs args ###################
+    pycompss_args:
+        type: croupier.datatypes.pycompss_options
+
+#################### START WORKFLOW ###################
+node_templates:
+    hpc_exporter:
+        type: croupier.nodes.HPCExporter
+
+    vault:
+        type: croupier.nodes.Vault
+        properties:
+            jwt: { get_input: iam_jwt }
+            user: { get_input: iam_user }
+
+    hpc:
+        type: croupier.nodes.InfrastructureInterface
+        properties:
+            config:
+                infrastructure_interface: { get_input: hpc_scheduler }
+                modules: { get_input: hpc_scheduler_modules}
+            credentials:
+                host: { get_input: hpc_host }
+            job_prefix: croupier
+            base_dir: $HOME
+            monitoring_options:
+                monitor_period: 15
+                monitor_interface: { get_input: monitor_scheduler }
+            skip_cleanup: true
+            workdir_prefix: "pycompss-cancer-invasion"
+        relationships:
+            - type: retrieve_credentials_from_vault
+              target: vault
+            - type: interface_monitored_by
+              target: hpc_exporter
+
+    job:
+        type: croupier.nodes.PyCOMPSsJob
+        properties:
+            job_options:
+                pre_script: { get_input: job_pre_script}
+                app_name: cancer-invasion
+                app_source: permedcoe_apps/cancer-invasion/Workflow/PyCOMPSs/src
+                env:
+                    - PERMEDCOE_IMAGES: ${PERMEDCOE_IMAGES}
+                    - COMPUTING_UNITS: 1
+                    - dataset: $HOME/permedcoe_apps/cancer-invasion/Resources/data
+                compss_args: { get_input: pycompss_args }
+                app_file: '$(pwd)/sdp.py'
+                app_args: { get_input: cancer-invasion_args }
+            skip_cleanup: True
+        relationships:
+            - type: task_managed_by_interface
+              target: hpc
+
+#################### END WORKFLOW ###################
+
+#################### START DATAFLOW #################
+
+#################### END DATAFLOW ###################
+
+outputs:
+    job_name:
+        description: single job name in the HPC
+        value: { get_attribute: [job, job_name] }

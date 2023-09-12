@@ -11,4 +11,6 @@ cffi==1.14.5
 pytz
 cryptography>=3.3.2
 ckanapi
+future~=0.18.2
+paramiko==2.7.2
 

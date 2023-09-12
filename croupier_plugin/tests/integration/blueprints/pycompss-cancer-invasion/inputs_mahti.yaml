@@ -1,0 +1,36 @@
+# VAULT
+iam_jwt: ''
+iam_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# HPC
+hpc_host: mahti.csc.fi
+hpc_scheduler: PYCOMPSS
+hpc_scheduler_modules:
+  - module load COMPSs/3.0
+  - module use /scratch/project_2003929/PerMedCoE/modulefiles
+  - module load permedcoe
+monitor_scheduler: SLURM
+
+# SINGLE DRUG PREDICTION args
+job_pre_script:
+  -
+cancer-invasion_args:
+  parameters_set: "${dataset}/parameters_small.csv"
+  outdir: '$(pwd)/results/'
+  reps: 5
+  max_time: 4500
+
+# PYCOMPSs args
+pycompss_args:
+  project_name: "project_2003929"
+  num_nodes: 2
+  exec_time: 45
+  worker_working_dir: $(pwd)
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: ''
+

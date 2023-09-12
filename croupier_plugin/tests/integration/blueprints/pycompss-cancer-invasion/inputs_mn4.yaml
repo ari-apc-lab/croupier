@@ -1,0 +1,39 @@
+# VAULT
+iam_jwt: ''
+iam_user: 'yosu'
+
+# WORKFLOW
+# HPC infrastructures
+# HPC
+hpc_host: mn1.bsc.es
+hpc_scheduler: PYCOMPSS
+hpc_scheduler_modules:
+  - export COMPSS_PYTHON_VERSION=3
+  - module load COMPSs/3.1
+  - module load singularity/3.5.2
+  - module use /apps/modules/modulefiles/tools/COMPSs/libraries
+  - module load permedcoe
+monitor_scheduler: SLURM
+
+# SINGLE DRUG PREDICTION args
+job_pre_script:
+  - unset PYTHONSTARTUP
+  - unset PYTHONHOME
+
+cancer-invasion_args:
+  parameters_set: "${dataset}/parameters_small.csv"
+  outdir: '$(pwd)/results/'
+  reps: 5
+  max_time: 4500
+
+# PYCOMPSs args
+pycompss_args:
+  project_name: ''
+  num_nodes: 2
+  exec_time: 45
+  worker_working_dir: $(pwd)
+  log_level: 'off'
+  graph: true
+  tracing: 'false'
+  python_interpreter: python3
+  qos: 'debug'

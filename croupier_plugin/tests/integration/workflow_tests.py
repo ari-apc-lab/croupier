@@ -324,6 +324,16 @@ class TestPlugin(unittest.TestCase):
         self.run_test(cfy_local)
 
     # -------------------------------------------------------------------------------
+    # -------------------------------- Cancer Invasion  -----------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'pycompss-cancer-invasion', 'blueprint.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='pycompss-cancer-invasion')
+    def test_pycompss_cancer_invasion(self, cfy_local):
+        self.run_test(cfy_local)
+
+    # -------------------------------------------------------------------------------
     # ---------------------------------- MultiHPC-DM --------------------------------
     # -------------------------------------------------------------------------------
 
