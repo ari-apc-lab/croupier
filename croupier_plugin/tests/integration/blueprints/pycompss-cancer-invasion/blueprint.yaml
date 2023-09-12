@@ -123,7 +123,7 @@ node_templates:
                     - COMPUTING_UNITS: 1
                     - dataset: $HOME/permedcoe_apps/cancer-invasion/Resources/data
                 compss_args: { get_input: pycompss_args }
-                app_file: '$(pwd)/sdp.py'
+                app_file: '$(pwd)/cancer_invasion.py'
                 app_args: { get_input: cancer-invasion_args }
             skip_cleanup: True
         relationships:
