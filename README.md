@@ -22,7 +22,7 @@ Latest documentation can be found at [Read the Docs](https://croupier.readthedoc
 
 ## Install and Usage
 
-As Cloudify plugin, Croupier needs to operate under a Cloudify Manager instance.
+As a Cloudify plugin, Croupier needs to operate under a Cloudify Manager instance.
 Check [Cloudify Docs](http://docs.getcloudify.org/4.5.5/intro/what-is-cloudify)
 for general information about how to install and use Cloudify. To easily install
 the manager, check the
