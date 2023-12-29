@@ -47,6 +47,7 @@ from croupier_plugin.ssh import SshClient
 from croupier_plugin.infrastructure_interfaces.infrastructure_interface import (InfrastructureInterface)
 # from croupier_plugin.data_mover.datamover_proxy import (DataMoverProxy)
 import croupier_plugin.vault.vault as vault
+import croupier_plugin.keycloak.keycloak as keycloak
 from croupier_plugin.accounting_client.model.user import (User)
 from croupier_plugin.accounting_client.accounting_client import (AccountingClient)
 from croupier_plugin.accounting_client.model.resource_consumption_record import (ResourceConsumptionRecord)
@@ -369,11 +370,11 @@ def cleanup_execution(
 
 @operation
 def create_monitor(address, **kwargs):
+    config = configparser.RawConfigParser()
+    config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
     if not address:
         ctx.logger.info(
             "No HPC Exporter address provided. Using address set in croupier installation's config file")
-        config = configparser.RawConfigParser()
-        config_file = str(os.path.dirname(os.path.realpath(__file__))) + '/Croupier.cfg'
         config.read(config_file)
         try:
             address = config.get('Monitoring', 'hpc_exporter_address')
@@ -392,6 +393,28 @@ def create_monitor(address, **kwargs):
 
     ctx.instance.runtime_properties["hpc_exporter_address"] = address if address.startswith("http") \
         else "http://" + address
+
+    gf_reg_address = config.get('Monitoring', 'grafana_registry_address')
+    if gf_reg_address is None:
+        ctx.logger.error(
+            'Could not find grafana-registry address in the croupier config file. No dashboards will be created')
+        return
+    gf_reg_address = gf_reg_address if gf_reg_address.startswith("http") else "http://" + gf_reg_address
+    keycloak_credentials = ctx.instance.runtime_properties["keycloak_credentials"]
+    try:
+        jwt = keycloak.get_jwt(keycloak_credentials['user'], keycloak_credentials['password'])
+    except Exception as e:
+        ctx.logger.error("Could not create dashboards in grafana due to:\n" + str(e))
+        return
+    endpoint = gf_reg_address + '/dashboards'
+    data = {"monitoring_id": monitoring_id}
+    auth = {"Authorization": "Bearer " + jwt}
+    r = requests.request('POST', endpoint, json=data, headers=auth)
+    if not r.ok:
+        ctx.logger.error(
+            "Failed to create dashboards in grafana({0})\n{1}".format(r.status_code, r.content))
+        return
+    ctx.logger.info("Dashboards created in grafana")
 
 
 @operation

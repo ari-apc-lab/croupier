@@ -759,6 +759,11 @@ node_types:
                 type: string
                 required: false
                 default: ''
+            keycloak_credentials:
+                type: croupier.datatypes.Credentials
+                required: False
+                default: { }
+                description: Keycloak User/password. Used to generate dashboards on Grafana.
         interfaces:
             cloudify.interfaces.lifecycle:
                 create:
