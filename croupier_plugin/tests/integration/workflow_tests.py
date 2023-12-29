@@ -340,6 +340,16 @@ class TestPlugin(unittest.TestCase):
     def test_ckan(self, cfy_local):
         self.run_test(cfy_local)
 
+    # -------------------------------------------------------------------------------
+    # ---------------------------------- SCP ---------------------------------------
+    # -------------------------------------------------------------------------------
+    @workflow_test(
+        os.path.join('blueprints', 'ckan', 'blueprint_scp.yaml'),
+        copy_plugin_yaml=True,
+        inputs='load_inputs', input_func_args='ckan')
+    def test_ckan_scp(self, cfy_local):
+        self.run_test(cfy_local)
+
 
 if __name__ == '__main__':
     unittest.main()

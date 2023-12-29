@@ -1,0 +1,21 @@
+credentials:
+  host:
+  user:
+  private_key: |
+    -----BEGIN RSA PRIVATE KEY-----
+    ...
+    -----END RSA PRIVATE KEY-----
+ckan_credentials:
+  auth-header: "..."
+  user: cloudify
+  private_key: |
+    -----BEGIN OPENSSH PRIVATE KEY-----
+    ...
+    -----END OPENSSH PRIVATE KEY-----
+hpc_interface: SHELL
+partition: standard
+ckan_dataset_id:
+ckan_dataset_owner:
+ckan_resource_name: "file_to_upload.txt"
+ckan_resource_description: "File uploaded via SCP"
+ckan_file_to_upload: "file_to_upload.txt"
