@@ -58,7 +58,7 @@ setup(
         "paramiko==2.7.2",
         "pyyaml>=5.4",
         "wget",
-        "future==0.18.2",
+        "future==0.18.3",
         "ckanapi"
     ],
     license='Apache APLv2.0'
